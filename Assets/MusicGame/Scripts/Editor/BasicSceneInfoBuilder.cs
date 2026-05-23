@@ -1,4 +1,6 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -30,6 +32,9 @@ namespace MusicGame.Editor
             EnsureFolder("Assets/MusicGame", "Scenes");
             EnsureFolder("Assets/MusicGame", "Prefabs");
             EnsureFolder("Assets/MusicGame", "Generated");
+            EnsureFolder("Assets/MusicGame", "Resources");
+            EnsureFolder("Assets/MusicGame/Resources", "Songs");
+            EnsureFolder("Assets/MusicGame/Resources", "Charts");
             EnsureFolder(GeneratedPath, "Materials");
 
             Material cyan = CreateMaterial("BCI_Cyan", new Color(0.1f, 0.95f, 0.9f, 1f));
@@ -40,6 +45,7 @@ namespace MusicGame.Editor
 
             HoldNote holdPrefab = CreateHoldNotePrefab(cyan);
             FlickNote flickPrefab = CreateFlickNotePrefab(cyan);
+            GenerateDefaultSongsAndCharts();
 
             BuildMainMenu();
             BuildSongSelect();
@@ -143,24 +149,38 @@ namespace MusicGame.Editor
             ConfigureCamera(new Color(0.02f, 0.02f, 0.025f), false);
             GameObject canvas = CreateCanvas("SongSelectCanvas");
 
-            Button back = CreateButton("BackButton", canvas.transform, "Back", new Vector2(-360, 230), new Vector2(110, 44));
-            Button preview = CreateButton("PreviewButton", canvas.transform, "Preview", new Vector2(250, -155), new Vector2(160, 48));
-            Button easy = CreateButton("EasyButton", canvas.transform, "Easy", new Vector2(-120, -230), new Vector2(110, 48));
-            Button normal = CreateButton("NormalButton", canvas.transform, "Normal", new Vector2(0, -230), new Vector2(110, 48));
-            Button hard = CreateButton("HardButton", canvas.transform, "Hard", new Vector2(120, -230), new Vector2(110, 48));
+            CreateText("SongSelectTitle", canvas.transform, "Select Song", 42, new Vector2(0, 250), new Vector2(720, 70));
+            Button back = CreateButton("BackButton", canvas.transform, "Back", new Vector2(-640, 310), new Vector2(150, 56));
+            Button preview = CreateButton("PreviewButton", canvas.transform, "Preview", new Vector2(430, -170), new Vector2(190, 58));
+            Button easy = CreateButton("EasyButton", canvas.transform, "Easy", new Vector2(250, -305), new Vector2(150, 58));
+            Button normal = CreateButton("NormalButton", canvas.transform, "Normal", new Vector2(430, -305), new Vector2(150, 58));
+            Button hard = CreateButton("HardButton", canvas.transform, "Hard", new Vector2(610, -305), new Vector2(150, 58));
 
-            GameObject list = CreatePanel("SongList", canvas.transform, new Color(1f, 1f, 1f, 0.08f), new Vector2(-180, 0), new Vector2(360, 360));
+            GameObject list = CreatePanel("SongList", canvas.transform, new Color(1f, 1f, 1f, 0.08f), new Vector2(-360, -10), new Vector2(560, 480));
             GameObject content = new GameObject("Content");
             content.transform.SetParent(list.transform, false);
-            content.AddComponent<RectTransform>().sizeDelta = new Vector2(340, 340);
+            RectTransform contentRect = content.AddComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0, 1);
+            contentRect.anchorMax = new Vector2(1, 1);
+            contentRect.pivot = new Vector2(0.5f, 1);
+            contentRect.anchoredPosition = new Vector2(0, -18);
+            contentRect.sizeDelta = new Vector2(-36, 430);
+            VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(14, 14, 14, 14);
+            layout.spacing = 14;
+            layout.childControlWidth = true;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
 
-            Image cover = CreatePanel("Cover", canvas.transform, new Color(1f, 1f, 1f, 0.18f), new Vector2(250, 75), new Vector2(220, 220)).GetComponent<Image>();
-            Text title = CreateText("TitleText", canvas.transform, "Song Title", 26, new Vector2(250, -55), new Vector2(300, 42));
-            Text artist = CreateText("ArtistText", canvas.transform, "Artist", 18, new Vector2(250, -95), new Vector2(300, 32));
+            Image cover = CreatePanel("Cover", canvas.transform, new Color(1f, 1f, 1f, 0.18f), new Vector2(430, 85), new Vector2(320, 320)).GetComponent<Image>();
+            Text title = CreateText("TitleText", canvas.transform, "Song Title", 32, new Vector2(430, -100), new Vector2(430, 54));
+            Text artist = CreateText("ArtistText", canvas.transform, "Artist", 22, new Vector2(430, -145), new Vector2(430, 36));
 
             SongSelectController controller = new GameObject("SongSelectController").AddComponent<SongSelectController>();
             SetField(controller, "songListContent", content.transform);
             SetField(controller, "songItemPrefab", CreateSongItemPrefab());
+            SetField(controller, "availableSongs", LoadGeneratedSongs());
             SetField(controller, "backButton", back);
             SetField(controller, "playPreviewButton", preview);
             SetField(controller, "coverImage", cover);
@@ -292,14 +312,109 @@ namespace MusicGame.Editor
         {
             GameObject item = new GameObject("SongItem_Basic");
             RectTransform rect = item.AddComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(300, 42);
+            rect.sizeDelta = new Vector2(500, 72);
             Image image = item.AddComponent<Image>();
             image.color = new Color(1f, 1f, 1f, 0.12f);
             item.AddComponent<Button>();
-            CreateText("Label", item.transform, "Song", 18, Vector2.zero, rect.sizeDelta);
+            Text label = CreateText("Label", item.transform, "Song", 24, Vector2.zero, rect.sizeDelta);
+            label.alignment = TextAnchor.MiddleLeft;
+            RectTransform labelRect = label.GetComponent<RectTransform>();
+            labelRect.offsetMin = new Vector2(24, 0);
+            labelRect.offsetMax = new Vector2(-24, 0);
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(item, $"{PrefabPath}/SongItem_Basic.prefab");
             Object.DestroyImmediate(item);
             return prefab;
+        }
+
+        private static void GenerateDefaultSongsAndCharts()
+        {
+            CreateSong("2077", "2077", "BCI Demo", "2077");
+            CreateSong("jumping", "Jumping", "BCI Demo", "Jumping");
+            CreateSong("kite", "Kite", "BCI Demo", "Kite");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        private static void CreateSong(string songId, string title, string artist, string coverName)
+        {
+            string assetPath = $"Assets/MusicGame/Resources/Songs/{title}.asset";
+            SongData song = AssetDatabase.LoadAssetAtPath<SongData>(assetPath);
+            if (song == null)
+            {
+                song = ScriptableObject.CreateInstance<SongData>();
+                AssetDatabase.CreateAsset(song, assetPath);
+            }
+
+            song.songId = songId;
+            song.title = title;
+            song.artist = artist;
+            song.bpm = 120f;
+            song.previewStartTime = 8f;
+            song.cueSheetName = "CueSheet_0";
+            song.cueName = "cue_0000";
+            song.coverImage = LoadCoverSprite($"Assets/Images/Covers/{coverName}.png");
+            song.easyChartPath = $"Charts/{songId}_easy";
+            song.normalChartPath = $"Charts/{songId}_normal";
+            song.hardChartPath = $"Charts/{songId}_hard";
+
+            EditorUtility.SetDirty(song);
+            WriteChart(song.easyChartPath, Difficulty.Easy, 3, 8);
+            WriteChart(song.normalChartPath, Difficulty.Normal, 5, 14);
+            WriteChart(song.hardChartPath, Difficulty.Hard, 8, 22);
+        }
+
+        private static void WriteChart(string resourcePath, Difficulty difficulty, int level, int noteCount)
+        {
+            ChartData chart = ScriptableObject.CreateInstance<ChartData>();
+            chart.difficulty = difficulty;
+            chart.level = level;
+            chart.notes = new List<NoteData>();
+
+            float startTime = 1.5f;
+            float spacing = difficulty == Difficulty.Hard ? 0.75f : difficulty == Difficulty.Normal ? 0.95f : 1.2f;
+            for (int i = 0; i < noteCount; i++)
+            {
+                bool flick = i % 4 == 1;
+                chart.notes.Add(new NoteData
+                {
+                    time = startTime + i * spacing,
+                    x = Mathf.Sin(i * 0.7f) * 2.8f,
+                    y = Mathf.Cos(i * 0.55f) * 1.8f,
+                    z = 10f,
+                    noteType = flick ? NoteType.Flick : NoteType.Hold,
+                    duration = flick ? 0f : Mathf.Lerp(0.8f, 1.8f, (i % 3) / 2f),
+                    threshold = 45 + (i % 4) * 10,
+                    flickDirection = (FlickDirection)(i % 4),
+                    approachTime = 2f
+                });
+            }
+
+            string filePath = Path.Combine(Application.dataPath, "MusicGame", "Resources", resourcePath + ".json");
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+            File.WriteAllText(filePath, JsonUtility.ToJson(chart, true));
+        }
+
+        private static List<SongData> LoadGeneratedSongs()
+        {
+            return new List<SongData>
+            {
+                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/2077.asset"),
+                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/Jumping.asset"),
+                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/Kite.asset")
+            };
+        }
+
+        private static Sprite LoadCoverSprite(string path)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null && importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         private static GameObject CreateCube(string name, Transform parent, Material material, Vector3 scale)
@@ -371,7 +486,10 @@ namespace MusicGame.Editor
             GameObject canvasObj = new GameObject(name);
             Canvas canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
+            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1600, 900);
+            scaler.matchWidthOrHeight = 0.5f;
             canvasObj.AddComponent<GraphicRaycaster>();
             return canvasObj;
         }
@@ -385,7 +503,7 @@ namespace MusicGame.Editor
             rect.sizeDelta = dimensions;
             Text label = obj.AddComponent<Text>();
             label.text = text;
-            label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             label.fontSize = size;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = Color.white;

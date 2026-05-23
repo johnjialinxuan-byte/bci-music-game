@@ -22,6 +22,13 @@ namespace MusicGame.Notes
             }
         }
 
+protected override void Update()
+        {
+            base.Update();
+            TryHit();
+        }
+
+
         public void TryHit()
         {
             if (IsJudged || IsMissed) return;
@@ -29,7 +36,6 @@ namespace MusicGame.Notes
             float timeDiff = SongTime - Data.time;
             if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
 
-            // Detect direction via angular velocity
             FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
             if (detectedDir != Data.flickDirection)
                 return;

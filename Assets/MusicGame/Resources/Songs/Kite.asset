@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38567559e74500f418b280e37dab1f53, type: 3}
+  m_Name: Kite
+  m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
+  songId: kite
+  title: Kite
+  artist: BCI Demo
+  bpm: 120
+  previewStartTime: 8
+  coverImage: {fileID: -2940649096967254720, guid: eb0967576069e4bdb89b7c3e5a5c5fc7, type: 3}
+  cueSheetName: CueSheet_0
+  cueName: cue_0000
+  easyChartPath: Charts/kite_easy
+  normalChartPath: Charts/kite_normal
+  hardChartPath: Charts/kite_hard

@@ -17,6 +17,8 @@ namespace MusicGame.Scenes
         [SerializeField] private Text rankText;
         [SerializeField] private Button retryButton;
         [SerializeField] private Button backButton;
+        private Image coverImage;
+
 
         [Header("Rank Colors")]
         [SerializeField] private Color sRankColor = Color.yellow;
@@ -37,6 +39,16 @@ namespace MusicGame.Scenes
 
         private void DisplayResult()
         {
+            if (coverImage == null)
+            {
+                GameObject coverObject = GameObject.Find("CoverImage");
+                if (coverObject != null)
+                {
+                    coverImage = coverObject.GetComponent<Image>();
+                    coverImage.transform.SetAsFirstSibling();
+                }
+            }
+
             if (ScoreManager.Instance == null)
             {
                 Debug.LogError("[ResultController] ScoreManager not found!");
@@ -46,6 +58,14 @@ namespace MusicGame.Scenes
             SongData song = GameStateManager.Instance.SelectedSong;
             if (resultTitleText != null)
                 resultTitleText.text = song != null ? song.title : "Result";
+
+            if (coverImage != null && song != null)
+            {
+                coverImage.sprite = song.coverImage;
+                coverImage.color = new Color(1f, 1f, 1f, 0.65f);
+                coverImage.preserveAspect = true;
+            }
+
 
             if (scoreText != null)
                 scoreText.text = $"Score: {ScoreManager.Instance.Score}";

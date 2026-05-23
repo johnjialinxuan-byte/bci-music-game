@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+
 
 namespace MusicGame.Input
 {
@@ -28,11 +30,11 @@ namespace MusicGame.Input
             }
         }
 
-        public Quaternion GetHeadRotation()
+public Quaternion GetHeadRotation()
         {
-            // Simulated head rotation based on mouse movement for desktop testing
-            float yaw = UnityEngine.Input.GetAxis("Mouse X") * 2f;
-            float pitch = -UnityEngine.Input.GetAxis("Mouse Y") * 2f;
+            Vector2 delta = Mouse.current != null ? Mouse.current.delta.ReadValue() : Vector2.zero;
+            float yaw = delta.x * 0.02f;
+            float pitch = -delta.y * 0.02f;
             return Quaternion.Euler(pitch, yaw, 0f);
         }
 

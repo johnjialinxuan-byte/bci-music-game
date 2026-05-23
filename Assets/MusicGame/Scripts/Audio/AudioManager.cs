@@ -66,6 +66,19 @@ namespace MusicGame.Audio
             playing = false;
         }
 
+        public void Pause()
+        {
+            if (player == null || !playing) return;
+            player.Pause();
+        }
+
+        public void Resume()
+        {
+            if (player == null || !playing) return;
+            player.Resume(CriAtomEx.ResumeMode.AllPlayback);
+        }
+
+
         public float GetCurrentTime()
         {
             if (!playing || playback.id == CriAtomExPlayback.invalidId)

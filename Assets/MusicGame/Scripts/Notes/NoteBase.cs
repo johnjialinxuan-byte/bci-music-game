@@ -21,7 +21,7 @@ namespace MusicGame.Notes
         [SerializeField] protected float maxAlpha = 1.0f;
 
         protected NoteData Data { get; private set; }
-        protected float SongTime => CriAudioManager.Instance.GetCurrentTime();
+        protected float SongTime => MusicTime.Current;
         protected bool IsJudged { get; set; }
         protected bool IsMissed { get; set; }
 
@@ -42,7 +42,30 @@ namespace MusicGame.Notes
             IsJudged = false;
             IsMissed = false;
             transform.position = data.SpawnPosition;
+            
+            // Load SVG sprite based on note type and direction
+            LoadNoteSprite(data);
+            
             gameObject.SetActive(true);
+        }
+        
+        private void LoadNoteSprite(NoteData data)
+        {
+            if (spriteRenderer == null) return;
+            
+            string spritePath = NoteVisualManager.GetNoteSpritePath(data);
+            Sprite sprite = NoteVisualManager.LoadNoteSprite(spritePath);
+            
+            if (sprite != null)
+            {
+                spriteRenderer.sprite = sprite;
+                spriteRenderer.color = Color.white;
+                Debug.Log($"[NoteBase] Loaded sprite: {spritePath}");
+            }
+            else
+            {
+                Debug.LogWarning($"[NoteBase] Could not load sprite: {spritePath}");
+            }
         }
 
         protected virtual void UpdatePosition()

@@ -1,15 +1,17 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+
 
 namespace MusicGame.Input
 {
     public class DemoHoldProvider : MonoBehaviour, IHoldValueProvider
     {
-        [SerializeField] private KeyCode simulateKey = KeyCode.Space;
+        [SerializeField] private Key simulateKey = Key.Space;
         [SerializeField] private int simulatedValue = 80;
 
-        public int GetHoldValue()
+                                public int GetHoldValue()
         {
-            if (UnityEngine.Input.GetKey(simulateKey))
+            if (Keyboard.current != null && Keyboard.current[simulateKey].isPressed)
                 return simulatedValue;
             return 0;
         }

@@ -6,7 +6,22 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 8c9cfa26abfee488c85f1582747f6a02
+    path: Assets/MusicGame/Scenes/MainMenu.unity
+    guid: 42ebea8b2bae643eba0dc9bff647a40b
+  - enabled: 1
+    path: Assets/MusicGame/Scenes/SongSelect.unity
+    guid: a07eaed071a8e4c50939af0e24ac5dfc
+  - enabled: 1
+    path: Assets/MusicGame/Scenes/Settings.unity
+    guid: 2b6c2a8c24a394ddbab8e3b9c37951ed
+  - enabled: 1
+    path: Assets/MusicGame/Scenes/About.unity
+    guid: ed30912662db8453791d8b6599c84337
+  - enabled: 1
+    path: Assets/MusicGame/Scenes/Gameplay.unity
+    guid: b20f3e2ee239e4911a47fbda4ebe3182
+  - enabled: 1
+    path: Assets/MusicGame/Scenes/Result.unity
+    guid: 763aaf92b889e45b7888af7877cb9b75
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

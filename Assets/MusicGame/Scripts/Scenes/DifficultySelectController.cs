@@ -54,7 +54,7 @@ namespace MusicGame.Scenes
         private void OnDifficultySelected(Difficulty difficulty)
         {
             GameStateManager.Instance.SetSelectedDifficulty(difficulty);
-            Audio.CriAudioManager.Instance.StopSong();
+            Audio.AudioManager.Instance.StopSong();
             GameStateManager.Instance.ChangeScene(GameScene.Gameplay);
         }
 

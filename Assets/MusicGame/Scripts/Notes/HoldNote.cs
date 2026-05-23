@@ -42,6 +42,13 @@ namespace MusicGame.Notes
             }
         }
 
+protected override void Update()
+        {
+            base.Update();
+            TryHitHead();
+        }
+
+
         protected override void UpdatePosition()
         {
             if (headJudged && isHolding)
@@ -124,20 +131,21 @@ namespace MusicGame.Notes
             }
         }
 
-        public void TryHitHead()
+public void TryHitHead()
         {
             if (headJudged || IsMissed) return;
 
             float timeDiff = SongTime - Data.time;
             if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
 
+            int holdValue = InputManager.Instance.CurrentHoldValue;
+            if (holdValue < Data.threshold) return;
+
             headJudgment = JudgeManager.Instance.Judge(timeDiff);
             headJudged = true;
             isHolding = true;
             holdStartTime = SongTime;
             lastSampleTime = SongTime;
-            ScoreManager.Instance.RegisterJudgment(headJudgment);
-            ShowJudgmentEffect(headJudgment);
         }
 
         public void OnRelease()
@@ -161,13 +169,15 @@ namespace MusicGame.Notes
             base.CheckMiss();
         }
 
-        private void OnCompleted()
+private void OnCompleted()
         {
             if (IsJudged || IsMissed) return;
             IsJudged = true;
             isHolding = false;
-            ScoreManager.Instance.RegisterJudgment(headJudgment);
-            ShowJudgmentEffect(headJudgment);
+            float requiredProgress = Mathf.Max(samplingInterval, Data.duration * 0.6f);
+            JudgmentType finalJudgment = successProgress >= requiredProgress ? headJudgment : JudgmentType.Miss;
+            ScoreManager.Instance.RegisterJudgment(finalJudgment);
+            ShowJudgmentEffect(finalJudgment);
             DestroyNote();
         }
 

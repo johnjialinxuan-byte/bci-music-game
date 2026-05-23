@@ -80,7 +80,7 @@ namespace MusicGame.Gameplay
         {
             if (!isSpawning || currentChart == null) return;
 
-            songTime = Audio.CriAudioManager.Instance.CurrentTimeSec;
+            songTime = Audio.MusicTime.Current;
 
             SpawnNotes();
             UpdateActiveNotes();

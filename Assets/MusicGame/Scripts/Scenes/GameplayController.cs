@@ -42,17 +42,22 @@ namespace MusicGame.Scenes
                 pauseMenuPanel.SetActive(false);
         }
 
-        private void InitializeGameplay()
+private void InitializeGameplay()
         {
+            if (GameStateManager.Instance == null)
+            {
+                Debug.LogError("[GameplayController] GameStateManager not found. Start from MainMenu.");
+                return;
+            }
+
             currentSong = GameStateManager.Instance.SelectedSong;
             if (currentSong == null)
             {
-                Debug.LogError("[GameplayController] No song selected!");
+                Debug.LogError("[GameplayController] No song selected. Returning to SongSelect.");
                 GameStateManager.Instance.ChangeScene(GameScene.SongSelect);
                 return;
             }
 
-            // Load chart via ChartManager
             string chartPath = currentSong.GetChartPath(GameStateManager.Instance.SelectedDifficulty);
             currentChart = ChartManager.Instance.LoadChart(chartPath);
             if (currentChart == null)
@@ -65,8 +70,7 @@ namespace MusicGame.Scenes
             ScoreManager.Instance.Initialize(currentChart.notes.Count);
             NoteManager.Instance.LoadChart(currentChart);
 
-            // Setup and play audio
-            CriAudioManager.Instance.PlaySong(currentSong.cueSheetName, currentSong.cueName);
+            AudioManager.Instance.PlaySong(currentSong.cueSheetName, currentSong.cueName);
             NoteManager.Instance.StartSpawning();
             isPlaying = true;
         }
@@ -90,7 +94,7 @@ namespace MusicGame.Scenes
 
         private void CheckGameEnd()
         {
-            if (CriAudioManager.Instance.IsPlaying) return;
+            if (AudioManager.Instance.IsPlaying()) return;
             if (NoteManager.Instance.HasActiveNotes) return;
 
             Invoke(nameof(ShowResult), 1f);
@@ -106,7 +110,7 @@ namespace MusicGame.Scenes
         {
             if (!isPlaying) return;
             isPaused = true;
-            CriAudioManager.Instance.Pause();
+            AudioManager.Instance.Pause();
             NoteManager.Instance.StopSpawning();
             if (pauseMenuPanel != null)
                 pauseMenuPanel.SetActive(true);
@@ -116,7 +120,7 @@ namespace MusicGame.Scenes
         {
             if (!isPaused) return;
             isPaused = false;
-            CriAudioManager.Instance.Resume();
+            AudioManager.Instance.Resume();
             NoteManager.Instance.StartSpawning();
             if (pauseMenuPanel != null)
                 pauseMenuPanel.SetActive(false);
@@ -124,7 +128,7 @@ namespace MusicGame.Scenes
 
         private void OnQuitToMenu()
         {
-            CriAudioManager.Instance.StopSong();
+            AudioManager.Instance.StopSong();
             GameStateManager.Instance.ChangeScene(GameScene.MainMenu);
         }
     }

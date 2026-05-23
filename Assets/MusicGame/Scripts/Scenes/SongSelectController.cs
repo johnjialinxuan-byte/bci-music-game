@@ -55,6 +55,12 @@ namespace MusicGame.Scenes
                 availableSongs.AddRange(songs);
             }
 
+            // Fallback: create test song if no songs found
+            if (availableSongs.Count == 0)
+            {
+                CreateTestSong();
+            }
+
             foreach (var song in availableSongs)
             {
                 CreateSongItem(song);
@@ -64,6 +70,37 @@ namespace MusicGame.Scenes
             {
                 SelectSong(availableSongs[0]);
             }
+        }
+
+        private void CreateTestSong()
+        {
+            SongData testSong = ScriptableObject.CreateInstance<SongData>();
+            testSong.songId = "test_01";
+            testSong.title = "Test Song";
+            testSong.artist = "Test Artist";
+            testSong.bpm = 120f;
+            testSong.previewStartTime = 0f;
+            testSong.cueSheetName = "";
+            testSong.cueName = "";
+            testSong.easyChartPath = "MusicGame/Resources/TestChart_Easy";
+            testSong.normalChartPath = "MusicGame/Resources/TestChart_Easy";
+            testSong.hardChartPath = "MusicGame/Resources/TestChart_Easy";
+            
+            // Load cover image from Resources
+            Sprite cover = Resources.Load<Sprite>("Images/Covers/2077");
+            if (cover == null)
+            {
+                // Try loading as Texture2D and creating sprite
+                Texture2D tex = Resources.Load<Texture2D>("Images/Covers/2077");
+                if (tex != null)
+                {
+                    cover = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                }
+            }
+            testSong.coverImage = cover;
+            
+            availableSongs.Add(testSong);
+            Debug.Log("[SongSelectController] Created test song.");
         }
 
         private void CreateSongItem(SongData song)
@@ -96,26 +133,26 @@ namespace MusicGame.Scenes
             if (artistText != null) artistText.text = song.artist;
             if (coverImage != null) coverImage.sprite = song.coverImage;
 
-            Audio.CriAudioManager.Instance.StopSong();
+            Audio.AudioManager.Instance.StopSong();
         }
 
         private void OnPlayPreview()
         {
             if (selectedSong == null) return;
-            Audio.CriAudioManager.Instance.PlaySong(selectedSong.cueSheetName, selectedSong.cueName);
+            Audio.AudioManager.Instance.PlaySong(selectedSong.cueSheetName, selectedSong.cueName);
         }
 
         private void OnDifficultySelected(Difficulty difficulty)
         {
             if (selectedSong == null) return;
             GameStateManager.Instance.SetSelectedDifficulty(difficulty);
-            Audio.CriAudioManager.Instance.StopSong();
+            Audio.AudioManager.Instance.StopSong();
             GameStateManager.Instance.ChangeScene(GameScene.Gameplay);
         }
 
         private void OnBackClicked()
         {
-            Audio.CriAudioManager.Instance.StopSong();
+            Audio.AudioManager.Instance.StopSong();
             GameStateManager.Instance.ChangeScene(GameScene.MainMenu);
         }
     }
