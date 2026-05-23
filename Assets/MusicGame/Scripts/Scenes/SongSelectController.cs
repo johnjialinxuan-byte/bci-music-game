@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
+using MusicGame.UI;
 
 namespace MusicGame.Scenes
 {
@@ -35,6 +36,7 @@ namespace MusicGame.Scenes
             if (hardButton != null)
                 hardButton.onClick.AddListener(() => OnDifficultySelected(Difficulty.Hard));
 
+            ConfigureHeaderEffects();
             LoadSongs();
         }
 
@@ -46,10 +48,12 @@ namespace MusicGame.Scenes
             }
             songItems.Clear();
 
-            if (availableSongs.Count == 0)
+            SongData[] songs = Resources.LoadAll<SongData>("Songs");
+            foreach (SongData song in songs)
             {
-                SongData[] songs = Resources.LoadAll<SongData>("Songs");
-                availableSongs.AddRange(songs);
+                if (song == null || availableSongs.Exists(existing => existing != null && existing.songId == song.songId))
+                    continue;
+                availableSongs.Add(song);
             }
 
             // Fallback: create test song if no songs found
@@ -131,7 +135,40 @@ namespace MusicGame.Scenes
                 SongData capturedSong = song;
                 btn.onClick.AddListener(() => OnSongSelected(capturedSong));
             }
+
+            SongItemHoverEffect hoverEffect = item.GetComponent<SongItemHoverEffect>();
+            if (hoverEffect == null)
+                hoverEffect = item.AddComponent<SongItemHoverEffect>();
+            hoverEffect.SetLabel(txt);
+
             songItems.Add(item);
+        }
+
+        private void ConfigureHeaderEffects()
+        {
+            Text[] texts = GetComponentsInChildren<Text>(true);
+            foreach (Text text in texts)
+            {
+                if (text.name == "SongListHeader")
+                {
+                    AddGlow(text, 30, new Color(0.05f, 0.95f, 1f, 0.85f));
+                }
+                else if (text.name == "CollectionLabel")
+                {
+                    AddGlow(text, 28, new Color(0.35f, 0.35f, 1f, 0.8f));
+                }
+            }
+        }
+
+        private static void AddGlow(Text text, int fontSize, Color glowColor)
+        {
+            text.fontSize = fontSize;
+            text.color = new Color(0.28f, 0.93f, 1f, 1f);
+            Outline outline = text.GetComponent<Outline>();
+            if (outline == null)
+                outline = text.gameObject.AddComponent<Outline>();
+            outline.effectColor = glowColor;
+            outline.effectDistance = new Vector2(2f, -2f);
         }
 
         private void OnSongSelected(SongData song)

@@ -14,16 +14,13 @@ namespace MusicGame.Gameplay
 
         private Material lineMaterial;
 
-        private void Awake()
+        private void Start()
         {
             BuildGuides();
         }
 
         private void OnValidate()
         {
-            if (!Application.isPlaying) return;
-            ClearGuides();
-            BuildGuides();
         }
 
         private void BuildGuides()

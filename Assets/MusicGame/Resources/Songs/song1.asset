@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 38567559e74500f418b280e37dab1f53, type: 3}
-  m_Name: Jumping
+  m_Name: song1
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
-  songId: jumping
-  title: Cute Jump
-  artist: "\u66f2\u5e08\uff1axxx \u8c31\u5e08\uff1axyxuanying"
+  songId: song1
+  title: A Forever Friend
+  artist: "\u66f2\u5e08\uff1a\u672a\u77e5 \u8c31\u5e08\uff1axyxuanying"
   bpm: 120
   previewStartTime: 8
-  coverImage: {fileID: -4312366431063467818, guid: 8a83a1cf6e65c4ae7bbfdd136e35c567, type: 3}
-  cueSheetName: song3
-  cueName: Cute Jump
-  easyChartPath: Charts/jumping_easy
-  normalChartPath: Charts/jumping_normal
-  hardChartPath: Charts/jumping_hard
+  coverImage: {fileID: -4192270184812131355, guid: 20220909781514aae9dea3b6c1846168, type: 3}
+  cueSheetName: song1
+  cueName: A Forever Friend
+  easyChartPath: Charts/test_easy
+  normalChartPath: Charts/test_easy
+  hardChartPath: Charts/test_easy

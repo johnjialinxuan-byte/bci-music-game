@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Kite
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
   songId: kite
-  title: Kite
-  artist: BCI Demo
+  title: "\u98ce\u7b5d"
+  artist: "\u66f2\u5e08\uff1axxx \u8c31\u5e08\uff1axyxuanying"
   bpm: 120
   previewStartTime: 8
   coverImage: {fileID: -2940649096967254720, guid: eb0967576069e4bdb89b7c3e5a5c5fc7, type: 3}

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: 2077
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
   songId: 2077
-  title: 2077
-  artist: BCI Demo
+  title: City of Night
+  artist: "\u66f2\u5e08\uff1axxx \u8c31\u5e08\uff1axyxuanying"
   bpm: 120
   previewStartTime: 8
   coverImage: {fileID: -4192270184812131355, guid: 20220909781514aae9dea3b6c1846168, type: 3}

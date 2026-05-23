@@ -19,7 +19,7 @@ namespace MusicGame.UI
         private Image[,] segmentImages;
         private RectTransform[,] segmentRects;
 
-        private void Awake()
+        private void Start()
         {
             BuildCurves();
         }

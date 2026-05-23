@@ -130,12 +130,20 @@ namespace MusicGame.Editor
             managers.AddComponent<UIManager>();
 
             GameObject canvas = CreateCanvas("MainMenuCanvas");
-            canvas.AddComponent<SciFiCurveBackground>();
-            CreateText("Title", canvas.transform, "BCI MUSIC GAME", 46, new Vector2(0, 120), new Vector2(720, 80));
-            Button start = CreateButton("StartButton", canvas.transform, "Start", new Vector2(0, 35));
-            Button settings = CreateButton("SettingsButton", canvas.transform, "Settings", new Vector2(0, -35));
-            Button about = CreateButton("AboutButton", canvas.transform, "About", new Vector2(0, -105));
-            Button quit = CreateButton("QuitButton", canvas.transform, "Quit", new Vector2(0, -175));
+            Image background = CreatePanel("StartBackground", canvas.transform, Color.white, Vector2.zero, new Vector2(1600, 900)).GetComponent<Image>();
+            background.sprite = LoadCoverSprite("Assets/Images/start.png");
+            background.preserveAspect = false;
+            background.raycastTarget = false;
+            background.transform.SetAsFirstSibling();
+
+            Button start = CreateButton("StartButton", canvas.transform, "Start", new Vector2(-400, -20), new Vector2(300, 76));
+            Button settings = CreateButton("SettingsButton", canvas.transform, "Settings", new Vector2(-400, -100), new Vector2(300, 76));
+            Button about = CreateButton("AboutButton", canvas.transform, "About", new Vector2(-400, -180), new Vector2(300, 76));
+            Button quit = CreateButton("QuitButton", canvas.transform, "Quit", new Vector2(-400, -260), new Vector2(300, 76));
+            StyleMenuTextButton(start);
+            StyleMenuTextButton(settings);
+            StyleMenuTextButton(about);
+            StyleMenuTextButton(quit);
 
             MainMenuController controller = new GameObject("MainMenuController").AddComponent<MainMenuController>();
             SetField(controller, "startButton", start);
@@ -149,20 +157,22 @@ namespace MusicGame.Editor
         private static void BuildSongSelect()
         {
             Scene scene = NewScene("SongSelect");
-            ConfigureCamera(new Color(0.015f, 0.018f, 0.025f), false);
+            ConfigureCamera(Color.black, false);
             GameObject canvas = CreateCanvas("SongSelectCanvas");
             canvas.AddComponent<SciFiCurveBackground>();
 
             CreatePanel("TopBand", canvas.transform, new Color(0.04f, 0.055f, 0.075f, 1f), new Vector2(0, 394), new Vector2(1600, 112));
-            Text selectTitle = CreateText("SongSelectTitle", canvas.transform, "SELECT MUSIC", 42, new Vector2(-480, 394), new Vector2(540, 70));
+            Text selectTitle = CreateText("SongSelectTitle", canvas.transform, "SELECT MUSIC", 42, new Vector2(-360, 394), new Vector2(420, 70));
             selectTitle.alignment = TextAnchor.MiddleLeft;
-            CreateText("CollectionLabel", canvas.transform, "BCI PERFORMANCE COLLECTION", 16, new Vector2(444, 394), new Vector2(440, 34)).color = new Color(0.22f, 0.86f, 0.9f);
+            Text collection = CreateText("CollectionLabel", canvas.transform, "BCI PERFORMANCE COLLECTION", 28, new Vector2(444, 394), new Vector2(560, 46));
+            StyleGlowText(collection, new Color(0.35f, 0.35f, 1f, 0.8f));
             Button back = CreateButton("BackButton", canvas.transform, "<  Back", new Vector2(-690, 394), new Vector2(135, 52));
             Button easy = CreateButton("EasyButton", canvas.transform, "EASY", new Vector2(120, -294), new Vector2(148, 62), new Color(0.09f, 0.38f, 0.41f, 1f));
             Button normal = CreateButton("NormalButton", canvas.transform, "NORMAL", new Vector2(286, -294), new Vector2(148, 62), new Color(0.13f, 0.54f, 0.58f, 1f));
             Button hard = CreateButton("HardButton", canvas.transform, "HARD", new Vector2(452, -294), new Vector2(148, 62), new Color(0.54f, 0.12f, 0.21f, 1f));
 
-            CreateText("SongListHeader", canvas.transform, "TRACK LIST", 16, new Vector2(-420, 276), new Vector2(400, 30)).color = new Color(0.22f, 0.86f, 0.9f);
+            Text listHeader = CreateText("SongListHeader", canvas.transform, "TRACK LIST", 30, new Vector2(-420, 276), new Vector2(400, 44));
+            StyleGlowText(listHeader, new Color(0.05f, 0.95f, 1f, 0.85f));
             GameObject list = CreatePanel("SongList", canvas.transform, new Color(0.06f, 0.075f, 0.095f, 0.95f), new Vector2(-420, -18), new Vector2(590, 536));
             GameObject content = new GameObject("Content");
             content.transform.SetParent(list.transform, false);
@@ -232,13 +242,45 @@ namespace MusicGame.Editor
             new GameObject("JudgeManager").AddComponent<JudgeManager>();
 
             GameObject canvas = CreateCanvas("GameplayCanvas");
-            Text score = CreateText("ScoreText", canvas.transform, "Score: 0", 22, new Vector2(-350, 230), new Vector2(240, 36));
-            Text combo = CreateText("ComboText", canvas.transform, "Combo: 0", 22, new Vector2(-350, 190), new Vector2(240, 36));
-            Text accuracy = CreateText("AccuracyText", canvas.transform, "Acc: 100%", 22, new Vector2(-350, 150), new Vector2(240, 36));
-            Button pause = CreateButton("PauseButton", canvas.transform, "II", new Vector2(380, 230), new Vector2(60, 44));
+            Text score = CreateText("ScoreText", canvas.transform, "SCORE  0", 42, Vector2.zero, new Vector2(500, 76));
+            score.rectTransform.anchorMin = Vector2.one;
+            score.rectTransform.anchorMax = Vector2.one;
+            score.rectTransform.pivot = Vector2.one;
+            score.rectTransform.anchoredPosition = new Vector2(-28f, -18f);
+            score.fontStyle = FontStyle.Bold;
+            score.alignment = TextAnchor.MiddleRight;
+            Text combo = CreateText("ComboText", canvas.transform, "COMBO  0", 56, new Vector2(0, 390), new Vector2(460, 94));
+            combo.rectTransform.anchorMin = new Vector2(0.5f, 1f);
+            combo.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+            combo.rectTransform.pivot = new Vector2(0.5f, 1f);
+            combo.rectTransform.anchoredPosition = new Vector2(0f, -20f);
+            combo.fontStyle = FontStyle.Bold;
+            combo.color = new Color(0.24f, 0.94f, 1f, 1f);
+            Text accuracy = CreateText("AccuracyText", canvas.transform, "ACC  100%", 42, Vector2.zero, new Vector2(500, 76));
+            accuracy.rectTransform.anchorMin = Vector2.one;
+            accuracy.rectTransform.anchorMax = Vector2.one;
+            accuracy.rectTransform.pivot = Vector2.one;
+            accuracy.rectTransform.anchoredPosition = new Vector2(-28f, -94f);
+            accuracy.fontStyle = FontStyle.Bold;
+            accuracy.alignment = TextAnchor.MiddleRight;
+            Button pause = CreateButton("PauseButton", canvas.transform, "II", Vector2.zero, new Vector2(120, 94));
+            pause.GetComponent<RectTransform>().anchorMin = new Vector2(0f, 1f);
+            pause.GetComponent<RectTransform>().anchorMax = new Vector2(0f, 1f);
+            pause.GetComponent<RectTransform>().pivot = new Vector2(0f, 1f);
+            pause.GetComponent<RectTransform>().anchoredPosition = new Vector2(28f, -18f);
+            Text pauseLabel = pause.GetComponentInChildren<Text>();
+            pauseLabel.fontSize = 56;
+            pauseLabel.fontStyle = FontStyle.Bold;
             GameObject pausePanel = CreatePanel("PauseMenuPanel", canvas.transform, new Color(0f, 0f, 0f, 0.82f), Vector2.zero, new Vector2(900, 600));
-            Button resume = CreateButton("ResumeButton", pausePanel.transform, "Resume", new Vector2(0, 35), new Vector2(180, 48));
-            Button quit = CreateButton("QuitButton", pausePanel.transform, "Quit", new Vector2(0, -35), new Vector2(180, 48));
+            Button resume = CreateButton("ResumeButton", pausePanel.transform, "Resume", new Vector2(0, 80), new Vector2(300, 72));
+            Button restart = CreateButton("RestartButton", pausePanel.transform, "Restart", Vector2.zero, new Vector2(300, 72));
+            Button quit = CreateButton("QuitButton", pausePanel.transform, "Quit", new Vector2(0, -80), new Vector2(300, 72));
+            foreach (Button button in new[] { resume, restart, quit })
+            {
+                Text label = button.GetComponentInChildren<Text>();
+                label.fontSize = 40;
+                label.fontStyle = FontStyle.Bold;
+            }
             pausePanel.SetActive(false);
 
             GameplayController controller = new GameObject("GameplayController").AddComponent<GameplayController>();
@@ -248,6 +290,7 @@ namespace MusicGame.Editor
             SetField(controller, "pauseButton", pause);
             SetField(controller, "pauseMenuPanel", pausePanel);
             SetField(controller, "resumeButton", resume);
+            SetField(controller, "restartButton", restart);
             SetField(controller, "quitButton", quit);
 
             CreateEventSystem();
@@ -324,6 +367,7 @@ namespace MusicGame.Editor
             image.color = new Color(0.1f, 0.13f, 0.17f, 1f);
             Button button = item.AddComponent<Button>();
             ConfigureButtonColors(button, image.color);
+            item.AddComponent<SongItemHoverEffect>();
             Text label = CreateText("Label", item.transform, "Song", 24, Vector2.zero, rect.sizeDelta);
             label.alignment = TextAnchor.MiddleLeft;
             RectTransform labelRect = label.GetComponent<RectTransform>();
@@ -373,16 +417,19 @@ namespace MusicGame.Editor
 
         private static void GenerateDefaultSongsAndCharts()
         {
-            CreateSong("2077", "2077", "BCI Demo", "2077", "song2", "City of Night");
-            CreateSong("jumping", "Jumping", "BCI Demo", "Jumping", "song3", "Cute Jump");
-            CreateSong("kite", "Kite", "BCI Demo", "Kite", "song6", "F");
+            CreateSong("2077", "2077", "City of Night", "曲师：xxx 谱师：xyxuanying", "2077", "song2", "City of Night");
+            CreateSong("Jumping", "jumping", "Cute Jump", "曲师：xxx 谱师：xyxuanying", "Jumping", "song3", "Cute Jump");
+            CreateSong("Kite", "kite", "风筝", "曲师：xxx 谱师：xyxuanying", "Kite", "song6", "F");
+            CreateSong("song1", "song1", "A Forever Friend", "曲师：未知 谱师：xyxuanying", "2077", "song1", "A Forever Friend");
+            CreateSong("song4", "song4", "Lost in the Phantom Night", "曲师：未知 谱师：xyxuanying", "2077", "song4", "Lost in the Phantom Night(1)");
+            CreateSong("song5", "song5", "song5", "曲师：未知 谱师：xyxuanying", "2077", "song5", "");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        private static void CreateSong(string songId, string title, string artist, string coverName, string cueSheetName, string cueName)
+        private static void CreateSong(string assetName, string songId, string title, string artist, string coverName, string cueSheetName, string cueName)
         {
-            string assetPath = $"Assets/MusicGame/Resources/Songs/{title}.asset";
+            string assetPath = $"Assets/MusicGame/Resources/Songs/{assetName}.asset";
             SongData song = AssetDatabase.LoadAssetAtPath<SongData>(assetPath);
             if (song == null)
             {
@@ -397,7 +444,8 @@ namespace MusicGame.Editor
             song.previewStartTime = 8f;
             song.cueSheetName = cueSheetName;
             song.cueName = cueName;
-            song.coverImage = LoadCoverSprite($"Assets/Images/Covers/{coverName}.png");
+            song.coverImage = LoadCoverSprite($"Assets/Images/Covers/{coverName}.png")
+                ?? LoadCoverSprite("Assets/Images/Covers/2077.png");
             song.easyChartPath = $"Charts/{songId}_easy";
             song.normalChartPath = $"Charts/{songId}_normal";
             song.hardChartPath = $"Charts/{songId}_hard";
@@ -461,7 +509,10 @@ namespace MusicGame.Editor
             {
                 AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/2077.asset"),
                 AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/Jumping.asset"),
-                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/Kite.asset")
+                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/Kite.asset"),
+                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/song1.asset"),
+                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/song4.asset"),
+                AssetDatabase.LoadAssetAtPath<SongData>("Assets/MusicGame/Resources/Songs/song5.asset")
             };
         }
 
@@ -606,6 +657,32 @@ namespace MusicGame.Editor
             colors.disabledColor = new Color(normalColor.r, normalColor.g, normalColor.b, 0.35f);
             colors.fadeDuration = 0.08f;
             button.colors = colors;
+        }
+
+        private static void StyleGlowText(Text text, Color glowColor)
+        {
+            text.color = new Color(0.28f, 0.93f, 1f, 1f);
+            Outline outline = text.gameObject.AddComponent<Outline>();
+            outline.effectColor = glowColor;
+            outline.effectDistance = new Vector2(2f, -2f);
+        }
+
+        private static void StyleMenuTextButton(Button button)
+        {
+            Image background = button.GetComponent<Image>();
+            if (background != null)
+                background.color = Color.clear;
+            button.transition = Selectable.Transition.None;
+
+            Text label = button.GetComponentInChildren<Text>();
+            if (label == null) return;
+            label.fontSize = 40;
+            label.fontStyle = FontStyle.Bold;
+            Outline outline = label.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.05f, 0.78f, 1f, 0.68f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            SongItemHoverEffect hoverEffect = button.gameObject.AddComponent<SongItemHoverEffect>();
+            hoverEffect.SetLabel(label);
         }
 
         private static GameObject CreatePanel(string name, Transform parent, Color color, Vector2 pos, Vector2 dimensions)

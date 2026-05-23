@@ -26,6 +26,10 @@ namespace MusicGame.Scenes
         private bool isPaused;
         private bool isCountingDown;
         private string countdownDisplay = "";
+        private int displayedCombo;
+        private float comboPulseTimer;
+        private const float ComboPulseDuration = 0.2f;
+        private const float ComboPulseScale = 0.28f;
 
         private void Start()
         {
@@ -35,6 +39,8 @@ namespace MusicGame.Scenes
 
         private void SetupScene()
         {
+            ConfigureHudDisplay();
+
             if (pauseButton != null)
                 pauseButton.onClick.AddListener(OnPause);
             if (resumeButton != null)
@@ -89,7 +95,85 @@ namespace MusicGame.Scenes
             }
         }
 
-private void InitializeGameplay()
+        private void ConfigureHudDisplay()
+        {
+            ConfigureCounterText(scoreText, new Vector2(-28f, -18f), TextAnchor.MiddleRight);
+            ConfigureCounterText(accuracyText, new Vector2(-28f, -94f), TextAnchor.MiddleRight);
+            ConfigurePauseMenuButton(resumeButton);
+            ConfigurePauseMenuButton(restartButton);
+            ConfigurePauseMenuButton(quitButton);
+
+            if (comboText != null)
+            {
+                RectTransform rect = comboText.rectTransform;
+                rect.anchorMin = new Vector2(0.5f, 1f);
+                rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = new Vector2(0f, -20f);
+                rect.sizeDelta = new Vector2(460f, 94f);
+                rect.localScale = Vector3.one;
+
+                comboText.text = "COMBO  0";
+                comboText.fontSize = 56;
+                comboText.fontStyle = FontStyle.Bold;
+                comboText.alignment = TextAnchor.MiddleCenter;
+                comboText.color = new Color(0.24f, 0.94f, 1f, 1f);
+
+                Outline outline = comboText.GetComponent<Outline>();
+                if (outline != null)
+                    Destroy(outline);
+            }
+
+            if (pauseButton != null)
+            {
+                RectTransform rect = pauseButton.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(0f, 1f);
+                rect.anchoredPosition = new Vector2(28f, -18f);
+                rect.sizeDelta = new Vector2(120f, 94f);
+
+                Text pauseLabel = pauseButton.GetComponentInChildren<Text>(true);
+                if (pauseLabel != null)
+                {
+                    pauseLabel.fontSize = 56;
+                    pauseLabel.fontStyle = FontStyle.Bold;
+                }
+            }
+        }
+
+        private static void ConfigureCounterText(Text text, Vector2 position, TextAnchor alignment)
+        {
+            if (text == null) return;
+
+            RectTransform rect = text.rectTransform;
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(500f, 76f);
+            text.fontSize = 42;
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = alignment;
+            text.color = Color.white;
+        }
+
+        private static void ConfigurePauseMenuButton(Button button)
+        {
+            if (button == null) return;
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(300f, 72f);
+
+            Text label = button.GetComponentInChildren<Text>(true);
+            if (label == null) return;
+
+            label.rectTransform.sizeDelta = rect.sizeDelta;
+            label.fontSize = 40;
+            label.fontStyle = FontStyle.Bold;
+        }
+
+        private void InitializeGameplay()
         {
             if (GameStateManager.Instance == null)
             {
@@ -137,17 +221,39 @@ private void InitializeGameplay()
         {
             if (!isPlaying || isPaused) return;
             UpdateUI();
+            AnimateCombo();
             CheckGameEnd();
         }
 
         private void UpdateUI()
         {
             if (scoreText != null)
-                scoreText.text = $"Score: {ScoreManager.Instance.Score}";
+                scoreText.text = $"SCORE  {ScoreManager.Instance.Score}";
             if (comboText != null)
-                comboText.text = $"Combo: {ScoreManager.Instance.Combo}";
+            {
+                int currentCombo = ScoreManager.Instance.Combo;
+                comboText.text = $"COMBO  {currentCombo}";
+                if (currentCombo > displayedCombo)
+                    comboPulseTimer = ComboPulseDuration;
+                displayedCombo = currentCombo;
+            }
             if (accuracyText != null)
-                accuracyText.text = $"Acc: {ScoreManager.Instance.Accuracy:F1}%";
+                accuracyText.text = $"ACC  {ScoreManager.Instance.Accuracy:F1}%";
+        }
+
+        private void AnimateCombo()
+        {
+            if (comboText == null) return;
+
+            float scale = 1f;
+            if (comboPulseTimer > 0f)
+            {
+                comboPulseTimer -= Time.unscaledDeltaTime;
+                float progress = 1f - Mathf.Clamp01(comboPulseTimer / ComboPulseDuration);
+                scale += Mathf.Sin(progress * Mathf.PI) * ComboPulseScale;
+            }
+
+            comboText.rectTransform.localScale = Vector3.one * scale;
         }
 
         private void CheckGameEnd()

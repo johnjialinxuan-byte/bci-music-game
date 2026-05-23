@@ -101,6 +101,7 @@ namespace MusicGame.Audio
                 return;
             }
 
+            bool playFirstCueByIndex = false;
             if (string.IsNullOrWhiteSpace(cueName))
             {
                 CriAtomEx.CueInfo[] cueInfos = acb.GetCueInfoList();
@@ -111,16 +112,25 @@ namespace MusicGame.Audio
                 }
 
                 cueName = cueInfos[0].name;
+                playFirstCueByIndex = string.IsNullOrWhiteSpace(cueName);
             }
 
             player ??= new CriAtomExPlayer(true);
-            player.SetCue(acb, cueName);
+            if (playFirstCueByIndex)
+            {
+                player.SetCueIndex(acb, 0);
+            }
+            else
+            {
+                player.SetCue(acb, cueName);
+            }
             playback = player.Start();
             hasPlayback = playback.id != CriAtomExPlayback.invalidId;
 
             if (!hasPlayback)
             {
-                Debug.LogError($"[AudioManager] CRIWARE failed to start '{cueSheetName}/{cueName}'.");
+                string playableCue = playFirstCueByIndex ? "#0" : cueName;
+                Debug.LogError($"[AudioManager] CRIWARE failed to start '{cueSheetName}/{playableCue}'.");
             }
         }
 
