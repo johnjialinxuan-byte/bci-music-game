@@ -25,6 +25,11 @@ public class IPC : MonoBehaviour
 
     public bool IsConnected => client != null && client.Connected;
 
+    [Header("在线数据（只读）")]
+    public int AttentionValue;           // attention 算法输出 0~100
+    public Vector3 GyroscopeValue;       // gyroscope 算法输出 (x=偏航, y=俯仰, z=翻滚)
+    public string LastAlgorithmName = "";
+
     TcpClient client;
     NetworkStream stream;
     Thread receiveThread;
@@ -175,9 +180,35 @@ public class IPC : MonoBehaviour
                 break;
 
             case "ipc_algorithm_test":
+                string algoName = ExtractField(json, "algorithm_name") ?? "";
+                LastAlgorithmName = algoName;
+
+                if (string.Equals(algoName, "attention", StringComparison.OrdinalIgnoreCase))
+                {
+                    string dataStr = ExtractNestedField(json, "result_args", "data");
+                    if (int.TryParse(dataStr, out int attVal))
+                        AttentionValue = Mathf.Clamp(attVal, 0, 100);
+                }
+                else if (string.Equals(algoName, "gyroscope", StringComparison.OrdinalIgnoreCase))
+                {
+                    string dataObj = ExtractNestedField(json, "result_args", "data");
+                    if (!string.IsNullOrEmpty(dataObj))
+                    {
+                        string gx = ExtractField(dataObj, "gyroscope_x");
+                        string gy = ExtractField(dataObj, "gyroscope_y");
+                        string gz = ExtractField(dataObj, "gyroscope_z");
+                        if (float.TryParse(gx, out float fx) &&
+                            float.TryParse(gy, out float fy) &&
+                            float.TryParse(gz, out float fz))
+                        {
+                            GyroscopeValue = new Vector3(fx, fy, fz);
+                        }
+                    }
+                }
+
                 var result = new AlgorithmTestData
                 {
-                    algorithm_name = ExtractField(json, "algorithm_name"),
+                    algorithm_name = algoName,
                     rawData = ExtractNestedField(json, "result_args", "data")
                 };
                 if (result.rawData != null)
@@ -235,6 +266,21 @@ public class IPC : MonoBehaviour
                 if (json[j] == '\\' && j + 1 < json.Length) { sb.Append(json[j + 1]); j++; }
                 else if (json[j] == '"') return sb.ToString();
                 else sb.Append(json[j]);
+            return null;
+        }
+
+        // 处理对象 { ... } 和数组 [ ... ]
+        if (json[i] == '{' || json[i] == '[')
+        {
+            char open = json[i];
+            char close = open == '{' ? '}' : ']';
+            int depth = 0;
+            int objStart = i;
+            for (int j = i; j < json.Length; j++)
+            {
+                if (json[j] == open) depth++;
+                else if (json[j] == close) { depth--; if (depth == 0) return json.Substring(objStart, j - objStart + 1).Trim(); }
+            }
             return null;
         }
 

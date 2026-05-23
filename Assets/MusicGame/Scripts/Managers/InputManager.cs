@@ -7,6 +7,10 @@ namespace MusicGame.Managers
     {
         public static InputManager Instance { get; private set; }
 
+        [Header("Flick 检测")]
+        [Tooltip("角速度绝对值超过此阈值才判定为有效 Flick。BCI 模式下建议根据 gyroScale 同步调整")]
+        [SerializeField] private float flickThreshold = 1.5f;
+
         private Input.IHoldValueProvider holdProvider;
         private Input.IHeadMotionProvider headMotionProvider;
 
@@ -14,6 +18,7 @@ namespace MusicGame.Managers
         public Vector3 CurrentAngularVelocity => headMotionProvider?.GetAngularVelocity() ?? Vector3.zero;
         public bool IsHoldProviderActive => holdProvider?.IsActive() ?? false;
         public bool IsHeadMotionProviderActive => headMotionProvider?.IsActive() ?? false;
+        public float FlickThreshold => flickThreshold;
 
         private void Awake()
         {
@@ -42,9 +47,8 @@ namespace MusicGame.Managers
         public FlickDirection DetectFlickDirection()
         {
             Vector3 angularVel = CurrentAngularVelocity;
-            float threshold = 1.5f; // rad/s threshold
 
-            if (Mathf.Abs(angularVel.x) < threshold && Mathf.Abs(angularVel.y) < threshold)
+            if (Mathf.Abs(angularVel.x) < flickThreshold && Mathf.Abs(angularVel.y) < flickThreshold)
                 return (FlickDirection)(-1); // Invalid
 
             if (Mathf.Abs(angularVel.x) > Mathf.Abs(angularVel.y))
