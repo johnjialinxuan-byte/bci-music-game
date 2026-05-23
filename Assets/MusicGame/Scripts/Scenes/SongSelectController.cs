@@ -62,6 +62,8 @@ namespace MusicGame.Scenes
                 CreateTestSong();
             }
 
+            availableSongs.Sort((a, b) => string.Compare(a.songId, b.songId, System.StringComparison.OrdinalIgnoreCase));
+
             foreach (var song in availableSongs)
             {
                 CreateSongItem(song);

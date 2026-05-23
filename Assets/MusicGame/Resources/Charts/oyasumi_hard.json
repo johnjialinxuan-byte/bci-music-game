@@ -1,0 +1,168 @@
+{
+  "difficulty": 2,
+  "level": 8,
+  "notes": [
+    {
+      "time": 1.5,
+      "x": 0,
+      "y": 1.7999999523162842,
+      "z": 10,
+      "noteType": 0,
+      "duration": 0.800000011920929,
+      "threshold": 45,
+      "flickDirection": 0,
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": -1.35,
+      "endY": 1.7999999523162842,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.36000000536441806,
+          "x": -0.675,
+          "y": 1.7999999523162842,
+          "z": 10
+        }
+      ]
+    },
+    {
+      "time": 2.700000047683716,
+      "x": 1.803809404373169,
+      "y": 1.5345441102981567,
+      "z": 10,
+      "noteType": 1,
+      "duration": 0,
+      "threshold": 55,
+      "flickDirection": 1,
+      "approachTime": 2,
+      "attentionPoints": []
+    },
+    {
+      "time": 3.9000000953674316,
+      "x": 2.7592592239379883,
+      "y": 0.8164729475975037,
+      "z": 10,
+      "noteType": 0,
+      "duration": 1.7999999523162842,
+      "threshold": 65,
+      "flickDirection": 2,
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": 2.7592592239379883,
+      "endY": 1.9164729475975038,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.8099999785423279,
+          "x": 2.7592592239379883,
+          "y": 1.3664729475975037,
+          "z": 10
+        }
+      ]
+    },
+    {
+      "time": 5.100000381469727,
+      "x": 2.4169864654541016,
+      "y": -0.142417773604393,
+      "z": 10,
+      "noteType": 0,
+      "duration": 0.800000011920929,
+      "threshold": 75,
+      "flickDirection": 3,
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": 2.4169864654541016,
+      "endY": -1.242417773604393,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.36000000536441806,
+          "x": 2.4169864654541016,
+          "y": -0.692417773604393,
+          "z": 10
+        }
+      ]
+    },
+    {
+      "time": 6.300000190734863,
+      "x": 0.9379669427871704,
+      "y": -1.0593020915985107,
+      "z": 10,
+      "noteType": 0,
+      "duration": 1.2999999523162842,
+      "threshold": 45,
+      "flickDirection": 0,
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": -0.4120330572128297,
+      "endY": -1.0593020915985107,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.5849999785423279,
+          "x": 0.26296694278717037,
+          "y": -1.0593020915985107,
+          "z": 10
+        }
+      ]
+    },
+    {
+      "time": 7.5,
+      "x": -0.9821930527687073,
+      "y": -1.663744330406189,
+      "z": 10,
+      "noteType": 1,
+      "duration": 0,
+      "threshold": 55,
+      "flickDirection": 1,
+      "approachTime": 2,
+      "attentionPoints": []
+    },
+    {
+      "time": 8.700000762939453,
+      "x": -2.4404118061065674,
+      "y": -1.7774635553359985,
+      "z": 10,
+      "noteType": 0,
+      "duration": 0.800000011920929,
+      "threshold": 65,
+      "flickDirection": 2,
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": -2.4404118061065674,
+      "endY": -0.6774635553359984,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.36000000536441806,
+          "x": -2.4404118061065674,
+          "y": -1.2274635553359985,
+          "z": 10
+        }
+      ]
+    },
+    {
+      "time": 9.90000057220459,
+      "x": -2.7508671283721924,
+      "y": -1.3669180870056152,
+      "z": 10,
+      "noteType": 0,
+      "duration": 1.2999999523162842,
+      "threshold": 75,
+      "flickDirection": 3,
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": -2.7508671283721924,
+      "endY": -2.2,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.5849999785423279,
+          "x": -2.7508671283721924,
+          "y": -1.7834590435028077,
+          "z": 10
+        }
+      ]
+    }
+  ]
+}
