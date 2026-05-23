@@ -130,7 +130,6 @@ GameObject:
   - component: {fileID: 19265789}
   - component: {fileID: 19265788}
   - component: {fileID: 19265787}
-  - component: {fileID: 19265786}
   - component: {fileID: 19265785}
   - component: {fileID: 19265784}
   - component: {fileID: 19265783}
@@ -179,20 +178,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a6530c764789478ea2dfc1c499e4e95, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Audio.AudioManager
-  cueSheetName: 
-  cueName: 
---- !u!114 &19265786
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 19265782}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dfdbe7ab22d5eb544a5378fabbae4b39, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Audio.CriAudioManager
+  acfFile: CRI/NewProject.acf
+  cueSheetFolder: CRI/WorkUnit_0
   cueSheetName: 
   cueName: 
 --- !u!114 &19265787
@@ -1316,7 +1303,7 @@ MonoBehaviour:
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 46
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1

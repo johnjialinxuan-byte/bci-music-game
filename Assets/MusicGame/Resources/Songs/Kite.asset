@@ -18,8 +18,8 @@ MonoBehaviour:
   bpm: 120
   previewStartTime: 8
   coverImage: {fileID: -2940649096967254720, guid: eb0967576069e4bdb89b7c3e5a5c5fc7, type: 3}
-  cueSheetName: CueSheet_0
-  cueName: cue_0000
+  cueSheetName: song6
+  cueName: F
   easyChartPath: Charts/kite_easy
   normalChartPath: Charts/kite_normal
   hardChartPath: Charts/kite_hard

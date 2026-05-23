@@ -18,8 +18,8 @@ MonoBehaviour:
   bpm: 120
   previewStartTime: 8
   coverImage: {fileID: -4312366431063467818, guid: 8a83a1cf6e65c4ae7bbfdd136e35c567, type: 3}
-  cueSheetName: CueSheet_0
-  cueName: cue_0000
+  cueSheetName: song3
+  cueName: Cute Jump
   easyChartPath: Charts/jumping_easy
   normalChartPath: Charts/jumping_normal
   hardChartPath: Charts/jumping_hard

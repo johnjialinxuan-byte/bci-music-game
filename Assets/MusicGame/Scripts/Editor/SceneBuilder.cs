@@ -68,7 +68,7 @@ namespace MusicGame.Editor
             GameObject managers = new GameObject("Managers");
             managers.AddComponent<GameStateManager>();
             managers.AddComponent<ScoreManager>();
-            managers.AddComponent<CriAudioManager>();
+            managers.AddComponent<AudioManager>();
             managers.AddComponent<UIManager>();
 
             // Create Canvas

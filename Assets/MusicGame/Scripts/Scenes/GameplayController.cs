@@ -62,15 +62,26 @@ private void InitializeGameplay()
             currentChart = ChartManager.Instance.LoadChart(chartPath);
             if (currentChart == null)
             {
-                Debug.LogError("[GameplayController] No chart found!");
+                Debug.LogError("[GameplayController] No valid JSON chart found.");
                 GameStateManager.Instance.ChangeScene(GameScene.SongSelect);
+                return;
+            }
+
+            if (AudioManager.Instance == null)
+            {
+                Debug.LogError("[GameplayController] AudioManager not found. Start from MainMenu.");
+                return;
+            }
+
+            AudioManager.Instance.PlaySong(currentSong);
+            if (!AudioManager.Instance.IsPlaying())
+            {
+                Debug.LogError($"[GameplayController] CRIWARE playback failed for song '{currentSong.title}'.");
                 return;
             }
 
             ScoreManager.Instance.Initialize(currentChart.notes.Count);
             NoteManager.Instance.LoadChart(currentChart);
-
-            AudioManager.Instance.PlaySong(currentSong.cueSheetName, currentSong.cueName);
             NoteManager.Instance.StartSpawning();
             isPlaying = true;
         }

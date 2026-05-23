@@ -2,22 +2,12 @@ namespace MusicGame.Audio
 {
     public static class MusicTime
     {
-        public static float Current
-        {
-            get
-            {
-                if (AudioManager.Instance != null && AudioManager.Instance.IsPlaying())
-                {
-                    return AudioManager.Instance.GetCurrentTime();
-                }
+        public static float Current => AudioManager.Instance != null
+            ? AudioManager.Instance.GetCurrentTime()
+            : 0f;
 
-                if (CriAudioManager.Instance != null && CriAudioManager.Instance.IsPlaying)
-                {
-                    return CriAudioManager.Instance.GetCurrentTime();
-                }
+        public static float CurrentMilliseconds => Current * 1000f;
 
-                return 0f;
-            }
-        }
+        public static bool IsPlaying => AudioManager.Instance != null && AudioManager.Instance.IsPlaying();
     }
 }

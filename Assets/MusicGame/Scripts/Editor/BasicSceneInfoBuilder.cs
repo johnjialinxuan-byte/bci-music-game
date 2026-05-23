@@ -126,9 +126,7 @@ namespace MusicGame.Editor
             GameObject managers = new GameObject("PersistentManagers");
             managers.AddComponent<GameStateManager>();
             managers.AddComponent<ScoreManager>();
-            managers.AddComponent<CriAudioManager>();
             managers.AddComponent<AudioManager>();
-            managers.AddComponent<CriWareInitializer>();
             managers.AddComponent<UIManager>();
 
             GameObject canvas = CreateCanvas("MainMenuCanvas");
@@ -375,14 +373,14 @@ namespace MusicGame.Editor
 
         private static void GenerateDefaultSongsAndCharts()
         {
-            CreateSong("2077", "2077", "BCI Demo", "2077");
-            CreateSong("jumping", "Jumping", "BCI Demo", "Jumping");
-            CreateSong("kite", "Kite", "BCI Demo", "Kite");
+            CreateSong("2077", "2077", "BCI Demo", "2077", "song2", "City of Night");
+            CreateSong("jumping", "Jumping", "BCI Demo", "Jumping", "song3", "Cute Jump");
+            CreateSong("kite", "Kite", "BCI Demo", "Kite", "song6", "F");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        private static void CreateSong(string songId, string title, string artist, string coverName)
+        private static void CreateSong(string songId, string title, string artist, string coverName, string cueSheetName, string cueName)
         {
             string assetPath = $"Assets/MusicGame/Resources/Songs/{title}.asset";
             SongData song = AssetDatabase.LoadAssetAtPath<SongData>(assetPath);
@@ -397,8 +395,8 @@ namespace MusicGame.Editor
             song.artist = artist;
             song.bpm = 120f;
             song.previewStartTime = 8f;
-            song.cueSheetName = "CueSheet_0";
-            song.cueName = "cue_0000";
+            song.cueSheetName = cueSheetName;
+            song.cueName = cueName;
             song.coverImage = LoadCoverSprite($"Assets/Images/Covers/{coverName}.png");
             song.easyChartPath = $"Charts/{songId}_easy";
             song.normalChartPath = $"Charts/{songId}_normal";

@@ -18,8 +18,8 @@ MonoBehaviour:
   bpm: 120
   previewStartTime: 8
   coverImage: {fileID: -4192270184812131355, guid: 20220909781514aae9dea3b6c1846168, type: 3}
-  cueSheetName: CueSheet_0
-  cueName: cue_0000
+  cueSheetName: song2
+  cueName: City of Night
   easyChartPath: Charts/2077_easy
   normalChartPath: Charts/2077_normal
   hardChartPath: Charts/2077_hard

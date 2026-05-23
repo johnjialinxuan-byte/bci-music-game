@@ -3,29 +3,32 @@ using CriWare;
 
 namespace MusicGame.Audio
 {
-    public class CriWareInitializer : MonoBehaviour
+    [DisallowMultipleComponent]
+    public sealed class CriWareInitializer : MonoBehaviour
     {
+        private bool initializedHere;
+
         private void Awake()
         {
-            InitializeCriAtom();
-        }
+            if (CriAtomPlugin.IsLibraryInitialized()) return;
 
-        private void InitializeCriAtom()
-        {
             try
             {
                 CriAtomPlugin.InitializeLibrary();
-                Debug.Log("[CriWareInitializer] CriAtomPlugin initialized.");
+                initializedHere = true;
             }
-            catch (System.Exception e)
+            catch (System.Exception exception)
             {
-                Debug.LogWarning($"[CriWareInitializer] CriAtomPlugin init issue: {e.Message}");
+                Debug.LogError($"[CriWareInitializer] CRIWARE initialization failed: {exception.Message}");
             }
         }
 
         private void OnDestroy()
         {
-            // Do not finalize here - managed by CriAudioManager lifecycle
+            if (!initializedHere || !CriAtomPlugin.IsLibraryInitialized()) return;
+
+            CriAtomPlugin.FinalizeLibrary();
+            initializedHere = false;
         }
     }
 }
