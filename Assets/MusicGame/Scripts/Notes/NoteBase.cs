@@ -16,7 +16,7 @@ namespace MusicGame.Notes
         [SerializeField] protected float judgePlaneZ = 0f;
         [SerializeField] protected float spawnZ = 10f;
         [SerializeField] protected float minScale = 0.3f;
-        [SerializeField] protected float maxScale = 1.0f;
+        [SerializeField] protected float maxScale = 0.82f;
         [SerializeField] protected float minAlpha = 0.4f;
         [SerializeField] protected float maxAlpha = 1.0f;
 

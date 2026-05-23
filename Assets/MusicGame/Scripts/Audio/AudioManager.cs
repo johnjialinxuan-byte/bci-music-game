@@ -118,6 +118,7 @@ namespace MusicGame.Audio
             }
 
             player ??= new CriAtomExPlayer(true);
+            player.Loop(false);
             if (playFirstCueByIndex)
             {
                 player.SetCueIndex(acb, 0);
@@ -198,6 +199,12 @@ namespace MusicGame.Audio
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(cue))
+            {
+                Debug.LogWarning($"[AudioManager] PlaySFX skipped for '{cueSheet}' because cueName is empty.");
+                return;
+            }
+
             string acbFilePath = Path.Combine(CriWare.Common.streamingAssetsPath, $"{cueSheetFolder}/{cueSheet}.acb");
             if (!File.Exists(acbFilePath))
             {
@@ -215,13 +222,6 @@ namespace MusicGame.Audio
             }
 
             sfxPlayer ??= new CriAtomExPlayer(true);
-
-            if (string.IsNullOrWhiteSpace(cue))
-            {
-                CriAtomEx.CueInfo[] cueInfos = acb.GetCueInfoList();
-                if (cueInfos == null || cueInfos.Length == 0) return;
-                cue = cueInfos[0].name;
-            }
 
             sfxPlayer.SetCue(acb, cue);
             sfxPlayer.Start();

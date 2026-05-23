@@ -18,6 +18,9 @@ namespace MusicGame.UI
 
         private void Play()
         {
+            if (string.IsNullOrWhiteSpace(cueSheet) || string.IsNullOrWhiteSpace(cueName))
+                return;
+
             AudioManager.Instance?.PlaySFX(cueSheet, cueName);
         }
     }

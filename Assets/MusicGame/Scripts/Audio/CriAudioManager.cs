@@ -82,6 +82,7 @@ namespace MusicGame.Audio
                 return;
             }
 
+            player.Loop(false);
             player.SetCue(acb, cueName);
             currentPlayback = player.Start();
             isPlaying = true;

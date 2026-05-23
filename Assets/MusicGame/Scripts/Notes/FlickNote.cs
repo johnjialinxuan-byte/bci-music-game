@@ -42,7 +42,6 @@ protected override void Update()
                 return;
 
             JudgmentType judgment = JudgeManager.Instance.Judge(timeDiff);
-            AudioManager.Instance?.PlaySFX("cuesheet0", "");
             OnHit(judgment);
         }
 

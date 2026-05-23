@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
   songId: 0_oyasumi
   title: "\u304A\u3084\u3059\u307F,Mother Goose"
-  artist: CRI Sample
+  artist: "\u66f2\u5e08\uff1a\u4e4c\u9e26Producer \u8c31\u5e08\uff1axyxuanying"
   bpm: 120
   previewStartTime: 8
-  coverImage: {fileID: 0}
+  coverImage: {fileID: 4743966413976176986, guid: e22e9ebe060a1479e820c7c9d3903d0d, type: 3}
   cueSheetName: oyasumi
   cueName: ""
   easyChartPath: Charts/oyasumi_easy
