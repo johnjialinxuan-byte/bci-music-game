@@ -11,7 +11,6 @@ namespace MusicGame.Scenes
         [SerializeField] private Transform songListContent;
         [SerializeField] private GameObject songItemPrefab;
         [SerializeField] private Button backButton;
-        [SerializeField] private Button playPreviewButton;
         [SerializeField] private Image coverImage;
         [SerializeField] private Text titleText;
         [SerializeField] private Text artistText;
@@ -29,8 +28,6 @@ namespace MusicGame.Scenes
         {
             if (backButton != null)
                 backButton.onClick.AddListener(OnBackClicked);
-            if (playPreviewButton != null)
-                playPreviewButton.onClick.AddListener(OnPlayPreview);
             if (easyButton != null)
                 easyButton.onClick.AddListener(() => OnDifficultySelected(Difficulty.Easy));
             if (normalButton != null)
@@ -108,9 +105,27 @@ namespace MusicGame.Scenes
             if (songItemPrefab == null || songListContent == null) return;
 
             GameObject item = Instantiate(songItemPrefab, songListContent);
+            item.name = $"SongItem_{song.title}";
             Button btn = item.GetComponent<Button>();
-            Text txt = item.GetComponentInChildren<Text>();
-            if (txt != null) txt.text = song.title;
+            Text txt = item.GetComponentInChildren<Text>(true);
+            if (txt != null)
+            {
+                txt.text = song.title;
+                txt.enabled = true;
+                txt.color = Color.white;
+                txt.fontSize = 24;
+                txt.alignment = TextAnchor.MiddleLeft;
+
+                RectTransform textRect = txt.GetComponent<RectTransform>();
+                if (textRect != null)
+                {
+                    textRect.anchorMin = Vector2.zero;
+                    textRect.anchorMax = Vector2.one;
+                    textRect.offsetMin = new Vector2(24f, 0f);
+                    textRect.offsetMax = new Vector2(-24f, 0f);
+                }
+            }
+
             if (btn != null)
             {
                 SongData capturedSong = song;
@@ -134,12 +149,6 @@ namespace MusicGame.Scenes
             if (coverImage != null) coverImage.sprite = song.coverImage;
 
             Audio.AudioManager.Instance.StopSong();
-        }
-
-        private void OnPlayPreview()
-        {
-            if (selectedSong == null) return;
-            Audio.AudioManager.Instance.PlaySong(selectedSong.cueSheetName, selectedSong.cueName);
         }
 
         private void OnDifficultySelected(Difficulty difficulty)

@@ -25,6 +25,7 @@ namespace MusicGame.Editor
         private const string ScenePath = "Assets/MusicGame/Scenes";
         private const string PrefabPath = "Assets/MusicGame/Prefabs";
         private const string GeneratedPath = "Assets/MusicGame/Generated";
+        private const string NoteSpriteResourcesPath = "Assets/MusicGame/Resources/Images/Notes";
 
         [MenuItem("MusicGame/Generate Basic Scene Info")]
         public static void Generate()
@@ -35,13 +36,16 @@ namespace MusicGame.Editor
             EnsureFolder("Assets/MusicGame", "Resources");
             EnsureFolder("Assets/MusicGame/Resources", "Songs");
             EnsureFolder("Assets/MusicGame/Resources", "Charts");
+            EnsureFolder("Assets/MusicGame/Resources", "Images");
+            EnsureFolder("Assets/MusicGame/Resources/Images", "Notes");
             EnsureFolder(GeneratedPath, "Materials");
+            PrepareNoteSprites();
 
             Material cyan = CreateMaterial("BCI_Cyan", new Color(0.1f, 0.95f, 0.9f, 1f));
             Material white = CreateMaterial("BCI_White", Color.white);
             Material red = CreateMaterial("BCI_Red", new Color(1f, 0.18f, 0.18f, 1f));
             Material blue = CreateMaterial("BCI_Blue", new Color(0.2f, 0.45f, 1f, 1f));
-            Material plane = CreateMaterial("JudgePlane_Transparent", new Color(0.1f, 0.9f, 1f, 0.22f), true);
+            Material plane = CreateMaterial("JudgePlane_Transparent", new Color(0.1f, 0.9f, 1f, 0.08f), true);
 
             HoldNote holdPrefab = CreateHoldNotePrefab(cyan);
             FlickNote flickPrefab = CreateFlickNotePrefab(cyan);
@@ -74,8 +78,10 @@ namespace MusicGame.Editor
             GameObject root = new GameObject("HoldNote_Basic");
             HoldNote note = root.AddComponent<HoldNote>();
 
-            Transform head = CreateCube("HoldHead", root.transform, material, new Vector3(0.7f, 0.18f, 0.08f)).transform;
-            Transform tail = CreateCube("HoldTail", root.transform, material, new Vector3(0.45f, 0.15f, 0.08f)).transform;
+            SpriteRenderer headRenderer = CreateSpriteVisual("HoldHeadClick", root.transform, "white_click", new Vector3(0.85f, 0.85f, 1f));
+            SpriteRenderer tailRenderer = CreateSpriteVisual("HoldTailSlide", root.transform, "white_slide", new Vector3(0.78f, 0.78f, 1f));
+            Transform head = headRenderer.transform;
+            Transform tail = tailRenderer.transform;
 
             LineRenderer line = root.AddComponent<LineRenderer>();
             line.sharedMaterial = material;
@@ -84,7 +90,9 @@ namespace MusicGame.Editor
             line.endWidth = 0.12f;
             line.useWorldSpace = true;
 
+            SetField(note, "spriteRenderer", headRenderer);
             SetField(note, "visualTransform", head);
+            SetField(note, "tailSpriteRenderer", tailRenderer);
             SetField(note, "tailTransform", tail);
             SetField(note, "connectionLine", line);
 
@@ -98,15 +106,10 @@ namespace MusicGame.Editor
             GameObject root = new GameObject("FlickNote_Basic");
             FlickNote note = root.AddComponent<FlickNote>();
 
-            GameObject arrow = new GameObject("ArrowTriangle");
-            arrow.transform.SetParent(root.transform, false);
-            arrow.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+            SpriteRenderer arrowRenderer = CreateSpriteVisual("SlideArrow", root.transform, "miku_slide", Vector3.one);
+            GameObject arrow = arrowRenderer.gameObject;
 
-            MeshFilter filter = arrow.AddComponent<MeshFilter>();
-            filter.sharedMesh = CreateTriangleMesh();
-            MeshRenderer renderer = arrow.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = material;
-
+            SetField(note, "spriteRenderer", arrowRenderer);
             SetField(note, "visualTransform", arrow.transform);
             SetField(note, "arrowTransform", arrow.transform);
 
@@ -125,9 +128,11 @@ namespace MusicGame.Editor
             managers.AddComponent<ScoreManager>();
             managers.AddComponent<CriAudioManager>();
             managers.AddComponent<AudioManager>();
+            managers.AddComponent<CriWareInitializer>();
             managers.AddComponent<UIManager>();
 
             GameObject canvas = CreateCanvas("MainMenuCanvas");
+            canvas.AddComponent<SciFiCurveBackground>();
             CreateText("Title", canvas.transform, "BCI MUSIC GAME", 46, new Vector2(0, 120), new Vector2(720, 80));
             Button start = CreateButton("StartButton", canvas.transform, "Start", new Vector2(0, 35));
             Button settings = CreateButton("SettingsButton", canvas.transform, "Settings", new Vector2(0, -35));
@@ -146,17 +151,21 @@ namespace MusicGame.Editor
         private static void BuildSongSelect()
         {
             Scene scene = NewScene("SongSelect");
-            ConfigureCamera(new Color(0.02f, 0.02f, 0.025f), false);
+            ConfigureCamera(new Color(0.015f, 0.018f, 0.025f), false);
             GameObject canvas = CreateCanvas("SongSelectCanvas");
+            canvas.AddComponent<SciFiCurveBackground>();
 
-            CreateText("SongSelectTitle", canvas.transform, "Select Song", 42, new Vector2(0, 250), new Vector2(720, 70));
-            Button back = CreateButton("BackButton", canvas.transform, "Back", new Vector2(-640, 310), new Vector2(150, 56));
-            Button preview = CreateButton("PreviewButton", canvas.transform, "Preview", new Vector2(430, -170), new Vector2(190, 58));
-            Button easy = CreateButton("EasyButton", canvas.transform, "Easy", new Vector2(250, -305), new Vector2(150, 58));
-            Button normal = CreateButton("NormalButton", canvas.transform, "Normal", new Vector2(430, -305), new Vector2(150, 58));
-            Button hard = CreateButton("HardButton", canvas.transform, "Hard", new Vector2(610, -305), new Vector2(150, 58));
+            CreatePanel("TopBand", canvas.transform, new Color(0.04f, 0.055f, 0.075f, 1f), new Vector2(0, 394), new Vector2(1600, 112));
+            Text selectTitle = CreateText("SongSelectTitle", canvas.transform, "SELECT MUSIC", 42, new Vector2(-480, 394), new Vector2(540, 70));
+            selectTitle.alignment = TextAnchor.MiddleLeft;
+            CreateText("CollectionLabel", canvas.transform, "BCI PERFORMANCE COLLECTION", 16, new Vector2(444, 394), new Vector2(440, 34)).color = new Color(0.22f, 0.86f, 0.9f);
+            Button back = CreateButton("BackButton", canvas.transform, "<  Back", new Vector2(-690, 394), new Vector2(135, 52));
+            Button easy = CreateButton("EasyButton", canvas.transform, "EASY", new Vector2(120, -294), new Vector2(148, 62), new Color(0.09f, 0.38f, 0.41f, 1f));
+            Button normal = CreateButton("NormalButton", canvas.transform, "NORMAL", new Vector2(286, -294), new Vector2(148, 62), new Color(0.13f, 0.54f, 0.58f, 1f));
+            Button hard = CreateButton("HardButton", canvas.transform, "HARD", new Vector2(452, -294), new Vector2(148, 62), new Color(0.54f, 0.12f, 0.21f, 1f));
 
-            GameObject list = CreatePanel("SongList", canvas.transform, new Color(1f, 1f, 1f, 0.08f), new Vector2(-360, -10), new Vector2(560, 480));
+            CreateText("SongListHeader", canvas.transform, "TRACK LIST", 16, new Vector2(-420, 276), new Vector2(400, 30)).color = new Color(0.22f, 0.86f, 0.9f);
+            GameObject list = CreatePanel("SongList", canvas.transform, new Color(0.06f, 0.075f, 0.095f, 0.95f), new Vector2(-420, -18), new Vector2(590, 536));
             GameObject content = new GameObject("Content");
             content.transform.SetParent(list.transform, false);
             RectTransform contentRect = content.AddComponent<RectTransform>();
@@ -173,16 +182,18 @@ namespace MusicGame.Editor
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            Image cover = CreatePanel("Cover", canvas.transform, new Color(1f, 1f, 1f, 0.18f), new Vector2(430, 85), new Vector2(320, 320)).GetComponent<Image>();
-            Text title = CreateText("TitleText", canvas.transform, "Song Title", 32, new Vector2(430, -100), new Vector2(430, 54));
-            Text artist = CreateText("ArtistText", canvas.transform, "Artist", 22, new Vector2(430, -145), new Vector2(430, 36));
+            GameObject coverFrame = CreatePanel("CoverFrame", canvas.transform, new Color(0.22f, 0.86f, 0.9f, 1f), new Vector2(286, 103), new Vector2(350, 350));
+            Image cover = CreatePanel("Cover", coverFrame.transform, Color.white, Vector2.zero, new Vector2(340, 340)).GetComponent<Image>();
+            cover.preserveAspect = true;
+            Text title = CreateText("TitleText", canvas.transform, "Song Title", 34, new Vector2(286, -103), new Vector2(530, 55));
+            Text artist = CreateText("ArtistText", canvas.transform, "Artist", 20, new Vector2(286, -145), new Vector2(530, 36));
+            artist.color = new Color(0.72f, 0.78f, 0.86f);
 
             SongSelectController controller = new GameObject("SongSelectController").AddComponent<SongSelectController>();
             SetField(controller, "songListContent", content.transform);
             SetField(controller, "songItemPrefab", CreateSongItemPrefab());
             SetField(controller, "availableSongs", LoadGeneratedSongs());
             SetField(controller, "backButton", back);
-            SetField(controller, "playPreviewButton", preview);
             SetField(controller, "coverImage", cover);
             SetField(controller, "titleText", title);
             SetField(controller, "artistText", artist);
@@ -199,12 +210,10 @@ namespace MusicGame.Editor
             Scene scene = NewScene("Gameplay");
             ConfigureCamera(Color.black, true);
 
-            GameObject judgePlane = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            judgePlane.name = "JudgePlane_Z0";
+            GameObject judgePlane = new GameObject("JudgePlane_Z0");
             judgePlane.transform.position = Vector3.zero;
-            judgePlane.transform.localScale = new Vector3(8f, 5f, 1f);
-            judgePlane.GetComponent<MeshRenderer>().sharedMaterial = planeMaterial;
             judgePlane.AddComponent<JudgePlane>();
+            judgePlane.AddComponent<SpaceGuide>();
 
             GameObject chartManager = new GameObject("ChartManager");
             chartManager.AddComponent<ChartManager>();
@@ -314,16 +323,54 @@ namespace MusicGame.Editor
             RectTransform rect = item.AddComponent<RectTransform>();
             rect.sizeDelta = new Vector2(500, 72);
             Image image = item.AddComponent<Image>();
-            image.color = new Color(1f, 1f, 1f, 0.12f);
-            item.AddComponent<Button>();
+            image.color = new Color(0.1f, 0.13f, 0.17f, 1f);
+            Button button = item.AddComponent<Button>();
+            ConfigureButtonColors(button, image.color);
             Text label = CreateText("Label", item.transform, "Song", 24, Vector2.zero, rect.sizeDelta);
             label.alignment = TextAnchor.MiddleLeft;
             RectTransform labelRect = label.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
             labelRect.offsetMin = new Vector2(24, 0);
             labelRect.offsetMax = new Vector2(-24, 0);
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(item, $"{PrefabPath}/SongItem_Basic.prefab");
             Object.DestroyImmediate(item);
             return prefab;
+        }
+
+        private static void PrepareNoteSprites()
+        {
+            string[] colors = { "miku", "white", "red", "blue" };
+            string[] shapes = { "round", "click", "slide" };
+            foreach (string color in colors)
+            {
+                foreach (string shape in shapes)
+                {
+                    string fileName = $"{color}_{shape}.svg";
+                    string source = $"Assets/Images/Notes/{fileName}";
+                    string destination = $"{NoteSpriteResourcesPath}/{fileName}";
+                    if (AssetDatabase.LoadAssetAtPath<Object>(destination) == null)
+                    {
+                        AssetDatabase.CopyAsset(source, destination);
+                    }
+                    SetSvgAsSprite(destination);
+                }
+            }
+        }
+
+        private static void SetSvgAsSprite(string path)
+        {
+            AssetImporter importer = AssetImporter.GetAtPath(path);
+            if (importer == null) return;
+
+            SerializedObject serializedImporter = new SerializedObject(importer);
+            SerializedProperty svgType = serializedImporter.FindProperty("m_SvgType");
+            if (svgType != null && svgType.enumValueIndex != 1)
+            {
+                svgType.enumValueIndex = 1;
+                serializedImporter.ApplyModifiedPropertiesWithoutUndo();
+                importer.SaveAndReimport();
+            }
         }
 
         private static void GenerateDefaultSongsAndCharts()
@@ -385,7 +432,23 @@ namespace MusicGame.Editor
                     duration = flick ? 0f : Mathf.Lerp(0.8f, 1.8f, (i % 3) / 2f),
                     threshold = 45 + (i % 4) * 10,
                     flickDirection = (FlickDirection)(i % 4),
-                    approachTime = 2f
+                    approachTime = 2f,
+                    useCustomEndPoint = !flick,
+                    endX = Mathf.Sin((i + 1) * 0.7f) * 2.8f,
+                    endY = Mathf.Cos((i + 1) * 0.55f) * 1.8f,
+                    endZ = 10f,
+                    attentionPoints = flick
+                        ? new List<NotePathPoint>()
+                        : new List<NotePathPoint>
+                        {
+                            new NotePathPoint
+                            {
+                                timeOffset = Mathf.Lerp(0.25f, 0.65f, (i % 3) / 2f),
+                                x = Mathf.Lerp(Mathf.Sin(i * 0.7f) * 2.8f, Mathf.Sin((i + 1) * 0.7f) * 2.8f, 0.5f),
+                                y = Mathf.Lerp(Mathf.Cos(i * 0.55f) * 1.8f, Mathf.Cos((i + 1) * 0.55f) * 1.8f, 0.5f),
+                                z = 10f
+                            }
+                        }
                 });
             }
 
@@ -427,18 +490,15 @@ namespace MusicGame.Editor
             return cube;
         }
 
-        private static Mesh CreateTriangleMesh()
+        private static SpriteRenderer CreateSpriteVisual(string name, Transform parent, string spriteName, Vector3 scale)
         {
-            Mesh mesh = new Mesh();
-            mesh.vertices = new[]
-            {
-                new Vector3(0.55f, 0f, 0f),
-                new Vector3(-0.35f, 0.42f, 0f),
-                new Vector3(-0.35f, -0.42f, 0f)
-            };
-            mesh.triangles = new[] { 0, 1, 2 };
-            mesh.RecalculateNormals();
-            return mesh;
+            GameObject visual = new GameObject(name);
+            visual.transform.SetParent(parent, false);
+            visual.transform.localScale = scale;
+            SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{NoteSpriteResourcesPath}/{spriteName}.svg");
+            renderer.color = Color.white;
+            return renderer;
         }
 
         private static Material CreateMaterial(string name, Color color, bool transparent = false)
@@ -447,7 +507,10 @@ namespace MusicGame.Editor
             Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null)
             {
-                material = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+                Shader shader = transparent
+                    ? Shader.Find("Universal Render Pipeline/Unlit")
+                    : Shader.Find("Universal Render Pipeline/Lit");
+                material = new Material(shader ?? Shader.Find("Standard"));
                 AssetDatabase.CreateAsset(material, path);
             }
 
@@ -456,6 +519,12 @@ namespace MusicGame.Editor
             {
                 material.SetFloat("_Surface", 1f);
                 material.SetFloat("_Blend", 0f);
+                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                material.SetFloat("_ZWrite", 0f);
+                material.SetOverrideTag("RenderType", "Transparent");
+                material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                 material.renderQueue = 3000;
             }
             return material;
@@ -517,10 +586,28 @@ namespace MusicGame.Editor
 
         private static Button CreateButton(string name, Transform parent, string label, Vector2 pos, Vector2 dimensions)
         {
-            GameObject obj = CreatePanel(name, parent, new Color(1f, 1f, 1f, 0.14f), pos, dimensions);
+            return CreateButton(name, parent, label, pos, dimensions, new Color(0.12f, 0.16f, 0.21f, 1f));
+        }
+
+        private static Button CreateButton(string name, Transform parent, string label, Vector2 pos, Vector2 dimensions, Color normalColor)
+        {
+            GameObject obj = CreatePanel(name, parent, normalColor, pos, dimensions);
             Button button = obj.AddComponent<Button>();
+            ConfigureButtonColors(button, normalColor);
             CreateText("Text", obj.transform, label, 18, Vector2.zero, dimensions);
             return button;
+        }
+
+        private static void ConfigureButtonColors(Button button, Color normalColor)
+        {
+            ColorBlock colors = button.colors;
+            colors.normalColor = normalColor;
+            colors.highlightedColor = Color.Lerp(normalColor, Color.white, 0.18f);
+            colors.pressedColor = Color.Lerp(normalColor, Color.black, 0.25f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.disabledColor = new Color(normalColor.r, normalColor.g, normalColor.b, 0.35f);
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
         }
 
         private static GameObject CreatePanel(string name, Transform parent, Color color, Vector2 pos, Vector2 dimensions)

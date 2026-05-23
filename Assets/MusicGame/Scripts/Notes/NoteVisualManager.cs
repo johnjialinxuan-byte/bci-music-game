@@ -21,26 +21,35 @@ namespace MusicGame.Notes
             
             return NotesPath + $"{color}_{shape}";
         }
+
+        public static string GetHoldSpritePath(NoteData data, string shape)
+        {
+            return GetDirectionalSpritePath(data.flickDirection, shape);
+        }
+
+        public static string GetDirectionalSpritePath(FlickDirection direction, string shape)
+        {
+            return NotesPath + $"{GetDirectionColor(direction)}_{shape}";
+        }
         
         /// <summary>
         /// Gets the color for the note based on type and direction.
         /// </summary>
+        public static string GetDirectionColor(FlickDirection direction)
+        {
+            return direction switch
+            {
+                FlickDirection.Right => "miku",
+                FlickDirection.Left => "white",
+                FlickDirection.Up => "red",
+                FlickDirection.Down => "blue",
+                _ => "white"
+            };
+        }
+
         private static string GetNoteColor(NoteData data)
         {
-            if (data.noteType == NoteType.Flick)
-            {
-                return data.flickDirection switch
-                {
-                    FlickDirection.Right => "miku",  // Cyan
-                    FlickDirection.Left => "white",
-                    FlickDirection.Up => "red",
-                    FlickDirection.Down => "blue",
-                    _ => "white"
-                };
-            }
-            
-            // Hold notes - default to white for click points
-            return "white";
+            return GetDirectionColor(data.flickDirection);
         }
         
         /// <summary>
@@ -56,8 +65,8 @@ namespace MusicGame.Notes
             
             if (data.noteType == NoteType.Flick)
             {
-                // Flick notes are round by default
-                return "round";
+                // Directional flick is the slide endpoint of a note path.
+                return "slide";
             }
             
             return "round";

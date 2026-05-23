@@ -6,12 +6,12 @@ namespace MusicGame.Audio
         {
             get
             {
-                if (AudioManager.Instance != null)
+                if (AudioManager.Instance != null && AudioManager.Instance.IsPlaying())
                 {
                     return AudioManager.Instance.GetCurrentTime();
                 }
 
-                if (CriAudioManager.Instance != null)
+                if (CriAudioManager.Instance != null && CriAudioManager.Instance.IsPlaying)
                 {
                     return CriAudioManager.Instance.GetCurrentTime();
                 }

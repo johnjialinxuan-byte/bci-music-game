@@ -245,10 +245,8 @@ namespace MusicGame.Editor
             // Judge Plane
             GameObject judgePlaneObj = new GameObject("JudgePlane");
             judgePlaneObj.transform.position = Vector3.zero;
-            SpriteRenderer judgeRenderer = judgePlaneObj.AddComponent<SpriteRenderer>();
-            judgeRenderer.color = new Color(0.2f, 0.8f, 1f, 0.3f);
-            judgeRenderer.sortingOrder = -1;
             JudgePlane judgePlane = judgePlaneObj.AddComponent<JudgePlane>();
+            judgePlaneObj.AddComponent<SpaceGuide>();
 
             // Managers
             GameObject chartMgr = new GameObject("ChartManager");
@@ -309,7 +307,6 @@ namespace MusicGame.Editor
             ctrl.GetType().GetField("noteSpawner", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, spawner);
             ctrl.GetType().GetField("gameplayCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, gameplayCam);
             ctrl.GetType().GetField("judgePlaneTransform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, judgePlaneObj.transform);
-            ctrl.GetType().GetField("judgePlaneRenderer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, judgeRenderer);
             ctrl.GetType().GetField("scoreText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, scoreTxt.GetComponent<Text>());
             ctrl.GetType().GetField("comboText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, comboTxt.GetComponent<Text>());
             ctrl.GetType().GetField("accuracyText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, accTxt.GetComponent<Text>());

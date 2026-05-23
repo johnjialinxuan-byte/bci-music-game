@@ -3,37 +3,62 @@
   "level": 3,
   "notes": [
     {
-      "time": 1.0,
-      "x": -2.0,
-      "y": 1.0,
-      "z": 10.0,
+      "time": 1,
+      "x": -2,
+      "y": 1,
+      "z": 10,
       "noteType": 0,
       "duration": 1.5,
       "threshold": 50,
       "flickDirection": 0,
-      "approachTime": 2.0
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": -3.35,
+      "endY": 1,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.675,
+          "x": -2.675,
+          "y": 1,
+          "z": 10
+        }
+      ]
     },
     {
-      "time": 3.0,
-      "x": 2.0,
-      "y": -1.0,
-      "z": 10.0,
+      "time": 3,
+      "x": 2,
+      "y": -1,
+      "z": 10,
       "noteType": 1,
-      "duration": 0.0,
+      "duration": 0,
       "threshold": 0,
       "flickDirection": 2,
-      "approachTime": 2.0
+      "approachTime": 2,
+      "attentionPoints": []
     },
     {
-      "time": 5.0,
-      "x": 0.0,
-      "y": 0.0,
-      "z": 10.0,
+      "time": 5,
+      "x": 0,
+      "y": 0,
+      "z": 10,
       "noteType": 0,
-      "duration": 2.0,
+      "duration": 2,
       "threshold": 60,
       "flickDirection": 0,
-      "approachTime": 2.0
+      "approachTime": 2,
+      "useCustomEndPoint": true,
+      "endX": -1.35,
+      "endY": 0,
+      "endZ": 10,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.9,
+          "x": -0.675,
+          "y": 0,
+          "z": 10
+        }
+      ]
     }
   ]
 }

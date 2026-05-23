@@ -1,7 +1,6 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MusicGame.Core;
-using MusicGame.Gameplay;
-using MusicGame.Audio;
 using MusicGame.Managers;
 
 namespace MusicGame.Notes
@@ -13,11 +12,14 @@ namespace MusicGame.Notes
         [SerializeField] private Transform tailTransform;
         [SerializeField] private LineRenderer connectionLine;
         [SerializeField] private float samplingInterval = 0.1f;
+        [SerializeField] private float sequenceStepTime = 0.16f;
+        [SerializeField] private float sequenceBaseScale = 0.78f;
+        [SerializeField] private int maxGeneratedPieces = 48;
 
+        private readonly List<HoldPiece> holdPieces = new List<HoldPiece>();
         private bool isHolding;
         private bool headJudged;
         private JudgmentType headJudgment;
-        private float holdStartTime;
         private float lastSampleTime;
         private float successProgress;
 
@@ -30,83 +32,33 @@ namespace MusicGame.Notes
             isHolding = false;
             headJudged = false;
             headJudgment = JudgmentType.Miss;
-            holdStartTime = 0f;
             lastSampleTime = 0f;
             successProgress = 0f;
 
-            if (tailTransform != null)
-            {
-                Vector3 tailPos = data.SpawnPosition;
-                tailPos.z = spawnZ;
-                tailTransform.position = tailPos;
-            }
+            transform.position = Vector3.zero;
+            if (connectionLine != null)
+                connectionLine.enabled = false;
+
+            BuildHoldSequence(data);
         }
 
-protected override void Update()
+        protected override void Update()
         {
             base.Update();
             TryHitHead();
         }
 
-
         protected override void UpdatePosition()
         {
             if (headJudged && isHolding)
             {
-                UpdateHoldVisuals();
+                UpdateSequenceVisuals();
                 EvaluateHold();
                 CheckHoldEnd();
                 return;
             }
 
-            base.UpdatePosition();
-            UpdateTailPosition();
-            UpdateConnectionLine();
-        }
-
-        private void UpdateTailPosition()
-        {
-            if (tailTransform == null || Data == null) return;
-
-            float tailTimeUntilHit = Data.EndTime - SongTime;
-            float tailProgress = 1f - (tailTimeUntilHit / Data.approachTime);
-            tailProgress = Mathf.Clamp01(tailProgress);
-
-            Vector3 judgePos = Data.SpawnPosition;
-            judgePos.z = judgePlaneZ;
-
-            Vector3 currentTailPos = Vector3.Lerp(Data.SpawnPosition, judgePos, tailProgress);
-            tailTransform.position = currentTailPos;
-
-            float zDistance = Mathf.Abs(currentTailPos.z - judgePlaneZ);
-            float zRange = Mathf.Abs(spawnZ - judgePlaneZ);
-            float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange);
-            tailTransform.localScale = Vector3.one * scaleFactor;
-        }
-
-        private void UpdateConnectionLine()
-        {
-            if (connectionLine == null) return;
-            connectionLine.SetPosition(0, transform.position);
-            connectionLine.SetPosition(1, tailTransform != null ? tailTransform.position : transform.position);
-        }
-
-        private void UpdateHoldVisuals()
-        {
-            Vector3 judgePos = Data.SpawnPosition;
-            judgePos.z = judgePlaneZ;
-            transform.position = judgePos;
-            UpdateTailPosition();
-            UpdateConnectionLine();
-
-            if (visualTransform != null)
-                visualTransform.localScale = Vector3.one * maxScale;
-            if (spriteRenderer != null)
-            {
-                Color c = spriteRenderer.color;
-                c.a = maxAlpha;
-                spriteRenderer.color = c;
-            }
+            UpdateSequenceVisuals();
         }
 
         private void EvaluateHold()
@@ -131,7 +83,7 @@ protected override void Update()
             }
         }
 
-public void TryHitHead()
+        public void TryHitHead()
         {
             if (headJudged || IsMissed) return;
 
@@ -144,7 +96,6 @@ public void TryHitHead()
             headJudgment = JudgeManager.Instance.Judge(timeDiff);
             headJudged = true;
             isHolding = true;
-            holdStartTime = SongTime;
             lastSampleTime = SongTime;
         }
 
@@ -169,7 +120,7 @@ public void TryHitHead()
             base.CheckMiss();
         }
 
-private void OnCompleted()
+        private void OnCompleted()
         {
             if (IsJudged || IsMissed) return;
             IsJudged = true;
@@ -184,6 +135,169 @@ private void OnCompleted()
         public override void OnHit(JudgmentType judgment)
         {
             TryHitHead();
+        }
+
+        private void BuildHoldSequence(NoteData data)
+        {
+            EnsureTemplatePieces();
+
+            foreach (HoldPiece piece in holdPieces)
+            {
+                piece.Renderer.gameObject.SetActive(false);
+            }
+
+            int pieceIndex = 0;
+            pieceIndex = ConfigurePiece(pieceIndex, "click", data.time, data.SpawnPosition, true);
+
+            float duration = Mathf.Max(data.duration, sequenceStepTime);
+            int roundCount = Mathf.Clamp(Mathf.CeilToInt(duration / Mathf.Max(0.05f, sequenceStepTime)) - 1, 1, maxGeneratedPieces);
+            for (int i = 0; i < roundCount; i++)
+            {
+                float normalized = (i + 1f) / (roundCount + 1f);
+                float hitTime = Mathf.Lerp(data.time, data.EndTime, normalized);
+                Vector3 hitPosition = Vector3.Lerp(data.SpawnPosition, data.EndPosition, normalized);
+                pieceIndex = ConfigurePiece(pieceIndex, "round", hitTime, hitPosition, true);
+            }
+
+            if (data.attentionPoints != null)
+            {
+                for (int i = 0; i < data.attentionPoints.Count; i++)
+                {
+                    NotePathPoint point = data.attentionPoints[i];
+                    float hitTime = data.time + point.timeOffset;
+                    pieceIndex = ConfigurePiece(pieceIndex, "click", hitTime, point.Position, true);
+                }
+            }
+
+            pieceIndex = ConfigurePiece(pieceIndex, "slide", data.EndTime, data.EndPosition, true);
+            UpdateSequenceVisuals();
+        }
+
+        private void EnsureTemplatePieces()
+        {
+            if (spriteRenderer != null && !ContainsRenderer(spriteRenderer))
+            {
+                holdPieces.Add(new HoldPiece(spriteRenderer, sequenceBaseScale));
+            }
+
+            if (tailSpriteRenderer != null && !ContainsRenderer(tailSpriteRenderer))
+            {
+                holdPieces.Add(new HoldPiece(tailSpriteRenderer, sequenceBaseScale));
+            }
+        }
+
+        private bool ContainsRenderer(SpriteRenderer renderer)
+        {
+            for (int i = 0; i < holdPieces.Count; i++)
+            {
+                if (holdPieces[i].Renderer == renderer) return true;
+            }
+
+            return false;
+        }
+
+        private int ConfigurePiece(int index, string shape, float hitTime, Vector3 hitPosition, bool disappearAtPlane)
+        {
+            if (index >= maxGeneratedPieces + 3) return index;
+
+            HoldPiece piece = GetOrCreatePiece(index);
+            Sprite sprite = NoteVisualManager.LoadNoteSprite(NoteVisualManager.GetHoldSpritePath(Data, shape));
+            if (sprite != null)
+            {
+                piece.Renderer.sprite = sprite;
+            }
+
+            piece.Shape = shape;
+            piece.HitTime = hitTime;
+            piece.HitPosition = hitPosition;
+            piece.DisappearAtPlane = disappearAtPlane;
+            piece.Renderer.sortingOrder = shape == "click" ? 4 : shape == "slide" ? 3 : 2;
+            piece.Renderer.gameObject.name = $"Hold_{shape}_{index:00}";
+            piece.Renderer.gameObject.SetActive(true);
+            SetPieceRotation(piece.Renderer.transform, shape, Data.flickDirection);
+            return index + 1;
+        }
+
+        private HoldPiece GetOrCreatePiece(int index)
+        {
+            while (holdPieces.Count <= index)
+            {
+                GameObject pieceObject = new GameObject("Hold_round");
+                pieceObject.transform.SetParent(transform, false);
+                SpriteRenderer renderer = pieceObject.AddComponent<SpriteRenderer>();
+                renderer.color = Color.white;
+                holdPieces.Add(new HoldPiece(renderer, sequenceBaseScale));
+            }
+
+            return holdPieces[index];
+        }
+
+        private void UpdateSequenceVisuals()
+        {
+            float zRange = Mathf.Max(0.001f, Mathf.Abs(spawnZ - judgePlaneZ));
+
+            foreach (HoldPiece piece in holdPieces)
+            {
+                if (piece.Renderer == null || !piece.Renderer.gameObject.activeSelf) continue;
+
+                float timeUntilHit = piece.HitTime - SongTime;
+                float progress = Mathf.Clamp01(1f - (timeUntilHit / Data.approachTime));
+                if (piece.DisappearAtPlane && progress >= 1f)
+                {
+                    piece.Renderer.gameObject.SetActive(false);
+                    continue;
+                }
+
+                Vector3 spawnPosition = piece.HitPosition;
+                spawnPosition.z = spawnZ;
+                Vector3 judgePosition = piece.HitPosition;
+                judgePosition.z = judgePlaneZ;
+                Vector3 currentPosition = Vector3.Lerp(spawnPosition, judgePosition, progress);
+                piece.Renderer.transform.position = currentPosition;
+
+                float zDistance = Mathf.Abs(currentPosition.z - judgePlaneZ);
+                float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange) * piece.BaseScale;
+                piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
+
+                Color color = piece.Renderer.color;
+                color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange);
+                piece.Renderer.color = color;
+            }
+        }
+
+        private void SetPieceRotation(Transform pieceTransform, string shape, FlickDirection direction)
+        {
+            if (shape != "slide")
+            {
+                pieceTransform.rotation = Quaternion.identity;
+                return;
+            }
+
+            float angle = direction switch
+            {
+                FlickDirection.Left => 180f,
+                FlickDirection.Right => 0f,
+                FlickDirection.Up => 90f,
+                FlickDirection.Down => -90f,
+                _ => 0f
+            };
+            pieceTransform.rotation = Quaternion.Euler(0f, 0f, angle);
+        }
+
+        private sealed class HoldPiece
+        {
+            public HoldPiece(SpriteRenderer renderer, float baseScale)
+            {
+                Renderer = renderer;
+                BaseScale = baseScale;
+            }
+
+            public readonly SpriteRenderer Renderer;
+            public readonly float BaseScale;
+            public string Shape;
+            public float HitTime;
+            public Vector3 HitPosition;
+            public bool DisappearAtPlane;
         }
     }
 }

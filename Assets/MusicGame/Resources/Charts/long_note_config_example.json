@@ -1,0 +1,35 @@
+{
+  "difficulty": 0,
+  "level": 1,
+  "notes": [
+    {
+      "time": 2.0,
+      "x": -2.0,
+      "y": 0.5,
+      "z": 10.0,
+      "noteType": 0,
+      "duration": 2.4,
+      "threshold": 60,
+      "flickDirection": 1,
+      "approachTime": 2.0,
+      "useCustomEndPoint": true,
+      "endX": 2.0,
+      "endY": 0.5,
+      "endZ": 10.0,
+      "attentionPoints": [
+        {
+          "timeOffset": 0.8,
+          "x": -0.6,
+          "y": 0.9,
+          "z": 10.0
+        },
+        {
+          "timeOffset": 1.6,
+          "x": 0.8,
+          "y": 0.2,
+          "z": 10.0
+        }
+      ]
+    }
+  ]
+}

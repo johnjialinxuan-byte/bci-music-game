@@ -42,15 +42,33 @@ namespace MusicGame.Audio
             cueSheetName = cueSheet;
             cueName = cue;
 
+            if (string.IsNullOrWhiteSpace(cueSheetName) || string.IsNullOrWhiteSpace(cueName))
+            {
+                Debug.LogWarning("[AudioManager] No CRIWARE cue assigned yet; add the song cue sheet and cue before audio playback.");
+                playing = false;
+                return;
+            }
+
             if (player == null)
             {
                 player = new CriAtomExPlayer(true);
             }
 
-            CriAtomExAcb acb = CriAtom.GetAcb(cueSheetName);
+            CriAtomExAcb acb;
+            try
+            {
+                acb = CriAtom.GetAcb(cueSheetName);
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogWarning($"[AudioManager] CRIWARE is not ready for '{cueSheetName}': {exception.Message}");
+                playing = false;
+                return;
+            }
+
             if (acb == null)
             {
-                Debug.LogError($"[AudioManager] CRIWARE ACB not found: {cueSheetName}");
+                Debug.LogWarning($"[AudioManager] CRIWARE ACB not found: {cueSheetName}");
                 playing = false;
                 return;
             }
