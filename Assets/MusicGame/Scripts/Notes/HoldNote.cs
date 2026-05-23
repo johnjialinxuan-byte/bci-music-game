@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using MusicGame.Core;
 using MusicGame.Managers;
+using MusicGame.Audio;
 
 namespace MusicGame.Notes
 {
@@ -97,6 +98,8 @@ namespace MusicGame.Notes
             headJudged = true;
             isHolding = true;
             lastSampleTime = SongTime;
+
+            AudioManager.Instance?.PlaySFX("cuesheet1", "");
         }
 
         public void OnRelease()

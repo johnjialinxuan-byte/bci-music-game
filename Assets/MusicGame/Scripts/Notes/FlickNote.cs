@@ -2,6 +2,7 @@ using UnityEngine;
 using MusicGame.Core;
 using MusicGame.Gameplay;
 using MusicGame.Managers;
+using MusicGame.Audio;
 
 namespace MusicGame.Notes
 {
@@ -41,6 +42,7 @@ protected override void Update()
                 return;
 
             JudgmentType judgment = JudgeManager.Instance.Judge(timeDiff);
+            AudioManager.Instance?.PlaySFX("cuesheet0", "");
             OnHit(judgment);
         }
 

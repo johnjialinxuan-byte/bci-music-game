@@ -5,6 +5,7 @@ using MusicGame.Core;
 using MusicGame.Audio;
 using MusicGame.Gameplay;
 using MusicGame.Managers;
+using MusicGame.UI;
 
 namespace MusicGame.Scenes
 {
@@ -171,6 +172,9 @@ namespace MusicGame.Scenes
             label.rectTransform.sizeDelta = rect.sizeDelta;
             label.fontSize = 40;
             label.fontStyle = FontStyle.Bold;
+
+            if (button.GetComponent<ButtonSFX>() == null)
+                button.gameObject.AddComponent<ButtonSFX>();
         }
 
         private void InitializeGameplay()
@@ -204,17 +208,10 @@ namespace MusicGame.Scenes
                 return;
             }
 
-            AudioManager.Instance.PlaySong(currentSong);
-            if (!AudioManager.Instance.IsPlaying())
-            {
-                Debug.LogError($"[GameplayController] CRIWARE playback failed for song '{currentSong.title}'.");
-                return;
-            }
-
             ScoreManager.Instance.Initialize(currentChart.notes.Count);
             NoteManager.Instance.LoadChart(currentChart);
-            NoteManager.Instance.StartSpawning();
-            isPlaying = true;
+
+            StartCoroutine(GameStartCountdownCoroutine());
         }
 
         private void Update()
@@ -284,6 +281,28 @@ namespace MusicGame.Scenes
         {
             if (!isPaused || isCountingDown) return;
             StartCoroutine(CountdownCoroutine());
+        }
+
+        private IEnumerator GameStartCountdownCoroutine()
+        {
+            isCountingDown = true;
+            for (int i = 3; i > 0; i--)
+            {
+                countdownDisplay = i.ToString();
+                yield return new WaitForSecondsRealtime(1f);
+            }
+            countdownDisplay = "";
+            isCountingDown = false;
+
+            AudioManager.Instance.PlaySong(currentSong);
+            if (!AudioManager.Instance.IsPlaying())
+            {
+                Debug.LogError($"[GameplayController] CRIWARE playback failed for song '{currentSong.title}'.");
+                yield break;
+            }
+
+            NoteManager.Instance.StartSpawning();
+            isPlaying = true;
         }
 
         private IEnumerator CountdownCoroutine()

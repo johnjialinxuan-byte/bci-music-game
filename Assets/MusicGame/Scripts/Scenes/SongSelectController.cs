@@ -28,13 +28,29 @@ namespace MusicGame.Scenes
         private void Start()
         {
             if (backButton != null)
+            {
                 backButton.onClick.AddListener(OnBackClicked);
+                if (backButton.GetComponent<ButtonSFX>() == null)
+                    backButton.gameObject.AddComponent<ButtonSFX>();
+            }
             if (easyButton != null)
+            {
                 easyButton.onClick.AddListener(() => OnDifficultySelected(Difficulty.Easy));
+                if (easyButton.GetComponent<ButtonSFX>() == null)
+                    easyButton.gameObject.AddComponent<ButtonSFX>();
+            }
             if (normalButton != null)
+            {
                 normalButton.onClick.AddListener(() => OnDifficultySelected(Difficulty.Normal));
+                if (normalButton.GetComponent<ButtonSFX>() == null)
+                    normalButton.gameObject.AddComponent<ButtonSFX>();
+            }
             if (hardButton != null)
+            {
                 hardButton.onClick.AddListener(() => OnDifficultySelected(Difficulty.Hard));
+                if (hardButton.GetComponent<ButtonSFX>() == null)
+                    hardButton.gameObject.AddComponent<ButtonSFX>();
+            }
 
             ConfigureHeaderEffects();
             LoadSongs();
@@ -142,6 +158,10 @@ namespace MusicGame.Scenes
             if (hoverEffect == null)
                 hoverEffect = item.AddComponent<SongItemHoverEffect>();
             hoverEffect.SetLabel(txt);
+
+            ButtonSFX sfx = item.GetComponent<ButtonSFX>();
+            if (sfx == null)
+                item.AddComponent<ButtonSFX>();
 
             songItems.Add(item);
         }

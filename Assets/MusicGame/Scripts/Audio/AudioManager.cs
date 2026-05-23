@@ -29,6 +29,8 @@ namespace MusicGame.Audio
         private bool criAtomReady;
         private bool ownsAcfRegistration;
 
+        private CriAtomExPlayer sfxPlayer;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -186,6 +188,43 @@ namespace MusicGame.Audio
             {
                 playback.Resume(CriAtomEx.ResumeMode.AllPlayback);
             }
+        }
+
+        public void PlaySFX(string cueSheet, string cue)
+        {
+            if (string.IsNullOrWhiteSpace(cueSheet))
+            {
+                Debug.LogWarning("[AudioManager] PlaySFX called with empty cueSheet.");
+                return;
+            }
+
+            string acbFilePath = Path.Combine(CriWare.Common.streamingAssetsPath, $"{cueSheetFolder}/{cueSheet}.acb");
+            if (!File.Exists(acbFilePath))
+            {
+                Debug.LogWarning($"[AudioManager] PlaySFX: ACB file not found at {acbFilePath}. Skipping.");
+                return;
+            }
+
+            if (!EnsureCueSheetLoaded(cueSheet)) return;
+
+            CriAtomExAcb acb = CriAtom.GetAcb(cueSheet);
+            if (acb == null)
+            {
+                Debug.LogError($"[AudioManager] PlaySFX: ACB not found for {cueSheet}.");
+                return;
+            }
+
+            sfxPlayer ??= new CriAtomExPlayer(true);
+
+            if (string.IsNullOrWhiteSpace(cue))
+            {
+                CriAtomEx.CueInfo[] cueInfos = acb.GetCueInfoList();
+                if (cueInfos == null || cueInfos.Length == 0) return;
+                cue = cueInfos[0].name;
+            }
+
+            sfxPlayer.SetCue(acb, cue);
+            sfxPlayer.Start();
         }
 
         private bool EnsureCueSheetLoaded(string cueSheet)

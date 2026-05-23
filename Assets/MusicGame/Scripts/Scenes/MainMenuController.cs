@@ -106,6 +106,10 @@ namespace MusicGame.Scenes
             if (hoverEffect == null)
                 hoverEffect = button.gameObject.AddComponent<SongItemHoverEffect>();
             hoverEffect.SetLabel(label);
+
+            ButtonSFX sfx = button.GetComponent<ButtonSFX>();
+            if (sfx == null)
+                button.gameObject.AddComponent<ButtonSFX>();
         }
 
         private void OnStartClicked()
