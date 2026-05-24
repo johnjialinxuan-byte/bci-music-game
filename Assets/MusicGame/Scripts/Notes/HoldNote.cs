@@ -28,7 +28,9 @@ namespace MusicGame.Notes
         private MeshFilter ribbonFilter;
         private MeshRenderer ribbonRenderer;
         private Mesh ribbonMesh;
-        private bool isHolding;
+        
+        private bool holdJudged;
+private bool isHolding;
         private bool headJudged;
         private bool tailJudged;
         private JudgmentType headJudgment;
@@ -42,6 +44,7 @@ namespace MusicGame.Notes
         {
             base.Initialize(data);
             isHolding = false;
+            holdJudged = false;
             headJudged = false;
             tailJudged = false;
             headJudgment = JudgmentType.Miss;
@@ -63,16 +66,13 @@ namespace MusicGame.Notes
 
         protected override void UpdatePosition()
         {
-            if (headJudged && isHolding)
-            {
-                UpdateSequenceVisuals();
-                EvaluateHold();
-                TryHitTailSlide();
-                CheckHoldEnd();
-                return;
-            }
-
             UpdateSequenceVisuals();
+
+            if (headJudged && isHolding)
+                EvaluateHold();
+
+            TryHitTailSlide();
+            CheckHoldEnd();
         }
 
         private void EvaluateHold()
@@ -87,20 +87,26 @@ namespace MusicGame.Notes
 
         private void CheckHoldEnd()
         {
-            if (!isHolding) return;
-            if (SongTime > Data.EndTime + JudgeManager.Instance.MissWindow)
-                OnMiss();
+            if (!holdJudged && SongTime > Data.EndTime)
+                ResolveHoldJudgment();
+
+            if (Data.HasTailFlick && !tailJudged && SongTime > Data.EndTime + JudgeManager.Instance.MissWindow)
+                ResolveTailJudgment(JudgmentType.Miss);
+
+            TryFinishJudgment();
         }
 
         public void TryHitHead()
         {
-            if (headJudged || IsMissed || InputManager.Instance == null) return;
+            if (headJudged || holdJudged || IsJudged || InputManager.Instance == null) return;
 
             float timeDiff = SongTime - Data.time;
-            if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
+            if (timeDiff < -JudgeManager.Instance.GoodWindow || SongTime > Data.EndTime) return;
             if (InputManager.Instance.CurrentHoldValue < Data.threshold) return;
 
-            headJudgment = JudgeManager.Instance.Judge(timeDiff);
+            headJudgment = timeDiff <= JudgeManager.Instance.GoodWindow
+                ? JudgeManager.Instance.Judge(timeDiff)
+                : JudgmentType.Good;
             headJudged = true;
             isHolding = true;
             lastSampleTime = SongTime;
@@ -108,28 +114,25 @@ namespace MusicGame.Notes
 
         public void OnRelease()
         {
-            if (!isHolding) return;
+            if (!isHolding || holdJudged) return;
 
-            if (SongTime < Data.EndTime - JudgeManager.Instance.GoodWindow || !tailJudged)
-            {
-                isHolding = false;
-                OnMiss();
-            }
+            if (SongTime < Data.EndTime - JudgeManager.Instance.GoodWindow)
+                ResolveHoldJudgment(JudgmentType.Miss);
             else
-            {
-                OnCompleted();
-            }
+                ResolveHoldJudgment();
+
+            TryFinishJudgment();
         }
 
         protected override void CheckMiss()
         {
-            if (IsJudged || IsMissed || headJudged) return;
-            base.CheckMiss();
+            if (IsJudged) return;
+            CheckHoldEnd();
         }
 
         private void TryHitTailSlide()
         {
-            if (!isHolding || tailJudged || IsJudged || IsMissed || InputManager.Instance == null) return;
+            if (!Data.HasTailFlick || tailJudged || IsJudged || InputManager.Instance == null) return;
 
             float timeDiff = SongTime - Data.EndTime;
             if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
@@ -137,21 +140,14 @@ namespace MusicGame.Notes
             FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
             if (detectedDir != Data.flickDirection) return;
 
-            tailJudged = true;
-            OnCompleted();
+            ResolveTailJudgment(JudgeManager.Instance.Judge(timeDiff));
+            TryFinishJudgment();
         }
 
         private void OnCompleted()
         {
-            if (IsJudged || IsMissed) return;
-
-            IsJudged = true;
-            isHolding = false;
-            float requiredProgress = Mathf.Max(samplingInterval, Data.duration * 0.6f);
-            JudgmentType finalJudgment = successProgress >= requiredProgress ? headJudgment : JudgmentType.Miss;
-            ScoreManager.Instance.RegisterJudgment(finalJudgment);
-            ShowJudgmentEffect(finalJudgment);
-            DestroyNote();
+            ResolveHoldJudgment();
+            TryFinishJudgment();
         }
 
         public override void OnHit(JudgmentType judgment)
@@ -185,7 +181,8 @@ namespace MusicGame.Notes
                 }
             }
 
-            ConfigurePiece(pieceIndex, "slide", data.EndTime, data.EndPosition);
+            if (data.HasTailFlick)
+                ConfigurePiece(pieceIndex, "slide", data.EndTime, data.EndPosition);
             UpdateSequenceVisuals();
         }
 
@@ -524,5 +521,44 @@ namespace MusicGame.Notes
             public readonly Vector3 WorldPosition;
             public readonly float Alpha;
         }
-    }
+    
+
+        protected override void ShowJudgmentEffect(JudgmentType judgment)
+        {
+            if (judgment == JudgmentType.Miss) return;
+            MusicGame.Audio.AudioManager.Instance?.PlaySFX("cuesheet1", "");
+        }
+
+
+        private void ResolveHoldJudgment(JudgmentType? forcedJudgment = null)
+        {
+            if (holdJudged) return;
+
+            holdJudged = true;
+            isHolding = false;
+            float requiredProgress = Mathf.Max(samplingInterval, Data.duration * 0.6f);
+            JudgmentType judgment = forcedJudgment ??
+                (headJudged && successProgress >= requiredProgress ? headJudgment : JudgmentType.Miss);
+            ScoreManager.Instance.RegisterJudgment(judgment);
+            ShowJudgmentEffect(judgment);
+        }
+
+        private void ResolveTailJudgment(JudgmentType judgment)
+        {
+            if (tailJudged) return;
+
+            tailJudged = true;
+            ScoreManager.Instance.RegisterJudgment(judgment);
+            if (judgment != JudgmentType.Miss)
+                MusicGame.Audio.AudioManager.Instance?.PlaySFX("cuesheet0", "");
+        }
+
+        private void TryFinishJudgment()
+        {
+            if (!holdJudged || (Data.HasTailFlick && !tailJudged)) return;
+
+            IsJudged = true;
+            DestroyNote();
+        }
+}
 }

@@ -65,6 +65,9 @@ namespace MusicGame.Editor
                 if (note.noteType == NoteType.Hold)
                 {
                     note.duration = EditorGUILayout.FloatField(note.duration, GUILayout.Width(50));
+                    note.hasTailFlick = EditorGUILayout.Toggle(note.hasTailFlick, GUILayout.Width(20));
+                    if (note.hasTailFlick)
+                        note.flickDirection = (FlickDirection)EditorGUILayout.EnumPopup(note.flickDirection, GUILayout.Width(80));
                 }
                 if (note.noteType == NoteType.Flick)
                 {

@@ -10,7 +10,7 @@ namespace MusicGame.Audio
     [RequireComponent(typeof(CriWareInitializer))]
     public sealed class AudioManager : MonoBehaviour
     {
-        private const string DefaultAcfFile = "CRI/NewProject.acf";
+        private const string DefaultAcfFile = "CRI/NewProject1.acf";
         private const string DefaultCueSheetFolder = "CRI/WorkUnit_0";
 
         public static AudioManager Instance { get; private set; }
@@ -199,12 +199,6 @@ namespace MusicGame.Audio
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(cue))
-            {
-                Debug.LogWarning($"[AudioManager] PlaySFX skipped for '{cueSheet}' because cueName is empty.");
-                return;
-            }
-
             string acbFilePath = Path.Combine(CriWare.Common.streamingAssetsPath, $"{cueSheetFolder}/{cueSheet}.acb");
             if (!File.Exists(acbFilePath))
             {
@@ -221,9 +215,22 @@ namespace MusicGame.Audio
                 return;
             }
 
-            sfxPlayer ??= new CriAtomExPlayer(true);
+            bool playFirstCueByIndex = string.IsNullOrWhiteSpace(cue);
+            if (playFirstCueByIndex)
+            {
+                CriAtomEx.CueInfo[] cueInfos = acb.GetCueInfoList();
+                if (cueInfos == null || cueInfos.Length == 0)
+                {
+                    Debug.LogWarning($"[AudioManager] PlaySFX: Cue sheet '{cueSheet}' contains no cues.");
+                    return;
+                }
+            }
 
-            sfxPlayer.SetCue(acb, cue);
+            sfxPlayer ??= new CriAtomExPlayer(true);
+            if (playFirstCueByIndex)
+                sfxPlayer.SetCueIndex(acb, 0);
+            else
+                sfxPlayer.SetCue(acb, cue);
             sfxPlayer.Start();
         }
 

@@ -150,7 +150,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a8688637b97c87044ab969448dd8a3f0, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.UI.UIManager
   mainCanvas: {fileID: 0}
   uiCamera: {fileID: 0}
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a6530c764789478ea2dfc1c499e4e95, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Audio.AudioManager
-  acfFile: CRI/NewProject.acf
+  acfFile: CRI/NewProject1.acf
   cueSheetFolder: CRI/WorkUnit_0
   cueSheetName: 
   cueName: 
@@ -504,7 +504,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u5f00\u59cb"
+  m_Text: "\u5F00\u59CB"
 --- !u!222 &509081818
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -583,7 +583,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u5173\u4e8e"
+  m_Text: "\u5173\u4E8E"
 --- !u!222 &542308418
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -662,7 +662,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u8bbe\u7f6e"
+  m_Text: "\u8BBE\u7F6E"
 --- !u!222 &576328016
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1031,7 +1031,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u9000\u51fa"
+  m_Text: "\u9000\u51FA"
 --- !u!222 &1569285087
 CanvasRenderer:
   m_ObjectHideFlags: 0

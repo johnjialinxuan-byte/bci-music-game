@@ -18,7 +18,12 @@ namespace MusicGame.Notes
         [SerializeField] protected float minScale = 0.3f;
         [SerializeField] protected float maxScale = 0.82f;
         [SerializeField] protected float minAlpha = 0.4f;
-        [SerializeField] protected float maxAlpha = 1.0f;
+        
+
+        [Header("Judgment SFX")]
+        [SerializeField] private string successCueSheet = "cuesheet2";
+        [SerializeField] private string successCueName = "";
+[SerializeField] protected float maxAlpha = 1.0f;
 
         protected NoteData Data { get; private set; }
         protected float SongTime => MusicTime.Current;
@@ -125,6 +130,8 @@ namespace MusicGame.Notes
 
         protected virtual void ShowJudgmentEffect(JudgmentType judgment)
         {
+            if (judgment == JudgmentType.Miss) return;
+            AudioManager.Instance?.PlaySFX(successCueSheet, successCueName);
         }
 
         protected virtual void DestroyNote()

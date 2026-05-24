@@ -56,5 +56,12 @@ protected override void Update()
                 _ => 0f
             };
         }
-    }
+    
+
+        protected override void ShowJudgmentEffect(JudgmentType judgment)
+        {
+            if (judgment == JudgmentType.Miss) return;
+            AudioManager.Instance?.PlaySFX("cuesheet0", "");
+        }
+}
 }

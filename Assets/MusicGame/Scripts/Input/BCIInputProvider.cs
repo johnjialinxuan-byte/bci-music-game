@@ -22,7 +22,11 @@ namespace MusicGame.Input
 
         [Header("Flick 检测阈值")]
         [Tooltip("角速度绝对值超过此阈值才判定为有效 Flick")]
-        [SerializeField] private float flickThreshold = 1.5f;
+        
+
+        private bool hasGyroReference;
+        private Vector3 gyroReference;
+[SerializeField] private float flickThreshold = 1.5f;
 
         public float FlickThreshold => flickThreshold;
 
@@ -77,10 +81,23 @@ namespace MusicGame.Input
         {
             if (ipc == null) return Vector3.zero;
 
-            Vector3 g = ipc.GyroscopeValue;
-            // BCI 坐标系 → InputManager 坐标系
-            float upDown     = g.y * (invertY ? -1f : 1f) * gyroScale;   // 俯仰 → Up/Down
-            float leftRight  = g.x * (invertX ? -1f : 1f) * gyroScale;   // 偏航 → Left/Right
+            Vector3 sample = ipc.GyroscopeValue;
+            if (!hasGyroReference)
+            {
+                // Input is queried before the first IPC packet arrives; do not calibrate on its zero default.
+                if (sample.sqrMagnitude < 0.0001f)
+                    return Vector3.zero;
+
+                gyroReference = sample;
+                hasGyroReference = true;
+                return Vector3.zero;
+            }
+
+            // The platform reports orientation around a non-zero neutral pose.
+            // Use motion away from the captured neutral pose for directional flick input.
+            Vector3 motion = sample - gyroReference;
+            float upDown = motion.y * (invertY ? -1f : 1f) * gyroScale;
+            float leftRight = motion.x * (invertX ? -1f : 1f) * gyroScale;
             return new Vector3(upDown, leftRight, 0f);
         }
     }

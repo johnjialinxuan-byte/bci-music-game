@@ -25,7 +25,9 @@ namespace MusicGame.Core
         public NoteType noteType;
         public float duration;
         public int threshold;
-        public FlickDirection flickDirection;
+        
+        public bool hasTailFlick = true;
+public FlickDirection flickDirection;
         public float approachTime = 2f;
         public bool useCustomEndPoint;
         public float endX;
@@ -35,6 +37,8 @@ namespace MusicGame.Core
 
         public Vector3 SpawnPosition => new Vector3(x, y, z);
         public Vector3 EndPosition => useCustomEndPoint ? new Vector3(endX, endY, endZ) : SpawnPosition;
-        public float EndTime => time + duration;
+        
+        public bool HasTailFlick => noteType == NoteType.Hold && hasTailFlick;
+public float EndTime => time + duration;
     }
 }

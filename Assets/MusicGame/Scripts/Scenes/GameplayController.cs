@@ -208,7 +208,13 @@ namespace MusicGame.Scenes
                 return;
             }
 
-            ScoreManager.Instance.Initialize(currentChart.notes.Count);
+            int totalJudgments = currentChart.notes.Count;
+            foreach (NoteData note in currentChart.notes)
+            {
+                if (note.HasTailFlick)
+                    totalJudgments++;
+            }
+            ScoreManager.Instance.Initialize(totalJudgments);
             NoteManager.Instance.LoadChart(currentChart);
 
             StartCoroutine(GameStartCountdownCoroutine());
