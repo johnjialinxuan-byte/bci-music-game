@@ -9,7 +9,7 @@ namespace MusicGame.Managers
 
         [Header("Flick 检测")]
         [Tooltip("角速度绝对值超过此阈值才判定为有效 Flick。BCI 模式下建议根据 gyroScale 同步调整")]
-        [SerializeField] private float flickThreshold = 1.5f;
+        [SerializeField] private float flickThreshold = 0.25f;
 
         private Input.IHoldValueProvider holdProvider;
         private Input.IHeadMotionProvider headMotionProvider;

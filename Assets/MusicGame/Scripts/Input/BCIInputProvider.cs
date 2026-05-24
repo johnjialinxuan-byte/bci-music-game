@@ -26,7 +26,7 @@ namespace MusicGame.Input
 
         private bool hasGyroReference;
         private Vector3 gyroReference;
-[SerializeField] private float flickThreshold = 1.5f;
+[SerializeField] private float flickThreshold = 0.25f;
 
         public float FlickThreshold => flickThreshold;
 
