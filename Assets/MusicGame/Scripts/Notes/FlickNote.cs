@@ -11,17 +11,26 @@ namespace MusicGame.Notes
         [Header("Flick Visuals")]
         [SerializeField] private Transform arrowTransform;
         [SerializeField] private float arrowRotationOffset = 0f;
-
+        [SerializeField, Range(0.1f, 1f)] private float visualScaleMultiplier = 0.7f;
         public override void Initialize(NoteData data)
         {
             base.Initialize(data);
 
             if (arrowTransform != null)
             {
-                float angle = GetDirectionAngle(data.flickDirection);
+                FlickDirection effectiveDirection = GetEffectiveDirection(data.flickDirection);
+                float angle = GetDirectionAngle(effectiveDirection);
                 arrowTransform.rotation = Quaternion.Euler(0, 0, angle + arrowRotationOffset);
             }
         }
+
+        protected override void UpdatePosition()
+        {
+            base.UpdatePosition();
+            if (visualTransform != null)
+                visualTransform.localScale *= visualScaleMultiplier;
+        }
+
 
 protected override void Update()
         {
@@ -37,8 +46,9 @@ protected override void Update()
             float timeDiff = SongTime - Data.time;
             if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
 
+            FlickDirection expectedDirection = GetEffectiveDirection(Data.flickDirection);
             FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
-            if (detectedDir != Data.flickDirection)
+            if (detectedDir != expectedDirection)
                 return;
 
             JudgmentType judgment = JudgeManager.Instance.Judge(timeDiff);
@@ -62,6 +72,17 @@ protected override void Update()
         {
             if (judgment == JudgmentType.Miss) return;
             AudioManager.Instance?.PlaySFX("cuesheet0", "");
+        }
+
+
+        private static FlickDirection GetEffectiveDirection(FlickDirection originalDirection)
+        {
+            return originalDirection switch
+            {
+                FlickDirection.Up => FlickDirection.Right,   // red: clockwise by 90 degrees
+                FlickDirection.Down => FlickDirection.Right, // blue: counterclockwise by 90 degrees
+                _ => originalDirection
+            };
         }
 }
 }

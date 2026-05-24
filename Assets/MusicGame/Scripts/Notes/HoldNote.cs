@@ -16,7 +16,9 @@ namespace MusicGame.Notes
         [SerializeField] private float ribbonWidth = 0.46f;
         [SerializeField] private float ribbonAlpha = 0.62f;
         [SerializeField] private float sequenceBaseScale = 0.78f;
-        [SerializeField] private int maxGeneratedPieces = 48;
+        
+        [SerializeField, Range(0.1f, 1f)] private float tailFlickScaleMultiplier = 0.7f;
+[SerializeField] private int maxGeneratedPieces = 48;
 
         private readonly List<HoldPiece> holdPieces = new List<HoldPiece>();
         private readonly List<HoldPathNode> pathNodes = new List<HoldPathNode>();
@@ -137,8 +139,9 @@ private bool isHolding;
             float timeDiff = SongTime - Data.EndTime;
             if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
 
+            FlickDirection expectedDirection = GetEffectiveTailFlickDirection(Data.flickDirection);
             FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
-            if (detectedDir != Data.flickDirection) return;
+            if (detectedDir != expectedDirection) return;
 
             ResolveTailJudgment(JudgeManager.Instance.Judge(timeDiff));
             TryFinishJudgment();
@@ -312,7 +315,8 @@ private bool isHolding;
                 piece.Renderer.transform.position = currentPosition;
 
                 float zDistance = Mathf.Abs(currentPosition.z - judgePlaneZ);
-                float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange) * piece.BaseScale;
+                float scaleMultiplier = piece.Shape == "slide" ? tailFlickScaleMultiplier : 1f;
+                float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange) * piece.BaseScale * scaleMultiplier;
                 piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
 
                 Color color = piece.Renderer.color;
@@ -472,7 +476,8 @@ private bool isHolding;
                 return;
             }
 
-            float angle = direction switch
+            FlickDirection effectiveDirection = GetEffectiveTailFlickDirection(direction);
+            float angle = effectiveDirection switch
             {
                 FlickDirection.Left => 180f,
                 FlickDirection.Right => 0f,
@@ -559,6 +564,17 @@ private bool isHolding;
 
             IsJudged = true;
             DestroyNote();
+        }
+
+
+        private static FlickDirection GetEffectiveTailFlickDirection(FlickDirection originalDirection)
+        {
+            return originalDirection switch
+            {
+                FlickDirection.Up => FlickDirection.Right,   // red: clockwise by 90 degrees
+                FlickDirection.Down => FlickDirection.Right, // blue: counterclockwise by 90 degrees
+                _ => originalDirection
+            };
         }
 }
 }
