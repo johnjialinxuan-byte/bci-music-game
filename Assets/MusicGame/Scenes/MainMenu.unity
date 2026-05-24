@@ -504,7 +504,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Start
+  m_Text: "\u5f00\u59cb"
 --- !u!222 &509081818
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -583,7 +583,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: About
+  m_Text: "\u5173\u4e8e"
 --- !u!222 &542308418
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -662,7 +662,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Settings
+  m_Text: "\u8bbe\u7f6e"
 --- !u!222 &576328016
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1031,7 +1031,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Quit
+  m_Text: "\u9000\u51fa"
 --- !u!222 &1569285087
 CanvasRenderer:
   m_ObjectHideFlags: 0

@@ -136,10 +136,10 @@ namespace MusicGame.Editor
             background.raycastTarget = false;
             background.transform.SetAsFirstSibling();
 
-            Button start = CreateButton("StartButton", canvas.transform, "Start", new Vector2(-400, -20), new Vector2(300, 76));
-            Button settings = CreateButton("SettingsButton", canvas.transform, "Settings", new Vector2(-400, -100), new Vector2(300, 76));
-            Button about = CreateButton("AboutButton", canvas.transform, "About", new Vector2(-400, -180), new Vector2(300, 76));
-            Button quit = CreateButton("QuitButton", canvas.transform, "Quit", new Vector2(-400, -260), new Vector2(300, 76));
+            Button start = CreateButton("StartButton", canvas.transform, "\u5f00\u59cb", new Vector2(-400, -20), new Vector2(300, 76));
+            Button settings = CreateButton("SettingsButton", canvas.transform, "\u8bbe\u7f6e", new Vector2(-400, -100), new Vector2(300, 76));
+            Button about = CreateButton("AboutButton", canvas.transform, "\u5173\u4e8e", new Vector2(-400, -180), new Vector2(300, 76));
+            Button quit = CreateButton("QuitButton", canvas.transform, "\u9000\u51fa", new Vector2(-400, -260), new Vector2(300, 76));
             StyleMenuTextButton(start);
             StyleMenuTextButton(settings);
             StyleMenuTextButton(about);

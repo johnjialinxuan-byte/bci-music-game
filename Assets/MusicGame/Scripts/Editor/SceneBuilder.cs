@@ -89,16 +89,16 @@ namespace MusicGame.Editor
             title.GetComponent<RectTransform>().sizeDelta = new Vector2(600, 100);
 
             // Start Button
-            GameObject startBtn = CreateButton("StartButton", canvasObj.transform, "Start Game", new Vector2(0, 20));
+            GameObject startBtn = CreateButton("StartButton", canvasObj.transform, "\u5f00\u59cb", new Vector2(0, 20));
 
             // Settings Button
-            GameObject settingsBtn = CreateButton("SettingsButton", canvasObj.transform, "Settings", new Vector2(0, -60));
+            GameObject settingsBtn = CreateButton("SettingsButton", canvasObj.transform, "\u8bbe\u7f6e", new Vector2(0, -60));
 
             // About Button
-            GameObject aboutBtn = CreateButton("AboutButton", canvasObj.transform, "About", new Vector2(0, -140));
+            GameObject aboutBtn = CreateButton("AboutButton", canvasObj.transform, "\u5173\u4e8e", new Vector2(0, -140));
 
             // Quit Button
-            GameObject quitBtn = CreateButton("QuitButton", canvasObj.transform, "Quit", new Vector2(0, -220));
+            GameObject quitBtn = CreateButton("QuitButton", canvasObj.transform, "\u9000\u51fa", new Vector2(0, -220));
 
             // Add MainMenuController
             GameObject controller = new GameObject("MainMenuController");

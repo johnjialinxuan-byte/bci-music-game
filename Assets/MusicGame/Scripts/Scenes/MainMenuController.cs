@@ -16,6 +16,10 @@ namespace MusicGame.Scenes
         private void Start()
         {
             ConfigurePresentation();
+            SetButtonLabel(startButton, "\u5f00\u59cb");
+            SetButtonLabel(settingsButton, "\u8bbe\u7f6e");
+            SetButtonLabel(aboutButton, "\u5173\u4e8e");
+            SetButtonLabel(quitButton, "\u9000\u51fa");
 
             if (startButton != null)
                 startButton.onClick.AddListener(OnStartClicked);
@@ -110,6 +114,15 @@ namespace MusicGame.Scenes
             ButtonSFX sfx = button.GetComponent<ButtonSFX>();
             if (sfx == null)
                 button.gameObject.AddComponent<ButtonSFX>();
+        }
+
+        private static void SetButtonLabel(Button button, string label)
+        {
+            if (button == null) return;
+
+            Text text = button.GetComponentInChildren<Text>(true);
+            if (text != null)
+                text.text = label;
         }
 
         private void OnStartClicked()
