@@ -15,15 +15,15 @@ namespace MusicGame.Notes
         [Header("Pseudo-3D Settings")]
         [SerializeField] protected float judgePlaneZ = 0f;
         [SerializeField] protected float spawnZ = 10f;
-        [SerializeField] protected float minScale = 0.3f;
-        [SerializeField] protected float maxScale = 0.82f;
+        [SerializeField] protected float minScale = 0.22f;
+        [SerializeField] protected float maxScale = 0.68f;
         [SerializeField] protected float minAlpha = 0.4f;
-        
+
 
         [Header("Judgment SFX")]
         [SerializeField] private string successCueSheet = "cuesheet2";
         [SerializeField] private string successCueName = "";
-[SerializeField] protected float maxAlpha = 1.0f;
+        [SerializeField] protected float maxAlpha = 1.0f;
 
         protected NoteData Data { get; private set; }
         protected float SongTime => MusicTime.Current;

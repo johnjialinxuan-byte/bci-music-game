@@ -13,6 +13,8 @@ namespace MusicGame.UI
 
         private Vector3 targetScale = Vector3.one;
         private Color normalColor = Color.white;
+        private bool isPointerInside;
+        private bool isSelected;
 
         public void SetLabel(Text targetLabel)
         {
@@ -43,18 +45,30 @@ namespace MusicGame.UI
                 Time.unscaledDeltaTime * animationSpeed);
         }
 
+        public void SetSelected(bool selected)
+        {
+            isSelected = selected;
+            UpdateVisualTarget();
+        }
+
         public void OnPointerEnter(PointerEventData eventData)
         {
-            targetScale = Vector3.one * hoverScale;
-            if (targetGraphic != null)
-                targetGraphic.color = hoverColor;
+            isPointerInside = true;
+            UpdateVisualTarget();
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
-            targetScale = Vector3.one;
+            isPointerInside = false;
+            UpdateVisualTarget();
+        }
+
+        private void UpdateVisualTarget()
+        {
+            bool emphasized = isPointerInside || isSelected;
+            targetScale = Vector3.one * (emphasized ? hoverScale : 1f);
             if (targetGraphic != null)
-                targetGraphic.color = normalColor;
+                targetGraphic.color = emphasized ? hoverColor : normalColor;
         }
     }
 }

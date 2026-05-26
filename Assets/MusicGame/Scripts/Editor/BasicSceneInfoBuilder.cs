@@ -162,14 +162,13 @@ namespace MusicGame.Editor
             canvas.AddComponent<SciFiCurveBackground>();
 
             CreatePanel("TopBand", canvas.transform, new Color(0.04f, 0.055f, 0.075f, 1f), new Vector2(0, 394), new Vector2(1600, 112));
-            Text selectTitle = CreateText("SongSelectTitle", canvas.transform, "SELECT MUSIC", 42, new Vector2(-360, 394), new Vector2(420, 70));
+            Text selectTitle = CreateText("SongSelectTitle", canvas.transform, "\u9009\u62e9\u97f3\u4e50", 42, new Vector2(-360, 394), new Vector2(420, 70));
             selectTitle.alignment = TextAnchor.MiddleLeft;
-            Text collection = CreateText("CollectionLabel", canvas.transform, "BCI PERFORMANCE COLLECTION", 28, new Vector2(444, 394), new Vector2(560, 46));
-            StyleGlowText(collection, new Color(0.35f, 0.35f, 1f, 0.8f));
             Button back = CreateButton("BackButton", canvas.transform, "<  Back", new Vector2(-690, 394), new Vector2(135, 52));
-            Button easy = CreateButton("EasyButton", canvas.transform, "EASY", new Vector2(120, -294), new Vector2(148, 62), new Color(0.09f, 0.38f, 0.41f, 1f));
-            Button normal = CreateButton("NormalButton", canvas.transform, "NORMAL", new Vector2(286, -294), new Vector2(148, 62), new Color(0.13f, 0.54f, 0.58f, 1f));
-            Button hard = CreateButton("HardButton", canvas.transform, "HARD", new Vector2(452, -294), new Vector2(148, 62), new Color(0.54f, 0.12f, 0.21f, 1f));
+            Button easy = CreateButton("EasyButton", canvas.transform, "EASY", new Vector2(120, -226), new Vector2(148, 62), new Color(0.18f, 0.72f, 0.36f, 1f));
+            Button normal = CreateButton("NormalButton", canvas.transform, "NORMAL", new Vector2(286, -226), new Vector2(148, 62), new Color(0.12f, 0.39f, 0.94f, 1f));
+            Button hard = CreateButton("HardButton", canvas.transform, "HARD", new Vector2(452, -226), new Vector2(148, 62), new Color(0.84f, 0.14f, 0.22f, 1f));
+            Button confirm = CreateButton("ConfirmButton", canvas.transform, "\u786e\u5b9a", new Vector2(286, -302), new Vector2(232, 62), new Color32(0x39, 0xC5, 0xBB, 0xFF));
 
             Text listHeader = CreateText("SongListHeader", canvas.transform, "TRACK LIST", 30, new Vector2(-420, 276), new Vector2(400, 44));
             StyleGlowText(listHeader, new Color(0.05f, 0.95f, 1f, 0.85f));
@@ -202,12 +201,14 @@ namespace MusicGame.Editor
             SetField(controller, "songItemPrefab", CreateSongItemPrefab());
             SetField(controller, "availableSongs", LoadGeneratedSongs());
             SetField(controller, "backButton", back);
+            SetField(controller, "coverFrame", coverFrame.GetComponent<Image>());
             SetField(controller, "coverImage", cover);
             SetField(controller, "titleText", title);
             SetField(controller, "artistText", artist);
             SetField(controller, "easyButton", easy);
             SetField(controller, "normalButton", normal);
             SetField(controller, "hardButton", hard);
+            SetField(controller, "confirmButton", confirm);
 
             CreateEventSystem();
             Save(scene, "SongSelect");
@@ -475,6 +476,7 @@ namespace MusicGame.Editor
                     y = Mathf.Cos(i * 0.55f) * 1.8f,
                     z = 10f,
                     noteType = flick ? NoteType.Flick : NoteType.Hold,
+                    hasTailFlick = false,
                     duration = flick ? 0f : Mathf.Lerp(0.8f, 1.8f, (i % 3) / 2f),
                     threshold = 45 + (i % 4) * 10,
                     flickDirection = (FlickDirection)(i % 4),

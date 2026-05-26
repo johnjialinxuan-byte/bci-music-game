@@ -49,8 +49,8 @@ MonoBehaviour:
   visualTransform: {fileID: 7284010687770759980}
   judgePlaneZ: 0
   spawnZ: 10
-  minScale: 0.3
-  maxScale: 0.82
+  minScale: 0.22
+  maxScale: 0.68
   minAlpha: 0.4
   maxAlpha: 1
   arrowTransform: {fileID: 7284010687770759980}

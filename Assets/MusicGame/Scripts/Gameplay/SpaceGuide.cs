@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MusicGame.Gameplay
@@ -12,11 +13,26 @@ namespace MusicGame.Gameplay
         [SerializeField] private float lineWidth = 0.018f;
         [SerializeField] private Color guideColor = new Color(1f, 1f, 1f, 0.34f);
 
+        [Header("Motion")]
+        [SerializeField] private bool animatePerspectiveDashes = true;
+        [SerializeField] private float forwardSpeed = 0.34f;
+        [SerializeField, Range(0f, 1f)] private float nearBrightnessBoost = 0.65f;
+
         private Material lineMaterial;
+        private readonly List<AnimatedDash> perspectiveDashes = new List<AnimatedDash>();
+        private float dashPhase;
 
         private void Start()
         {
             BuildGuides();
+        }
+
+        private void Update()
+        {
+            if (!animatePerspectiveDashes || perspectiveDashes.Count == 0) return;
+
+            dashPhase = Mathf.Repeat(dashPhase + Time.deltaTime * forwardSpeed, 1f);
+            UpdatePerspectiveDashes();
         }
 
         private void OnValidate()
@@ -46,14 +62,15 @@ namespace MusicGame.Gameplay
 
             for (int i = 0; i < nearCorners.Length; i++)
             {
-                CreateDashedLine($"PerspectiveDash_{i}", nearCorners[i], farCorners[i]);
+                CreateDashedLine($"PerspectiveDash_{i}", nearCorners[i], farCorners[i], true);
             }
 
-            CreateDashedLine("CenterVerticalDash", Vector3.down * height * 0.5f, Vector3.up * height * 0.5f);
-            CreateDashedLine("CenterHorizontalDash", Vector3.left * width * 0.5f, Vector3.right * width * 0.5f);
+            CreateDashedLine("CenterVerticalDash", Vector3.down * height * 0.5f, Vector3.up * height * 0.5f, false);
+            CreateDashedLine("CenterHorizontalDash", Vector3.left * width * 0.5f, Vector3.right * width * 0.5f, false);
+            UpdatePerspectiveDashes();
         }
 
-        private void CreateDashedLine(string lineName, Vector3 start, Vector3 end)
+        private void CreateDashedLine(string lineName, Vector3 start, Vector3 end, bool animated)
         {
             int count = Mathf.Max(1, dashCount);
             for (int i = 0; i < count; i++)
@@ -73,6 +90,32 @@ namespace MusicGame.Gameplay
                 renderer.endColor = guideColor;
                 renderer.SetPosition(0, Vector3.Lerp(start, end, dashStart));
                 renderer.SetPosition(1, Vector3.Lerp(start, end, dashEnd));
+
+                if (animated)
+                {
+                    perspectiveDashes.Add(new AnimatedDash(renderer, start, end, i, count));
+                }
+            }
+        }
+
+        private void UpdatePerspectiveDashes()
+        {
+            float segmentLength = Mathf.Clamp01(dashFill) / Mathf.Max(1, dashCount);
+            foreach (AnimatedDash dash in perspectiveDashes)
+            {
+                float dashStart = Mathf.Repeat(dash.Index / (float)dash.Count - dashPhase, 1f);
+                float dashEnd = Mathf.Min(1f, dashStart + segmentLength);
+                float depth = Mathf.Clamp01((dashStart + dashEnd) * 0.5f);
+                float nearAmount = 1f - depth;
+                Color animatedColor = guideColor;
+                animatedColor.a = Mathf.Clamp01(guideColor.a * (1f + nearAmount * nearBrightnessBoost));
+
+                dash.Renderer.startWidth = Mathf.Lerp(lineWidth * 1.8f, lineWidth * 0.45f, dashStart);
+                dash.Renderer.endWidth = Mathf.Lerp(lineWidth * 1.8f, lineWidth * 0.45f, dashEnd);
+                dash.Renderer.startColor = animatedColor;
+                dash.Renderer.endColor = animatedColor;
+                dash.Renderer.SetPosition(0, Vector3.Lerp(dash.Start, dash.End, dashStart));
+                dash.Renderer.SetPosition(1, Vector3.Lerp(dash.Start, dash.End, dashEnd));
             }
         }
 
@@ -93,10 +136,29 @@ namespace MusicGame.Gameplay
 
         private void ClearGuides()
         {
+            perspectiveDashes.Clear();
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
                 Destroy(transform.GetChild(i).gameObject);
             }
+        }
+
+        private readonly struct AnimatedDash
+        {
+            public AnimatedDash(LineRenderer renderer, Vector3 start, Vector3 end, int index, int count)
+            {
+                Renderer = renderer;
+                Start = start;
+                End = end;
+                Index = index;
+                Count = count;
+            }
+
+            public LineRenderer Renderer { get; }
+            public Vector3 Start { get; }
+            public Vector3 End { get; }
+            public int Index { get; }
+            public int Count { get; }
         }
     }
 }

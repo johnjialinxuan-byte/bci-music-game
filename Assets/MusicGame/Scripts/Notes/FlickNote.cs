@@ -12,6 +12,7 @@ namespace MusicGame.Notes
         [SerializeField] private Transform arrowTransform;
         [SerializeField] private float arrowRotationOffset = 0f;
         [SerializeField, Range(0.1f, 1f)] private float visualScaleMultiplier = 0.7f;
+
         public override void Initialize(NoteData data)
         {
             base.Initialize(data);

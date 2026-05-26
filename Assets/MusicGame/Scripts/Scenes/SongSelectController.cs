@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,23 +18,34 @@ namespace MusicGame.Scenes
         [SerializeField] private Text artistText;
         [SerializeField] private Button easyButton;
         [SerializeField] private Button normalButton;
+        [SerializeField] private Button hardButton;
+        [SerializeField] private Button confirmButton;
 
         [Header("Difficulty Colors")]
         [SerializeField] private Color easyFrameColor = new Color(0.20f, 0.92f, 0.55f, 1f);
         [SerializeField] private Color normalFrameColor = new Color(0.20f, 0.86f, 1f, 1f);
         [SerializeField] private Color hardFrameColor = new Color(1f, 0.24f, 0.40f, 1f);
-        [SerializeField] private Button hardButton;
+        [SerializeField] private Color easyButtonColor = new Color(0.18f, 0.72f, 0.36f, 1f);
+        [SerializeField] private Color normalButtonColor = new Color(0.12f, 0.39f, 0.94f, 1f);
+        [SerializeField] private Color hardButtonColor = new Color(0.84f, 0.14f, 0.22f, 1f);
+        [SerializeField] private Color confirmButtonColor = new Color32(0x39, 0xC5, 0xBB, 0xFF);
+        [SerializeField, Range(0f, 1f)] private float pillFillAlpha = 0.24f;
+        [SerializeField] private float pillBorderWidth = 2.5f;
 
         [Header("Data")]
         [SerializeField] private List<SongData> availableSongs = new List<SongData>();
 
         private SongData selectedSong;
         private bool isStartingGameplay;
-        private const float DifficultyFeedbackDuration = 0.15f;
         private List<GameObject> songItems = new List<GameObject>();
+        private readonly Dictionary<SongData, SongItemHoverEffect> songItemEffects = new Dictionary<SongData, SongItemHoverEffect>();
+        private Sprite pillButtonSprite;
 
         private void Start()
         {
+            EnsureConfirmButton();
+            ConfigureDifficultyButtons();
+
             if (backButton != null)
             {
                 backButton.onClick.AddListener(OnBackClicked);
@@ -60,8 +70,16 @@ namespace MusicGame.Scenes
                 if (hardButton.GetComponent<ButtonSFX>() == null)
                     hardButton.gameObject.AddComponent<ButtonSFX>();
             }
+            if (confirmButton != null)
+            {
+                confirmButton.onClick.AddListener(OnConfirmClicked);
+                if (confirmButton.GetComponent<ButtonSFX>() == null)
+                    confirmButton.gameObject.AddComponent<ButtonSFX>();
+            }
 
             ConfigureHeaderEffects();
+            if (GameStateManager.Instance != null)
+                UpdateCoverFrameColor(GameStateManager.Instance.SelectedDifficulty);
             LoadSongs();
         }
 
@@ -72,6 +90,7 @@ namespace MusicGame.Scenes
                 Destroy(item);
             }
             songItems.Clear();
+            songItemEffects.Clear();
 
             SongData[] songs = Resources.LoadAll<SongData>("Songs");
             foreach (SongData song in songs)
@@ -167,6 +186,7 @@ namespace MusicGame.Scenes
             if (hoverEffect == null)
                 hoverEffect = item.AddComponent<SongItemHoverEffect>();
             hoverEffect.SetLabel(txt);
+            songItemEffects[song] = hoverEffect;
 
             ButtonSFX sfx = item.GetComponent<ButtonSFX>();
             if (sfx == null)
@@ -180,13 +200,19 @@ namespace MusicGame.Scenes
             Text[] texts = GetComponentsInChildren<Text>(true);
             foreach (Text text in texts)
             {
-                if (text.name == "SongListHeader")
+                if (text.name == "SongSelectTitle")
+                {
+                    text.text = "\u9009\u62e9\u97f3\u4e50";
+                    AddGlow(text, 42, new Color(0.05f, 0.95f, 1f, 0.85f));
+                }
+                else if (text.name == "SongListHeader")
                 {
                     AddGlow(text, 30, new Color(0.05f, 0.95f, 1f, 0.85f));
                 }
                 else if (text.name == "CollectionLabel")
                 {
-                    AddGlow(text, 28, new Color(0.35f, 0.35f, 1f, 0.8f));
+                    text.text = "";
+                    text.enabled = false;
                 }
             }
         }
@@ -211,6 +237,7 @@ namespace MusicGame.Scenes
         {
             selectedSong = song;
             GameStateManager.Instance.SetSelectedSong(song);
+            UpdateSelectedSongEffect();
 
             if (titleText != null) titleText.text = song.title;
             if (artistText != null) artistText.text = song.artist;
@@ -221,21 +248,140 @@ namespace MusicGame.Scenes
             Audio.AudioManager.Instance.StopSong();
         }
 
-        private void OnDifficultySelected(Difficulty difficulty)
+        private void UpdateSelectedSongEffect()
         {
-            if (selectedSong == null || isStartingGameplay) return;
-            StartCoroutine(StartGameplayAfterDifficultyFeedback(difficulty));
+            foreach (KeyValuePair<SongData, SongItemHoverEffect> entry in songItemEffects)
+            {
+                if (entry.Value != null)
+                    entry.Value.SetSelected(entry.Key == selectedSong);
+            }
         }
 
-        private IEnumerator StartGameplayAfterDifficultyFeedback(Difficulty difficulty)
+        private void OnDifficultySelected(Difficulty difficulty)
         {
-            isStartingGameplay = true;
-            UpdateCoverFrameColor(difficulty);
-            GameStateManager.Instance.SetSelectedDifficulty(difficulty);
-            Audio.AudioManager.Instance.StopSong();
+            if (isStartingGameplay || GameStateManager.Instance == null) return;
 
-            yield return new WaitForSecondsRealtime(DifficultyFeedbackDuration);
+            GameStateManager.Instance.SetSelectedDifficulty(difficulty);
+            UpdateCoverFrameColor(difficulty);
+        }
+
+        private void OnConfirmClicked()
+        {
+            if (selectedSong == null || isStartingGameplay || GameStateManager.Instance == null) return;
+
+            isStartingGameplay = true;
+            Audio.AudioManager.Instance?.StopSong();
             GameStateManager.Instance.ChangeScene(GameScene.Gameplay);
+        }
+
+        private void EnsureConfirmButton()
+        {
+            if (confirmButton != null) return;
+
+            Transform parent = hardButton != null ? hardButton.transform.parent : transform.parent;
+            if (parent == null) return;
+
+            GameObject buttonObject = new GameObject("ConfirmButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+
+            confirmButton = buttonObject.GetComponent<Button>();
+            confirmButton.targetGraphic = buttonObject.GetComponent<Image>();
+
+            GameObject labelObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+            RectTransform labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = Vector2.zero;
+            labelRect.offsetMax = Vector2.zero;
+
+            Text label = labelObject.GetComponent<Text>();
+            label.text = "\u786e\u5b9a";
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.fontSize = 20;
+            label.fontStyle = FontStyle.Bold;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.color = Color.white;
+        }
+
+        private void ConfigureDifficultyButtons()
+        {
+            ConfigurePillButton(easyButton, easyButtonColor, new Vector2(120f, -226f), new Vector2(148f, 62f));
+            ConfigurePillButton(normalButton, normalButtonColor, new Vector2(286f, -226f), new Vector2(148f, 62f));
+            ConfigurePillButton(hardButton, hardButtonColor, new Vector2(452f, -226f), new Vector2(148f, 62f));
+            ConfigurePillButton(confirmButton, confirmButtonColor, new Vector2(286f, -302f), new Vector2(232f, 62f));
+        }
+
+        private void ConfigurePillButton(Button button, Color color, Vector2 position, Vector2 size)
+        {
+            if (button == null) return;
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchoredPosition = position;
+                rect.sizeDelta = size;
+            }
+
+            Image image = button.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = color;
+                image.sprite = GetPillButtonSprite();
+                image.type = Image.Type.Sliced;
+            }
+
+            ColorBlock colors = button.colors;
+            colors.normalColor = color;
+            colors.highlightedColor = Color.Lerp(color, Color.white, 0.18f);
+            colors.pressedColor = Color.Lerp(color, Color.black, 0.25f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.disabledColor = new Color(color.r, color.g, color.b, 0.35f);
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+        }
+
+        private Sprite GetPillButtonSprite()
+        {
+            if (pillButtonSprite != null) return pillButtonSprite;
+
+            const int width = 128;
+            const int height = 48;
+            const float radius = height * 0.5f;
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                name = "RuntimePillButtonTexture",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+
+            Color[] pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float centerX = x < radius ? radius : x > width - radius ? width - radius : x;
+                    float centerY = radius;
+                    float distance = Vector2.Distance(new Vector2(x, y), new Vector2(centerX, centerY));
+                    float outerAlpha = Mathf.Clamp01(radius - distance + 0.5f);
+                    float borderMask = Mathf.Clamp01(distance - (radius - pillBorderWidth) + 0.5f);
+                    float alpha = outerAlpha * Mathf.Lerp(pillFillAlpha, 1f, borderMask);
+                    pixels[y * width + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply();
+            pillButtonSprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, width, height),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(radius, radius, radius, radius));
+            pillButtonSprite.name = "RuntimePillButtonSprite";
+            return pillButtonSprite;
         }
 
         private void UpdateCoverFrameColor(Difficulty difficulty)

@@ -155,7 +155,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 120, y: -294}
+  m_AnchoredPosition: {x: 120, y: -226}
   m_SizeDelta: {x: 148, y: 62}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &19265784
@@ -171,7 +171,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.09, g: 0.38, b: 0.41, a: 1}
+  m_Color: {r: 0.18, g: 0.72, b: 0.36, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -217,11 +217,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.09, g: 0.38, b: 0.41, a: 1}
-    m_HighlightedColor: {r: 0.2538, g: 0.4916, b: 0.5162, a: 1}
-    m_PressedColor: {r: 0.0675, g: 0.285, b: 0.3075, a: 1}
-    m_SelectedColor: {r: 0.2538, g: 0.4916, b: 0.5162, a: 1}
-    m_DisabledColor: {r: 0.09, g: 0.38, b: 0.41, a: 0.35}
+    m_NormalColor: {r: 0.18, g: 0.72, b: 0.36, a: 1}
+    m_HighlightedColor: {r: 0.3276, g: 0.7704, b: 0.4752, a: 1}
+    m_PressedColor: {r: 0.135, g: 0.54, b: 0.27, a: 1}
+    m_SelectedColor: {r: 0.3276, g: 0.7704, b: 0.4752, a: 1}
+    m_DisabledColor: {r: 0.18, g: 0.72, b: 0.36, a: 0.35}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.08
   m_SpriteState:
@@ -387,7 +387,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: SELECT MUSIC
+  m_Text: "\u9009\u62e9\u97f3\u4e50"
 --- !u!222 &210010789
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1712,7 +1712,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: BCI PERFORMANCE COLLECTION
+  m_Text: ""
 --- !u!222 &1329686748
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1757,7 +1757,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 286, y: -294}
+  m_AnchoredPosition: {x: 286, y: -226}
   m_SizeDelta: {x: 148, y: 62}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1569285086
@@ -1773,7 +1773,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.13, g: 0.54, b: 0.58, a: 1}
+  m_Color: {r: 0.12, g: 0.39, b: 0.94, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1819,11 +1819,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.13, g: 0.54, b: 0.58, a: 1}
-    m_HighlightedColor: {r: 0.2866, g: 0.6228, b: 0.6556, a: 1}
-    m_PressedColor: {r: 0.0975, g: 0.40500003, b: 0.435, a: 1}
-    m_SelectedColor: {r: 0.2866, g: 0.6228, b: 0.6556, a: 1}
-    m_DisabledColor: {r: 0.13, g: 0.54, b: 0.58, a: 0.35}
+    m_NormalColor: {r: 0.12, g: 0.39, b: 0.94, a: 1}
+    m_HighlightedColor: {r: 0.2784, g: 0.4998, b: 0.9508, a: 1}
+    m_PressedColor: {r: 0.09, g: 0.2925, b: 0.705, a: 1}
+    m_SelectedColor: {r: 0.2784, g: 0.4998, b: 0.9508, a: 1}
+    m_DisabledColor: {r: 0.12, g: 0.39, b: 0.94, a: 0.35}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.08
   m_SpriteState:
@@ -1882,11 +1882,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.54, g: 0.12, b: 0.21, a: 1}
-    m_HighlightedColor: {r: 0.6228, g: 0.2784, b: 0.3522, a: 1}
-    m_PressedColor: {r: 0.40500003, g: 0.089999996, b: 0.1575, a: 1}
-    m_SelectedColor: {r: 0.6228, g: 0.2784, b: 0.3522, a: 1}
-    m_DisabledColor: {r: 0.54, g: 0.12, b: 0.21, a: 0.35}
+    m_NormalColor: {r: 0.84, g: 0.14, b: 0.22, a: 1}
+    m_HighlightedColor: {r: 0.8688, g: 0.2948, b: 0.3604, a: 1}
+    m_PressedColor: {r: 0.63, g: 0.105, b: 0.165, a: 1}
+    m_SelectedColor: {r: 0.8688, g: 0.2948, b: 0.3604, a: 1}
+    m_DisabledColor: {r: 0.84, g: 0.14, b: 0.22, a: 0.35}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.08
   m_SpriteState:
@@ -1918,7 +1918,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.54, g: 0.12, b: 0.21, a: 1}
+  m_Color: {r: 0.84, g: 0.14, b: 0.22, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1960,7 +1960,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 452, y: -294}
+  m_AnchoredPosition: {x: 452, y: -226}
   m_SizeDelta: {x: 148, y: 62}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1846655249

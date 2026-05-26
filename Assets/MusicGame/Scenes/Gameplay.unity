@@ -1193,6 +1193,9 @@ MonoBehaviour:
   dashFill: 0.48
   lineWidth: 0.018
   guideColor: {r: 1, g: 1, b: 1, a: 0.34}
+  animatePerspectiveDashes: 1
+  forwardSpeed: 0.34
+  nearBrightnessBoost: 0.65
 --- !u!1 &1569285084
 GameObject:
   m_ObjectHideFlags: 0

@@ -233,14 +233,24 @@ MonoBehaviour:
   visualTransform: {fileID: 6719200952916153163}
   judgePlaneZ: 0
   spawnZ: 10
-  minScale: 0.3
-  maxScale: 0.82
+  minScale: 0.22
+  maxScale: 0.68
   minAlpha: 0.4
   maxAlpha: 1
   tailSpriteRenderer: {fileID: 8922995952429952266}
   tailTransform: {fileID: 8969848114720004808}
   connectionLine: {fileID: 1369762105440430260}
   samplingInterval: 0.1
+  ribbonSampleTime: 0.08
+  ribbonWidth: 0.38
+  ribbonAlpha: 0.22
+  sequenceBaseScale: 0.68
+  visualFillInterval: 0.025
+  visualFillScaleMultiplier: 0.92
+  visualFillAlphaMultiplier: 0.88
+  tailFlickScaleMultiplier: 0.7
+  maxGeneratedPieces: 48
+  maxVisualFillPieces: 192
 --- !u!120 &1369762105440430260
 LineRenderer:
   serializedVersion: 3

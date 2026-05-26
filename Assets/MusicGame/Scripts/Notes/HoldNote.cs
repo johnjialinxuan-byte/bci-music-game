@@ -13,14 +13,19 @@ namespace MusicGame.Notes
         [SerializeField] private LineRenderer connectionLine;
         [SerializeField] private float samplingInterval = 0.1f;
         [SerializeField] private float ribbonSampleTime = 0.08f;
-        [SerializeField] private float ribbonWidth = 0.46f;
-        [SerializeField] private float ribbonAlpha = 0.62f;
-        [SerializeField] private float sequenceBaseScale = 0.78f;
-        
+        [SerializeField] private float ribbonWidth = 0.38f;
+        [SerializeField] private float ribbonAlpha = 0.22f;
+        [SerializeField] private float sequenceBaseScale = 0.68f;
+        [SerializeField] private float visualFillInterval = 0.025f;
+        [SerializeField] private float visualFillScaleMultiplier = 0.92f;
+        [SerializeField] private float visualFillAlphaMultiplier = 0.88f;
+
         [SerializeField, Range(0.1f, 1f)] private float tailFlickScaleMultiplier = 0.7f;
-[SerializeField] private int maxGeneratedPieces = 48;
+        [SerializeField] private int maxGeneratedPieces = 48;
+        [SerializeField] private int maxVisualFillPieces = 192;
 
         private readonly List<HoldPiece> holdPieces = new List<HoldPiece>();
+        private readonly List<HoldPiece> visualFillPieces = new List<HoldPiece>();
         private readonly List<HoldPathNode> pathNodes = new List<HoldPathNode>();
         private readonly List<RibbonSample> ribbonSamples = new List<RibbonSample>();
         private readonly List<Vector3> ribbonVertices = new List<Vector3>();
@@ -32,7 +37,7 @@ namespace MusicGame.Notes
         private Mesh ribbonMesh;
         
         private bool holdJudged;
-private bool isHolding;
+        private bool isHolding;
         private bool headJudged;
         private bool tailJudged;
         private JudgmentType headJudgment;
@@ -168,7 +173,13 @@ private bool isHolding;
                 piece.Renderer.gameObject.SetActive(false);
             }
 
+            foreach (HoldPiece piece in visualFillPieces)
+            {
+                piece.Renderer.gameObject.SetActive(false);
+            }
+
             BuildPathNodes(data);
+            BuildVisualFillPieces(data);
             ClearRibbon();
 
             int pieceIndex = 0;
@@ -187,6 +198,37 @@ private bool isHolding;
             if (data.HasTailFlick)
                 ConfigurePiece(pieceIndex, "slide", data.EndTime, data.EndPosition);
             UpdateSequenceVisuals();
+        }
+
+        private void BuildVisualFillPieces(NoteData data)
+        {
+            Sprite fillSprite = NoteVisualManager.LoadNoteSprite(NoteVisualManager.GetHoldSpritePath(data, "round"));
+            float interval = Mathf.Max(0.01f, visualFillInterval);
+            int fillIndex = 0;
+
+            for (int segment = 0; segment < pathNodes.Count - 1 && fillIndex < maxVisualFillPieces; segment++)
+            {
+                HoldPathNode start = pathNodes[segment];
+                HoldPathNode end = pathNodes[segment + 1];
+                float duration = Mathf.Max(0f, end.HitTime - start.HitTime);
+                int count = Mathf.Max(0, Mathf.CeilToInt(duration / interval) - 1);
+
+                for (int i = 1; i <= count && fillIndex < maxVisualFillPieces; i++)
+                {
+                    float normalized = i / (count + 1f);
+                    HoldPiece piece = GetOrCreateVisualFillPiece(fillIndex);
+                    if (fillSprite != null)
+                        piece.Renderer.sprite = fillSprite;
+
+                    piece.Shape = "round";
+                    piece.HitTime = Mathf.Lerp(start.HitTime, end.HitTime, normalized);
+                    piece.HitPosition = Vector3.Lerp(start.Position, end.Position, normalized);
+                    piece.Renderer.sortingOrder = 2;
+                    piece.Renderer.gameObject.name = $"Hold_VisualRound_{fillIndex:000}";
+                    piece.Renderer.gameObject.SetActive(true);
+                    fillIndex++;
+                }
+            }
         }
 
         private void EnsureRibbonRenderer()
@@ -291,9 +333,25 @@ private bool isHolding;
             return holdPieces[index];
         }
 
+        private HoldPiece GetOrCreateVisualFillPiece(int index)
+        {
+            while (visualFillPieces.Count <= index)
+            {
+                GameObject pieceObject = new GameObject("Hold_VisualRound");
+                pieceObject.transform.SetParent(transform, false);
+                SpriteRenderer renderer = pieceObject.AddComponent<SpriteRenderer>();
+                renderer.color = Color.white;
+                visualFillPieces.Add(new HoldPiece(renderer, sequenceBaseScale));
+            }
+
+            return visualFillPieces[index];
+        }
+
         private void UpdateSequenceVisuals()
         {
             float zRange = Mathf.Max(0.001f, Mathf.Abs(spawnZ - judgePlaneZ));
+
+            UpdateVisualFillPieces(zRange);
 
             foreach (HoldPiece piece in holdPieces)
             {
@@ -301,6 +359,7 @@ private bool isHolding;
 
                 float timeUntilHit = piece.HitTime - SongTime;
                 float progress = Mathf.Clamp01(1f - (timeUntilHit / Data.approachTime));
+                float scaleMultiplier = piece.Shape == "slide" ? tailFlickScaleMultiplier : 1f;
                 if (progress >= 1f && SongTime > piece.HitTime + JudgeManager.Instance.GoodWindow)
                 {
                     piece.Renderer.gameObject.SetActive(false);
@@ -315,7 +374,6 @@ private bool isHolding;
                 piece.Renderer.transform.position = currentPosition;
 
                 float zDistance = Mathf.Abs(currentPosition.z - judgePlaneZ);
-                float scaleMultiplier = piece.Shape == "slide" ? tailFlickScaleMultiplier : 1f;
                 float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange) * piece.BaseScale * scaleMultiplier;
                 piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
 
@@ -325,6 +383,38 @@ private bool isHolding;
             }
 
             UpdateRibbonVisual();
+        }
+
+        // Visual filler circles build the Hold body; they never participate in judgment.
+        private void UpdateVisualFillPieces(float zRange)
+        {
+            foreach (HoldPiece piece in visualFillPieces)
+            {
+                if (piece.Renderer == null || !piece.Renderer.gameObject.activeSelf) continue;
+
+                float progress = Mathf.Clamp01(1f - ((piece.HitTime - SongTime) / Data.approachTime));
+                if (progress >= 1f)
+                {
+                    piece.Renderer.gameObject.SetActive(false);
+                    continue;
+                }
+
+                Vector3 spawnPosition = piece.HitPosition;
+                spawnPosition.z = spawnZ;
+                Vector3 judgePosition = piece.HitPosition;
+                judgePosition.z = judgePlaneZ;
+                Vector3 currentPosition = Vector3.Lerp(spawnPosition, judgePosition, progress);
+                piece.Renderer.transform.position = currentPosition;
+
+                float zDistance = Mathf.Abs(currentPosition.z - judgePlaneZ);
+                float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange)
+                    * piece.BaseScale * visualFillScaleMultiplier;
+                piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
+
+                Color color = piece.Renderer.color;
+                color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange) * visualFillAlphaMultiplier;
+                piece.Renderer.color = color;
+            }
         }
 
         private void UpdateRibbonVisual()
@@ -409,8 +499,7 @@ private bool isHolding;
                 float zDistance = Mathf.Abs(worldPosition.z - judgePlaneZ);
                 float zRange = Mathf.Max(0.001f, Mathf.Abs(spawnZ - judgePlaneZ));
                 float depthAlpha = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange);
-                float edgeFade = Mathf.Clamp01(Mathf.Min(normalized, 1f - normalized) * 5f);
-                ribbonSamples.Add(new RibbonSample(worldPosition, depthAlpha * edgeFade));
+                ribbonSamples.Add(new RibbonSample(worldPosition, depthAlpha));
             }
         }
 
