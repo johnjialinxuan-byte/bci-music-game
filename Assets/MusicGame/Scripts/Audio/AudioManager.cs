@@ -272,7 +272,7 @@ namespace MusicGame.Audio
         private bool EnsureCueSheetLoaded(string cueSheet)
         {
             if (!EnsureCriAtomReady()) return false;
-            if (CriAtom.GetAcb(cueSheet) != null) return true;
+            if (loadedCueSheets.Contains(cueSheet)) return true;
 
             string acbPath = $"{cueSheetFolder}/{cueSheet}.acb";
             CriAtom.AddCueSheet(cueSheet, acbPath, string.Empty);
