@@ -137,18 +137,18 @@ namespace MusicGame.Notes
             CheckHoldEnd();
         }
 
-        private void TryHitTailSlide()
+private void TryHitTailSlide()
         {
-            if (!Data.HasTailFlick || tailJudged || IsJudged || InputManager.Instance == null) return;
+            if (!Data.HasTailFlick || tailJudged || IsJudged || InputManager.Instance == null || JudgeManager.Instance == null) return;
 
             float timeDiff = SongTime - Data.EndTime;
-            if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
+            if (!JudgeManager.Instance.IsInFlickHitWindow(timeDiff)) return;
 
             FlickDirection expectedDirection = GetEffectiveTailFlickDirection(Data.flickDirection);
             FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
             if (detectedDir != expectedDirection) return;
 
-            ResolveTailJudgment(JudgeManager.Instance.Judge(timeDiff));
+            ResolveTailJudgment(JudgeManager.Instance.JudgeFlick(timeDiff));
             TryFinishJudgment();
         }
 

@@ -11,11 +11,6 @@ namespace MusicGame.Gameplay
         [SerializeField] private HoldNote holdNotePrefab;
         [SerializeField] private FlickNote flickNotePrefab;
 
-        [Header("Spawn Area")]
-        [SerializeField] private float spawnAreaWidth = 6f;
-        [SerializeField] private float spawnAreaHeight = 4f;
-        [SerializeField] private float spawnZ = 10f;
-
         [Header("Pooling")]
         [SerializeField] private int poolSize = 100;
 

@@ -59,7 +59,7 @@ namespace MusicGame.Scenes
             System.Type ipcType = System.Type.GetType("IPC, Assembly-CSharp");
             if (ipcType != null)
             {
-                Object ipcObj = FindObjectOfType(ipcType);
+                Object ipcObj = FindAnyObjectByType(ipcType);
                 if (ipcObj == null)
                 {
                     GameObject ipcGo = new GameObject("IPC (TEMP)");
@@ -69,7 +69,7 @@ namespace MusicGame.Scenes
             }
 
             System.Type bciInputType = System.Type.GetType("MusicGame.Input.BCIInputProvider, Assembly-CSharp");
-            if (bciInputType != null && FindObjectOfType(bciInputType) == null)
+            if (bciInputType != null && FindAnyObjectByType(bciInputType) == null)
             {
                 GameObject bciGo = new GameObject("BCIInputProvider (TEMP)");
                 Object comp = bciGo.AddComponent(bciInputType);
@@ -78,7 +78,7 @@ namespace MusicGame.Scenes
                 System.Type ipcType2 = System.Type.GetType("IPC, Assembly-CSharp");
                 if (ipcType2 != null)
                 {
-                    Object ipcInstance = FindObjectOfType(ipcType2);
+                    Object ipcInstance = FindAnyObjectByType(ipcType2);
                     if (ipcInstance != null)
                     {
                         var field = bciInputType.GetField("ipc", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
@@ -89,7 +89,7 @@ namespace MusicGame.Scenes
             }
 
             System.Type bciType = System.Type.GetType("MusicGame.Input.BCIDebugOverlay, Assembly-CSharp");
-            if (bciType != null && FindObjectOfType(bciType) == null)
+            if (bciType != null && FindAnyObjectByType(bciType) == null)
             {
                 GameObject debugGo = new GameObject("BCIDebugOverlay (TEMP)");
                 debugGo.AddComponent(bciType);
@@ -195,7 +195,15 @@ namespace MusicGame.Scenes
 
             string chartPath = currentSong.GetChartPath(GameStateManager.Instance.SelectedDifficulty);
             currentChart = ChartManager.Instance.LoadChart(chartPath);
-            if (currentChart == null)
+            
+
+            int attentionThreshold = GameplaySettings.GetAttentionThreshold(GameStateManager.Instance.SelectedDifficulty);
+            foreach (NoteData note in currentChart.notes)
+            {
+                if (note.noteType == NoteType.Hold)
+                    note.threshold = attentionThreshold;
+            }
+if (currentChart == null)
             {
                 Debug.LogError("[GameplayController] No valid JSON chart found.");
                 GameStateManager.Instance.ChangeScene(GameScene.SongSelect);

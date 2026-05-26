@@ -22,7 +22,7 @@ namespace MusicGame.Input
         void Start()
         {
             if (ipc == null)
-                ipc = FindObjectOfType<IPC>();
+                ipc = FindAnyObjectByType<IPC>();
         }
 
         void OnGUI()

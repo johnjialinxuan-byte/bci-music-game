@@ -16,8 +16,6 @@ namespace MusicGame.Gameplay
         public Vector2 TouchDelta { get; private set; }
         public Vector2 FlickDirection { get; private set; }
         public bool IsFlicking { get; private set; }
-
-        [SerializeField] private float flickThreshold = 0.3f;
         [SerializeField] private float flickMinDistance = 30f;
 
         private Vector2 touchStartPos;

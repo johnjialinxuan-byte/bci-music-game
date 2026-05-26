@@ -432,7 +432,6 @@ namespace MusicGame.Editor
             offsetValueTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(150, 30);
 
             GameObject calibrateBtn = CreateButton("CalibrateButton", canvasObj.transform, "Calibrate Input", new Vector2(0, -240), new Vector2(200, 50));
-            GameObject backBtn = CreateButton("BackButton", canvasObj.transform, "Back", new Vector2(0, -320), new Vector2(200, 50));
 
             GameObject controller = new GameObject("SettingsController");
             SettingsController ctrl = controller.AddComponent<SettingsController>();
@@ -442,7 +441,6 @@ namespace MusicGame.Editor
             ctrl.GetType().GetField("inputOffsetSlider", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, offsetSlider.GetComponent<Slider>());
             ctrl.GetType().GetField("inputOffsetText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, offsetValueTxt.GetComponent<Text>());
             ctrl.GetType().GetField("calibrateButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, calibrateBtn.GetComponent<Button>());
-            ctrl.GetType().GetField("backButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, backBtn.GetComponent<Button>());
 
             CreateEventSystem();
             EditorSceneManager.SaveScene(scene, $"{ScenesPath}/Settings.unity");
@@ -470,12 +468,9 @@ namespace MusicGame.Editor
             aboutTxt.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 0);
             aboutTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(600, 300);
 
-            GameObject backBtn = CreateButton("BackButton", canvasObj.transform, "Back", new Vector2(0, -220), new Vector2(200, 50));
-
             GameObject controller = new GameObject("AboutController");
             AboutController ctrl = controller.AddComponent<AboutController>();
             ctrl.GetType().GetField("aboutText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, aboutTxt.GetComponent<Text>());
-            ctrl.GetType().GetField("backButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(ctrl, backBtn.GetComponent<Button>());
 
             CreateEventSystem();
             EditorSceneManager.SaveScene(scene, $"{ScenesPath}/About.unity");

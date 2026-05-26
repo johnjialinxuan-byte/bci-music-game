@@ -7,6 +7,7 @@ namespace MusicGame.UI
     public class SongItemHoverEffect : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         [SerializeField] private Graphic targetGraphic;
+        [SerializeField] private Graphic backgroundGraphic;
         [SerializeField] private float hoverScale = 1.16f;
         [SerializeField] private float animationSpeed = 12f;
         [SerializeField] private Color hoverColor = new Color(0.18f, 0.95f, 1f, 1f);
@@ -34,15 +35,26 @@ namespace MusicGame.UI
                 targetGraphic = GetComponentInChildren<Text>(true);
             if (targetGraphic != null)
                 normalColor = targetGraphic.color;
+            if (backgroundGraphic == null)
+                backgroundGraphic = GetComponent<Image>();
         }
 
         private void Update()
         {
-            if (targetGraphic == null) return;
-            targetGraphic.rectTransform.localScale = Vector3.Lerp(
-                targetGraphic.rectTransform.localScale,
-                targetScale,
-                Time.unscaledDeltaTime * animationSpeed);
+            if (targetGraphic != null)
+            {
+                targetGraphic.rectTransform.localScale = Vector3.Lerp(
+                    targetGraphic.rectTransform.localScale,
+                    targetScale,
+                    Time.unscaledDeltaTime * animationSpeed);
+            }
+            if (backgroundGraphic != null)
+            {
+                backgroundGraphic.rectTransform.localScale = Vector3.Lerp(
+                    backgroundGraphic.rectTransform.localScale,
+                    targetScale,
+                    Time.unscaledDeltaTime * animationSpeed);
+            }
         }
 
         public void SetSelected(bool selected)

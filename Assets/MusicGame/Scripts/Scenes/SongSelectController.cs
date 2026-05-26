@@ -44,7 +44,9 @@ namespace MusicGame.Scenes
         private void Start()
         {
             EnsureConfirmButton();
-            ConfigureDifficultyButtons();
+            
+            ConfigureBackButton();
+ConfigureDifficultyButtons();
 
             if (backButton != null)
             {
@@ -77,6 +79,7 @@ namespace MusicGame.Scenes
                     confirmButton.gameObject.AddComponent<ButtonSFX>();
             }
 
+            RemoveSongListClipping();
             ConfigureHeaderEffects();
             if (GameStateManager.Instance != null)
                 UpdateCoverFrameColor(GameStateManager.Instance.SelectedDifficulty);
@@ -312,6 +315,32 @@ namespace MusicGame.Scenes
             ConfigurePillButton(confirmButton, confirmButtonColor, new Vector2(286f, -302f), new Vector2(232f, 62f));
         }
 
+private void ConfigureBackButton()
+        {
+            if (backButton == null) return;
+
+            RectTransform rect = backButton.GetComponent<RectTransform>();
+            if (rect != null)
+                rect.sizeDelta = new Vector2(174f, 56f);
+
+            PillButtonStyle.Apply(backButton, PillButtonStyle.Cyan);
+            Text label = backButton.GetComponentInChildren<Text>(true);
+            if (label == null)
+                label = PillButtonStyle.CreateLabel(backButton.transform, "<  BACK", 19);
+            else
+            {
+                label.text = "<  BACK";
+                label.fontSize = 19;
+                label.color = Color.white;
+            }
+
+            SongItemHoverEffect hover = backButton.GetComponent<SongItemHoverEffect>();
+            if (hover == null)
+                hover = backButton.gameObject.AddComponent<SongItemHoverEffect>();
+            hover.SetLabel(label);
+        }
+
+
         private void ConfigurePillButton(Button button, Color color, Vector2 position, Vector2 size)
         {
             if (button == null) return;
@@ -400,6 +429,27 @@ namespace MusicGame.Scenes
         {
             Audio.AudioManager.Instance.StopSong();
             GameStateManager.Instance.ChangeScene(GameScene.MainMenu);
+        }
+
+        private void RemoveSongListClipping()
+        {
+            if (songListContent == null) return;
+
+            Transform viewport = songListContent.parent;
+            if (viewport == null) return;
+
+            Mask mask = viewport.GetComponent<Mask>();
+            if (mask != null)
+            {
+                mask.enabled = false;
+            }
+
+            RectMask2D rectMask = viewport.GetComponent<RectMask2D>();
+            if (rectMask == null)
+            {
+                rectMask = viewport.gameObject.AddComponent<RectMask2D>();
+            }
+            rectMask.padding = new Vector4(-120f, 0f, -120f, 0f);
         }
     }
 }

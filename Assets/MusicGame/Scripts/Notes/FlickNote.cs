@@ -40,19 +40,19 @@ protected override void Update()
         }
 
 
-        public void TryHit()
+public void TryHit()
         {
-            if (IsJudged || IsMissed) return;
+            if (IsJudged || IsMissed || JudgeManager.Instance == null || InputManager.Instance == null) return;
 
             float timeDiff = SongTime - Data.time;
-            if (!JudgeManager.Instance.IsInHitWindow(timeDiff)) return;
+            if (!JudgeManager.Instance.IsInFlickHitWindow(timeDiff)) return;
 
             FlickDirection expectedDirection = GetEffectiveDirection(Data.flickDirection);
             FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
             if (detectedDir != expectedDirection)
                 return;
 
-            JudgmentType judgment = JudgeManager.Instance.Judge(timeDiff);
+            JudgmentType judgment = JudgeManager.Instance.JudgeFlick(timeDiff);
             OnHit(judgment);
         }
 

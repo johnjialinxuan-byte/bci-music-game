@@ -304,9 +304,7 @@ namespace MusicGame.Editor
             ConfigureCamera(Color.black, false);
             GameObject canvas = CreateCanvas("SettingsCanvas");
             CreateText("Title", canvas.transform, "Settings", 38, new Vector2(0, 170), new Vector2(400, 60));
-            Button back = CreateButton("BackButton", canvas.transform, "Back", new Vector2(0, -200));
             SettingsController controller = new GameObject("SettingsController").AddComponent<SettingsController>();
-            SetField(controller, "backButton", back);
             CreateEventSystem();
             Save(scene, "Settings");
         }
@@ -317,10 +315,8 @@ namespace MusicGame.Editor
             ConfigureCamera(Color.black, false);
             GameObject canvas = CreateCanvas("AboutCanvas");
             Text about = CreateText("AboutText", canvas.transform, "", 22, new Vector2(0, 40), new Vector2(680, 280));
-            Button back = CreateButton("BackButton", canvas.transform, "Back", new Vector2(0, -210));
             AboutController controller = new GameObject("AboutController").AddComponent<AboutController>();
             SetField(controller, "aboutText", about);
-            SetField(controller, "backButton", back);
             CreateEventSystem();
             Save(scene, "About");
         }

@@ -1,74 +1,204 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
+using MusicGame.UI;
 
 namespace MusicGame.Scenes
 {
     public class SettingsController : MonoBehaviour
     {
-        [Header("UI References")]
-        [SerializeField] private Slider masterVolumeSlider;
-        [SerializeField] private Slider musicVolumeSlider;
-        [SerializeField] private Slider sfxVolumeSlider;
-        [SerializeField] private Slider inputOffsetSlider;
-        [SerializeField] private Text inputOffsetText;
-        [SerializeField] private Button backButton;
-        [SerializeField] private Button calibrateButton;
+        private const float Step = 5f;
+        private Canvas canvas;
 
         private void Start()
         {
-            if (masterVolumeSlider != null)
+            canvas = FindAnyObjectByType<Canvas>();
+            if (canvas == null) return;
+
+            ConfigureTitle();
+            SetupBackButton();
+            BuildTuningPanel();
+        }
+
+        private void ConfigureTitle()
+        {
+            Text title = GameObject.Find("Title")?.GetComponent<Text>();
+            if (title == null) return;
+
+            title.text = "SETTINGS";
+            title.fontSize = 42;
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(0.28f, 0.93f, 1f, 1f);
+            title.rectTransform.anchoredPosition = new Vector2(0f, 320f);
+            Outline outline = title.GetComponent<Outline>() ?? title.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.05f, 0.95f, 1f, 0.85f);
+            outline.effectDistance = new Vector2(2f, -2f);
+        }
+
+        private void BuildTuningPanel()
+        {
+            Transform existing = canvas.transform.Find("TuningPanel");
+            if (existing != null) Destroy(existing.gameObject);
+
+            GameObject panel = new GameObject("TuningPanel", typeof(RectTransform), typeof(Image));
+            panel.transform.SetParent(canvas.transform, false);
+            RectTransform panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchoredPosition = new Vector2(0f, -20f);
+            panelRect.sizeDelta = new Vector2(950f, 620f);
+            Image panelImage = panel.GetComponent<Image>();
+            panelImage.sprite = PillButtonStyle.GetSprite();
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.03f, 0.10f, 0.15f, 0.72f);
+
+            CreateHeader(panel.transform, "ATTENTION THRESHOLD", 236f);
+            CreateStepperRow(panel.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, 170f);
+            CreateStepperRow(panel.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, 94f);
+            CreateStepperRow(panel.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, 18f);
+            CreateHeader(panel.transform, "FLICK TIMING WINDOW", -65f);
+            CreateStepperRow(panel.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -132f);
+            CreateStepperRow(panel.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -208f);
+        }
+
+        private static void CreateHeader(Transform parent, string value, float y)
+        {
+            Text text = CreateText(parent, value, 20, TextAnchor.MiddleLeft);
+            RectTransform rect = text.rectTransform;
+            rect.anchoredPosition = new Vector2(-380f, y);
+            rect.sizeDelta = new Vector2(720f, 34f);
+            text.fontStyle = FontStyle.Bold;
+            text.color = new Color(0.28f, 0.93f, 1f, 1f);
+        }
+
+        private void CreateStepperRow(Transform parent, string label, int initial, int min, int max, string suffix, Action<int> onChanged, float y)
+        {
+            GameObject row = new GameObject(label + "Row", typeof(RectTransform), typeof(Image));
+            row.transform.SetParent(parent, false);
+            RectTransform rowRect = row.GetComponent<RectTransform>();
+            rowRect.anchoredPosition = new Vector2(0f, y);
+            rowRect.sizeDelta = new Vector2(820f, 64f);
+            Image rowImage = row.GetComponent<Image>();
+            rowImage.sprite = PillButtonStyle.GetSprite();
+            rowImage.type = Image.Type.Sliced;
+            rowImage.color = PillButtonStyle.Panel;
+
+            Text name = CreateText(row.transform, label, 20, TextAnchor.MiddleLeft);
+            SetRect(name.rectTransform, new Vector2(-320f, 0f), new Vector2(132f, 60f));
+            SongItemHoverEffect effect = row.AddComponent<SongItemHoverEffect>();
+            effect.SetLabel(name);
+
+            Button minus = CreateSmallButton(row.transform, "-", new Vector2(-135f, 0f));
+            Button plus = CreateSmallButton(row.transform, "+", new Vector2(272f, 0f));
+            Text valueText = CreateText(row.transform, string.Empty, 19, TextAnchor.MiddleCenter);
+            SetRect(valueText.rectTransform, new Vector2(195f, 0f), new Vector2(102f, 60f));
+            valueText.color = new Color(0.28f, 0.93f, 1f, 1f);
+
+            Slider slider = CreateSlider(row.transform, new Vector2(35f, 0f), new Vector2(260f, 38f));
+            slider.minValue = min / Step;
+            slider.maxValue = max / Step;
+            slider.wholeNumbers = true;
+            slider.SetValueWithoutNotify(initial / Step);
+
+            Action update = () =>
             {
-                masterVolumeSlider.value = 0.8f;
-                masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
-            }
-            if (musicVolumeSlider != null)
-            {
-                musicVolumeSlider.value = 0.8f;
-                musicVolumeSlider.onValueChanged.AddListener(OnMusicVolumeChanged);
-            }
-            if (sfxVolumeSlider != null)
-            {
-                sfxVolumeSlider.value = 0.8f;
-                sfxVolumeSlider.onValueChanged.AddListener(OnSFXVolumeChanged);
-            }
-            if (inputOffsetSlider != null)
-            {
-                inputOffsetSlider.value = 0f;
-                inputOffsetSlider.minValue = -200f;
-                inputOffsetSlider.maxValue = 200f;
-                inputOffsetSlider.onValueChanged.AddListener(OnInputOffsetChanged);
-            }
-            if (calibrateButton != null)
-                calibrateButton.onClick.AddListener(OnCalibrate);
-            if (backButton != null)
-                backButton.onClick.AddListener(OnBackClicked);
+                int snapped = Mathf.RoundToInt(slider.value * Step);
+                valueText.text = snapped + suffix;
+                onChanged(snapped);
+            };
+            slider.onValueChanged.AddListener(_ => update());
+            minus.onClick.AddListener(() => slider.value -= 1f);
+            plus.onClick.AddListener(() => slider.value += 1f);
+            update();
         }
 
-        private void OnMasterVolumeChanged(float value)
+        private static Button CreateSmallButton(Transform parent, string label, Vector2 position)
         {
-            Debug.Log($"[Settings] Master Volume: {value}");
+            GameObject obj = new GameObject(label == "+" ? "Plus" : "Minus", typeof(RectTransform), typeof(Image), typeof(Button));
+            obj.transform.SetParent(parent, false);
+            SetRect(obj.GetComponent<RectTransform>(), position, new Vector2(50f, 44f));
+            Button button = obj.GetComponent<Button>();
+            PillButtonStyle.Apply(button, PillButtonStyle.Cyan);
+            Text text = PillButtonStyle.CreateLabel(obj.transform, label, 26);
+            SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
+            hover.SetLabel(text);
+            obj.AddComponent<ButtonSFX>();
+            return button;
         }
 
-        private void OnMusicVolumeChanged(float value)
+        private static Slider CreateSlider(Transform parent, Vector2 position, Vector2 size)
         {
-            Debug.Log($"[Settings] Music Volume: {value}");
+            GameObject obj = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
+            obj.transform.SetParent(parent, false);
+            SetRect(obj.GetComponent<RectTransform>(), position, size);
+            Slider slider = obj.GetComponent<Slider>();
+
+            Image background = CreateSliderImage(obj.transform, "Background", new Color(0.06f, 0.18f, 0.24f, 1f));
+            SetStretch(background.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
+            Image fill = CreateSliderImage(obj.transform, "Fill", new Color(0.18f, 0.78f, 0.85f, 1f));
+            SetStretch(fill.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
+            Image handle = CreateSliderImage(obj.transform, "Handle", new Color(0.28f, 0.93f, 1f, 1f));
+            handle.rectTransform.sizeDelta = new Vector2(18f, 38f);
+
+            slider.fillRect = fill.rectTransform;
+            slider.handleRect = handle.rectTransform;
+            slider.targetGraphic = handle;
+            slider.direction = Slider.Direction.LeftToRight;
+            return slider;
         }
 
-        private void OnSFXVolumeChanged(float value)
+        private static Image CreateSliderImage(Transform parent, string name, Color color)
         {
-            Debug.Log($"[Settings] SFX Volume: {value}");
+            GameObject obj = new GameObject(name, typeof(RectTransform), typeof(Image));
+            obj.transform.SetParent(parent, false);
+            Image image = obj.GetComponent<Image>();
+            image.color = color;
+            image.sprite = PillButtonStyle.GetSprite();
+            image.type = Image.Type.Sliced;
+            return image;
         }
 
-        private void OnInputOffsetChanged(float value)
+        private static Text CreateText(Transform parent, string value, int size, TextAnchor alignment)
         {
-            if (inputOffsetText != null)
-                inputOffsetText.text = $"Offset: {value:F0}ms";
+            GameObject obj = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            obj.transform.SetParent(parent, false);
+            Text text = obj.GetComponent<Text>();
+            text.text = value;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = size;
+            text.color = Color.white;
+            text.alignment = alignment;
+            return text;
         }
 
-        private void OnCalibrate()
+        private static void SetRect(RectTransform rect, Vector2 position, Vector2 size)
         {
-            Debug.Log("[Settings] Input calibration placeholder.");
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+        }
+
+        private static void SetStretch(RectTransform rect, Vector2 min, Vector2 max)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = min;
+            rect.offsetMax = max;
+        }
+
+        private void SetupBackButton()
+        {
+            GameObject existing = GameObject.Find("BackButton");
+            if (existing != null) Destroy(existing);
+
+            GameObject backObj = new GameObject("BackButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            backObj.transform.SetParent(canvas.transform, false);
+            SetRect(backObj.GetComponent<RectTransform>(), new Vector2(-680f, 394f), new Vector2(174f, 56f));
+            Button button = backObj.GetComponent<Button>();
+            PillButtonStyle.Apply(button, PillButtonStyle.Cyan);
+            Text label = PillButtonStyle.CreateLabel(backObj.transform, "<  BACK", 19);
+            SongItemHoverEffect hover = backObj.AddComponent<SongItemHoverEffect>();
+            hover.SetLabel(label);
+            backObj.AddComponent<ButtonSFX>();
+            button.onClick.AddListener(OnBackClicked);
         }
 
         private void OnBackClicked()
@@ -77,3 +207,4 @@ namespace MusicGame.Scenes
         }
     }
 }
+

@@ -8,7 +8,6 @@ namespace MusicGame.Gameplay
     {
         [SerializeField] private Text judgmentText;
         [SerializeField] private float floatSpeed = 50f;
-        [SerializeField] private float fadeSpeed = 1.5f;
         [SerializeField] private float lifetime = 0.5f;
 
         private float timer;
