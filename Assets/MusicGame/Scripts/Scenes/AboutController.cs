@@ -14,11 +14,12 @@ namespace MusicGame.Scenes
         {
             if (aboutText != null)
             {
-                aboutText.text = "Music Game\n\n" +
+                aboutText.text = "BCI music game\n\n" +
                     "A Unity 2D Rhythm Game with pseudo-3D spatial presentation.\n\n" +
                     "Powered by CRIWARE Audio Middleware.\n\n" +
-                    "Developed for BCI Music Game Project.\n\n" +
-                    "v0.1.0";
+                    "developed by students from TJU\n\n" +
+                    "Music provided by [乌鸦Producer].\n\n" +
+                    "v0.1.1";
             }
             if (backButton != null)
                 backButton.onClick.AddListener(OnBackClicked);

@@ -154,7 +154,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 40}
-  m_SizeDelta: {x: 680, y: 280}
+  m_SizeDelta: {x: 680, y: 360}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &542308417
 CanvasRenderer:
@@ -197,7 +197,9 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 
+  m_Text: "BCI music game\n\nA Unity 2D Rhythm Game with pseudo-3D spatial presentation.\n\nPowered
+    by CRIWARE Audio Middleware.\n\ndeveloped by students from TJU\n\nMusic provided
+    by [\u4E4C\u9E26Producer].\n\nv0.1.1"
 --- !u!1 &576328013
 GameObject:
   m_ObjectHideFlags: 0

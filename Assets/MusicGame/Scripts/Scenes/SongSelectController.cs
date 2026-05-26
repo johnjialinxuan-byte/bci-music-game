@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,17 +13,25 @@ namespace MusicGame.Scenes
         [SerializeField] private Transform songListContent;
         [SerializeField] private GameObject songItemPrefab;
         [SerializeField] private Button backButton;
+        [SerializeField] private Image coverFrame;
         [SerializeField] private Image coverImage;
         [SerializeField] private Text titleText;
         [SerializeField] private Text artistText;
         [SerializeField] private Button easyButton;
         [SerializeField] private Button normalButton;
+
+        [Header("Difficulty Colors")]
+        [SerializeField] private Color easyFrameColor = new Color(0.20f, 0.92f, 0.55f, 1f);
+        [SerializeField] private Color normalFrameColor = new Color(0.20f, 0.86f, 1f, 1f);
+        [SerializeField] private Color hardFrameColor = new Color(1f, 0.24f, 0.40f, 1f);
         [SerializeField] private Button hardButton;
 
         [Header("Data")]
         [SerializeField] private List<SongData> availableSongs = new List<SongData>();
 
         private SongData selectedSong;
+        private bool isStartingGameplay;
+        private const float DifficultyFeedbackDuration = 0.15f;
         private List<GameObject> songItems = new List<GameObject>();
 
         private void Start()
@@ -206,16 +215,39 @@ namespace MusicGame.Scenes
             if (titleText != null) titleText.text = song.title;
             if (artistText != null) artistText.text = song.artist;
             if (coverImage != null) coverImage.sprite = song.coverImage;
+            if (GameStateManager.Instance != null)
+                UpdateCoverFrameColor(GameStateManager.Instance.SelectedDifficulty);
 
             Audio.AudioManager.Instance.StopSong();
         }
 
         private void OnDifficultySelected(Difficulty difficulty)
         {
-            if (selectedSong == null) return;
+            if (selectedSong == null || isStartingGameplay) return;
+            StartCoroutine(StartGameplayAfterDifficultyFeedback(difficulty));
+        }
+
+        private IEnumerator StartGameplayAfterDifficultyFeedback(Difficulty difficulty)
+        {
+            isStartingGameplay = true;
+            UpdateCoverFrameColor(difficulty);
             GameStateManager.Instance.SetSelectedDifficulty(difficulty);
             Audio.AudioManager.Instance.StopSong();
+
+            yield return new WaitForSecondsRealtime(DifficultyFeedbackDuration);
             GameStateManager.Instance.ChangeScene(GameScene.Gameplay);
+        }
+
+        private void UpdateCoverFrameColor(Difficulty difficulty)
+        {
+            if (coverFrame == null) return;
+
+            coverFrame.color = difficulty switch
+            {
+                Difficulty.Easy => easyFrameColor,
+                Difficulty.Hard => hardFrameColor,
+                _ => normalFrameColor
+            };
         }
 
         private void OnBackClicked()
