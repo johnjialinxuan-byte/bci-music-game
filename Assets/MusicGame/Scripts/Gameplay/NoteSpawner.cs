@@ -26,6 +26,7 @@ namespace MusicGame.Gameplay
         private float songTime;
         private bool isSpawning;
 
+        public bool HasUnspawnedNotes => currentChart != null && currentChart.notes != null && nextNoteIndex < currentChart.notes.Count;
         public IReadOnlyList<NoteBase> ActiveNotes => activeNotes;
 
         private void Awake()

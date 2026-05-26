@@ -10,6 +10,7 @@ namespace MusicGame.Managers
 
         [SerializeField] private NoteSpawner noteSpawner;
 
+        public bool HasUnspawnedNotes => noteSpawner != null && noteSpawner.HasUnspawnedNotes;
         public bool HasActiveNotes => noteSpawner != null && noteSpawner.ActiveNotes.Count > 0;
 
         private void Awake()

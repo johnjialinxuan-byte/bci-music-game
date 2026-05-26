@@ -27,6 +27,11 @@ namespace MusicGame.Audio
         private CriAtomExPlayback playback;
         private bool hasPlayback;
         private bool criAtomReady;
+        private long currentCueLengthMs;
+        private float currentCueSinglePlaybackDurationSec;
+
+        public bool IsCurrentCueIndefinite => currentCueLengthMs < 0;
+        public bool HasReachedCurrentCueSinglePlaybackEnd => currentCueSinglePlaybackDurationSec <= 0f || GetCurrentTime() >= currentCueSinglePlaybackDurationSec;
         private bool ownsAcfRegistration;
 
         private CriAtomExPlayer sfxPlayer;
@@ -91,6 +96,8 @@ namespace MusicGame.Audio
             }
 
             StopSong();
+            currentCueLengthMs = 0;
+            currentCueSinglePlaybackDurationSec = 0f;
             cueSheetName = cueSheet;
             cueName = cue;
 
@@ -104,6 +111,8 @@ namespace MusicGame.Audio
             }
 
             bool playFirstCueByIndex = false;
+            CriAtomEx.CueInfo cueInfo;
+            bool hasCueInfo;
             if (string.IsNullOrWhiteSpace(cueName))
             {
                 CriAtomEx.CueInfo[] cueInfos = acb.GetCueInfoList();
@@ -113,8 +122,34 @@ namespace MusicGame.Audio
                     return;
                 }
 
-                cueName = cueInfos[0].name;
+                cueInfo = cueInfos[0];
+                hasCueInfo = true;
+                cueName = cueInfo.name;
                 playFirstCueByIndex = string.IsNullOrWhiteSpace(cueName);
+            }
+            else
+            {
+                hasCueInfo = acb.GetCueInfo(cueName, out cueInfo);
+            }
+
+            if (hasCueInfo)
+            {
+                currentCueLengthMs = cueInfo.length;
+                if (currentCueLengthMs > 0)
+                {
+                    currentCueSinglePlaybackDurationSec = currentCueLengthMs / 1000f;
+                }
+                else
+                {
+                    CriAtomEx.WaveformInfo waveformInfo;
+                    bool hasWaveformInfo = playFirstCueByIndex
+                        ? acb.GetWaveFormInfo(cueInfo.id, out waveformInfo)
+                        : acb.GetWaveFormInfo(cueName, out waveformInfo);
+                    if (hasWaveformInfo && waveformInfo.samplingRate > 0 && waveformInfo.numSamples > 0)
+                        currentCueSinglePlaybackDurationSec = (float)waveformInfo.numSamples / waveformInfo.samplingRate;
+
+                    Debug.Log($"[AudioManager] Cue '{cueSheetName}/{cueName}' is indefinite; gameplay will end at its single-playback duration ({currentCueSinglePlaybackDurationSec:F3}s) after its chart completes.");
+                }
             }
 
             player ??= new CriAtomExPlayer(true);

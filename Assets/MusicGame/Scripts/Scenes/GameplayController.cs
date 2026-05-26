@@ -261,8 +261,13 @@ namespace MusicGame.Scenes
 
         private void CheckGameEnd()
         {
-            if (AudioManager.Instance.IsPlaying()) return;
-            if (NoteManager.Instance.HasActiveNotes) return;
+            bool audioStillPlaying = AudioManager.Instance.IsPlaying();
+            if (audioStillPlaying && !AudioManager.Instance.IsCurrentCueIndefinite) return;
+            if (NoteManager.Instance.HasUnspawnedNotes || NoteManager.Instance.HasActiveNotes) return;
+            if (audioStillPlaying && !AudioManager.Instance.HasReachedCurrentCueSinglePlaybackEnd) return;
+
+            if (audioStillPlaying)
+                AudioManager.Instance.StopSong();
 
             Invoke(nameof(ShowResult), 1f);
             isPlaying = false;
