@@ -426,7 +426,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Scenes.AboutController
   aboutText: {fileID: 542308418}
-  backButton: {fileID: 1596625162}
+  backArrowSprite: {fileID: 3286163911610860551, guid: 717c78cb0b7abaa45935dc2ec2dd0e61, type: 3}
 --- !u!4 &1097078525
 Transform:
   m_ObjectHideFlags: 0

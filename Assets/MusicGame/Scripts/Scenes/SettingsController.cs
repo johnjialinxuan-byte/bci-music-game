@@ -10,10 +10,14 @@ namespace MusicGame.Scenes
     {
         private const float Step = 5f;
         private Canvas canvas;
+        [SerializeField] private Sprite backArrowSprite;
+
 
         private void Start()
         {
-            canvas = FindAnyObjectByType<Canvas>();
+            
+            GameplaySettings.InitializeAttentionDefaults();
+canvas = FindAnyObjectByType<Canvas>();
             if (canvas == null) return;
 
             ConfigureTitle();
@@ -26,13 +30,13 @@ namespace MusicGame.Scenes
             Text title = GameObject.Find("Title")?.GetComponent<Text>();
             if (title == null) return;
 
-            title.text = "SETTINGS";
+            title.text = "设置";
             title.fontSize = 42;
             title.fontStyle = FontStyle.Bold;
-            title.color = new Color(0.28f, 0.93f, 1f, 1f);
+            title.color = Color.white;
             title.rectTransform.anchoredPosition = new Vector2(0f, 320f);
             Outline outline = title.GetComponent<Outline>() ?? title.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.05f, 0.95f, 1f, 0.85f);
+            outline.effectColor = new Color(1f, 1f, 1f, 0.2f);
             outline.effectDistance = new Vector2(2f, -2f);
         }
 
@@ -51,11 +55,13 @@ namespace MusicGame.Scenes
             panelImage.type = Image.Type.Sliced;
             panelImage.color = new Color(0.03f, 0.10f, 0.15f, 0.72f);
 
-            CreateHeader(panel.transform, "ATTENTION THRESHOLD", 236f);
+            CreateSectionFrame(panel.transform, new Vector2(0f, 126f), new Vector2(860f, 304f));
+            CreateHeader(panel.transform, "注意力阈值", 240f);
             CreateStepperRow(panel.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, 170f);
             CreateStepperRow(panel.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, 94f);
             CreateStepperRow(panel.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, 18f);
-            CreateHeader(panel.transform, "FLICK TIMING WINDOW", -65f);
+            CreateSectionFrame(panel.transform, new Vector2(0f, -151f), new Vector2(860f, 222f));
+            CreateHeader(panel.transform, "Flick 判定范围", -70f);
             CreateStepperRow(panel.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -132f);
             CreateStepperRow(panel.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -208f);
         }
@@ -64,10 +70,10 @@ namespace MusicGame.Scenes
         {
             Text text = CreateText(parent, value, 20, TextAnchor.MiddleLeft);
             RectTransform rect = text.rectTransform;
-            rect.anchoredPosition = new Vector2(-380f, y);
-            rect.sizeDelta = new Vector2(720f, 34f);
+            rect.anchoredPosition = new Vector2(-205f, y);
+            rect.sizeDelta = new Vector2(350f, 34f);
             text.fontStyle = FontStyle.Bold;
-            text.color = new Color(0.28f, 0.93f, 1f, 1f);
+            text.color = Color.white;
         }
 
         private void CreateStepperRow(Transform parent, string label, int initial, int min, int max, string suffix, Action<int> onChanged, float y)
@@ -91,7 +97,7 @@ namespace MusicGame.Scenes
             Button plus = CreateSmallButton(row.transform, "+", new Vector2(272f, 0f));
             Text valueText = CreateText(row.transform, string.Empty, 19, TextAnchor.MiddleCenter);
             SetRect(valueText.rectTransform, new Vector2(195f, 0f), new Vector2(102f, 60f));
-            valueText.color = new Color(0.28f, 0.93f, 1f, 1f);
+            valueText.color = Color.white;
 
             Slider slider = CreateSlider(row.transform, new Vector2(35f, 0f), new Vector2(260f, 38f));
             slider.minValue = min / Step;
@@ -132,11 +138,11 @@ namespace MusicGame.Scenes
             SetRect(obj.GetComponent<RectTransform>(), position, size);
             Slider slider = obj.GetComponent<Slider>();
 
-            Image background = CreateSliderImage(obj.transform, "Background", new Color(0.06f, 0.18f, 0.24f, 1f));
+            Image background = CreateSliderImage(obj.transform, "Background", new Color(1f, 1f, 1f, 0.20f));
             SetStretch(background.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
-            Image fill = CreateSliderImage(obj.transform, "Fill", new Color(0.18f, 0.78f, 0.85f, 1f));
+            Image fill = CreateSliderImage(obj.transform, "Fill", new Color(1f, 1f, 1f, 0.82f));
             SetStretch(fill.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
-            Image handle = CreateSliderImage(obj.transform, "Handle", new Color(0.28f, 0.93f, 1f, 1f));
+            Image handle = CreateSliderImage(obj.transform, "Handle", Color.white);
             handle.rectTransform.sizeDelta = new Vector2(18f, 38f);
 
             slider.fillRect = fill.rectTransform;
@@ -191,20 +197,49 @@ namespace MusicGame.Scenes
 
             GameObject backObj = new GameObject("BackButton", typeof(RectTransform), typeof(Image), typeof(Button));
             backObj.transform.SetParent(canvas.transform, false);
-            SetRect(backObj.GetComponent<RectTransform>(), new Vector2(-680f, 394f), new Vector2(174f, 56f));
+            SetRect(backObj.GetComponent<RectTransform>(), new Vector2(-690f, 394f), new Vector2(135f, 52f));
+            Image hitImage = backObj.GetComponent<Image>();
+            hitImage.color = new Color(0.12f, 0.16f, 0.21f, 0f);
+
             Button button = backObj.GetComponent<Button>();
-            PillButtonStyle.Apply(button, PillButtonStyle.Cyan);
-            Text label = PillButtonStyle.CreateLabel(backObj.transform, "<  BACK", 19);
-            SongItemHoverEffect hover = backObj.AddComponent<SongItemHoverEffect>();
-            hover.SetLabel(label);
-            backObj.AddComponent<ButtonSFX>();
+            button.targetGraphic = hitImage;
+            button.transition = Selectable.Transition.None;
             button.onClick.AddListener(OnBackClicked);
+            backObj.AddComponent<ButtonSFX>();
+
+            GameObject iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            iconObject.transform.SetParent(backObj.transform, false);
+            SetRect(iconObject.GetComponent<RectTransform>(), Vector2.zero, new Vector2(40f, 40f));
+            Image icon = iconObject.GetComponent<Image>();
+            icon.sprite = backArrowSprite;
+            icon.color = Color.white;
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+
+            SongItemHoverEffect hover = backObj.AddComponent<SongItemHoverEffect>();
+            hover.SetGraphic(icon);
         }
 
         private void OnBackClicked()
         {
             GameStateManager.Instance.ChangeScene(GameScene.MainMenu);
         }
-    }
+    
+
+private static void CreateSectionFrame(Transform parent, Vector2 position, Vector2 size)
+        {
+            GameObject frame = new GameObject("SectionFrame", typeof(RectTransform), typeof(Image));
+            frame.transform.SetParent(parent, false);
+            RectTransform rect = frame.GetComponent<RectTransform>();
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+
+            Image image = frame.GetComponent<Image>();
+            image.sprite = PillButtonStyle.GetSprite();
+            image.type = Image.Type.Sliced;
+            image.color = new Color(1f, 1f, 1f, 0.30f);
+            image.raycastTarget = false;
+        }
+}
 }
 

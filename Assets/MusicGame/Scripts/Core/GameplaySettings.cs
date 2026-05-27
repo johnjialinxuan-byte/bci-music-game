@@ -9,23 +9,25 @@ namespace MusicGame.Core
         private const string NormalAttentionKey = "Gameplay.Attention.Normal";
         private const string HardAttentionKey = "Gameplay.Attention.Hard";
         private const string FlickPerfectKey = "Gameplay.Flick.PerfectMs";
-        private const string FlickGreatKey = "Gameplay.Flick.GreatMs";
+        
+        private const string AttentionDefaultsVersionKey = "Gameplay.Attention.DefaultsVersion";
+private const string FlickGreatKey = "Gameplay.Flick.GreatMs";
 
         public static int EasyAttention
         {
-            get => Read(EasyAttentionKey, 50, 0, 100);
+            get => Read(EasyAttentionKey, 10, 0, 100);
             set => Write(EasyAttentionKey, value, 0, 100);
         }
 
         public static int NormalAttention
         {
-            get => Read(NormalAttentionKey, 50, 0, 100);
+            get => Read(NormalAttentionKey, 10, 0, 100);
             set => Write(NormalAttentionKey, value, 0, 100);
         }
 
         public static int HardAttention
         {
-            get => Read(HardAttentionKey, 50, 0, 100);
+            get => Read(HardAttentionKey, 20, 0, 100);
             set => Write(HardAttentionKey, value, 0, 100);
         }
 
@@ -69,5 +71,28 @@ namespace MusicGame.Core
         {
             return Mathf.Clamp(Mathf.RoundToInt(value / (float)Step) * Step, min, max);
         }
-    }
+    
+
+public static void InitializeAttentionDefaults()
+        {
+            if (PlayerPrefs.GetInt(AttentionDefaultsVersionKey, 0) >= 1) return;
+
+            bool hasExistingValues = PlayerPrefs.HasKey(EasyAttentionKey)
+                || PlayerPrefs.HasKey(NormalAttentionKey)
+                || PlayerPrefs.HasKey(HardAttentionKey);
+            bool isPreviousDefault = EasyAttention == 50
+                && NormalAttention == 50
+                && HardAttention == 50;
+
+            if (!hasExistingValues || isPreviousDefault)
+            {
+                EasyAttention = 10;
+                NormalAttention = 10;
+                HardAttention = 20;
+            }
+
+            PlayerPrefs.SetInt(AttentionDefaultsVersionKey, 1);
+            PlayerPrefs.Save();
+        }
+}
 }

@@ -44,9 +44,7 @@ namespace MusicGame.Scenes
         private void Start()
         {
             EnsureConfirmButton();
-            
-            ConfigureBackButton();
-ConfigureDifficultyButtons();
+            ConfigureDifficultyButtons();
 
             if (backButton != null)
             {
@@ -314,32 +312,6 @@ ConfigureDifficultyButtons();
             ConfigurePillButton(hardButton, hardButtonColor, new Vector2(452f, -226f), new Vector2(148f, 62f));
             ConfigurePillButton(confirmButton, confirmButtonColor, new Vector2(286f, -302f), new Vector2(232f, 62f));
         }
-
-private void ConfigureBackButton()
-        {
-            if (backButton == null) return;
-
-            RectTransform rect = backButton.GetComponent<RectTransform>();
-            if (rect != null)
-                rect.sizeDelta = new Vector2(174f, 56f);
-
-            PillButtonStyle.Apply(backButton, PillButtonStyle.Cyan);
-            Text label = backButton.GetComponentInChildren<Text>(true);
-            if (label == null)
-                label = PillButtonStyle.CreateLabel(backButton.transform, "<  BACK", 19);
-            else
-            {
-                label.text = "<  BACK";
-                label.fontSize = 19;
-                label.color = Color.white;
-            }
-
-            SongItemHoverEffect hover = backButton.GetComponent<SongItemHoverEffect>();
-            if (hover == null)
-                hover = backButton.gameObject.AddComponent<SongItemHoverEffect>();
-            hover.SetLabel(label);
-        }
-
 
         private void ConfigurePillButton(Button button, Color color, Vector2 position, Vector2 size)
         {
