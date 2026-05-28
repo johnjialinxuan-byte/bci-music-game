@@ -658,12 +658,7 @@ private void TryHitTailSlide()
 
         private static FlickDirection GetEffectiveTailFlickDirection(FlickDirection originalDirection)
         {
-            return originalDirection switch
-            {
-                FlickDirection.Up => FlickDirection.Right,   // red: clockwise by 90 degrees
-                FlickDirection.Down => FlickDirection.Right, // blue: counterclockwise by 90 degrees
-                _ => originalDirection
-            };
+            return originalDirection;
         }
 }
 }

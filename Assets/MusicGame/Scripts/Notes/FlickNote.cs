@@ -78,12 +78,7 @@ public void TryHit()
 
         private static FlickDirection GetEffectiveDirection(FlickDirection originalDirection)
         {
-            return originalDirection switch
-            {
-                FlickDirection.Up => FlickDirection.Right,   // red: clockwise by 90 degrees
-                FlickDirection.Down => FlickDirection.Right, // blue: counterclockwise by 90 degrees
-                _ => originalDirection
-            };
+            return originalDirection;
         }
 }
 }
