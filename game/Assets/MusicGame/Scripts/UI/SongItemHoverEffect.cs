@@ -11,6 +11,8 @@ namespace MusicGame.UI
         [SerializeField] private float hoverScale = 1.16f;
         [SerializeField] private float animationSpeed = 12f;
         [SerializeField] private Color hoverColor = new Color(0.18f, 0.95f, 1f, 1f);
+        [SerializeField] private bool scaleTargetGraphic = true;
+        [SerializeField] private bool scaleBackgroundGraphic = true;
 
         private Vector3 targetScale = Vector3.one;
         private Color normalColor = Color.white;
@@ -29,6 +31,33 @@ namespace MusicGame.UI
                 normalColor = targetGraphic.color;
         }
 
+public void SetScaleTargets(bool scaleTarget, bool scaleBackground)
+        {
+            scaleTargetGraphic = scaleTarget;
+            scaleBackgroundGraphic = scaleBackground;
+        }
+
+
+public void SetBackgroundGraphic(Graphic target)
+        {
+            backgroundGraphic = target;
+        }
+
+
+public void SetHoverColor(Color color)
+        {
+            hoverColor = color;
+            UpdateVisualTarget();
+        }
+
+
+public void SetHoverScale(float scale)
+        {
+            hoverScale = scale;
+            UpdateVisualTarget();
+        }
+
+
         private void Awake()
         {
             if (targetGraphic == null)
@@ -39,21 +68,30 @@ namespace MusicGame.UI
                 backgroundGraphic = GetComponent<Image>();
         }
 
-        private void Update()
+private void Update()
         {
-            if (targetGraphic != null)
+            if (targetGraphic != null && scaleTargetGraphic)
             {
                 targetGraphic.rectTransform.localScale = Vector3.Lerp(
                     targetGraphic.rectTransform.localScale,
                     targetScale,
                     Time.unscaledDeltaTime * animationSpeed);
             }
-            if (backgroundGraphic != null)
+            else if (targetGraphic != null)
+            {
+                targetGraphic.rectTransform.localScale = Vector3.one;
+            }
+
+            if (backgroundGraphic != null && scaleBackgroundGraphic)
             {
                 backgroundGraphic.rectTransform.localScale = Vector3.Lerp(
                     backgroundGraphic.rectTransform.localScale,
                     targetScale,
                     Time.unscaledDeltaTime * animationSpeed);
+            }
+            else if (backgroundGraphic != null)
+            {
+                backgroundGraphic.rectTransform.localScale = Vector3.one;
             }
         }
 
@@ -75,10 +113,10 @@ namespace MusicGame.UI
             UpdateVisualTarget();
         }
 
-        private void UpdateVisualTarget()
+private void UpdateVisualTarget()
         {
             bool emphasized = isPointerInside || isSelected;
-            targetScale = Vector3.one * (emphasized ? hoverScale : 1f);
+            targetScale = Vector3.one * (isPointerInside ? hoverScale : 1f);
             if (targetGraphic != null)
                 targetGraphic.color = emphasized ? hoverColor : normalColor;
         }

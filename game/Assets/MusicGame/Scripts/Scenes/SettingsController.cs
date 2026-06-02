@@ -19,13 +19,15 @@ namespace MusicGame.Scenes
             GameplaySettings.InitializeAttentionDefaults();
 canvas = FindAnyObjectByType<Canvas>();
             if (canvas == null) return;
+            EnsureSongSelectBackground();
 
+            SetupTopBar();
             ConfigureTitle();
             SetupBackButton();
             BuildTuningPanel();
         }
 
-        private void ConfigureTitle()
+private void ConfigureTitle()
         {
             Text title = GameObject.Find("Title")?.GetComponent<Text>();
             if (title == null) return;
@@ -33,12 +35,25 @@ canvas = FindAnyObjectByType<Canvas>();
             title.text = "设置";
             title.fontSize = 42;
             title.fontStyle = FontStyle.Bold;
+            title.alignment = TextAnchor.MiddleLeft;
             title.color = Color.white;
-            title.rectTransform.anchoredPosition = new Vector2(0f, 320f);
-            Outline outline = title.GetComponent<Outline>() ?? title.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(1f, 1f, 1f, 0.2f);
-            outline.effectDistance = new Vector2(2f, -2f);
+            title.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            title.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            title.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            title.rectTransform.sizeDelta = new Vector2(460f, 64f);
+            title.rectTransform.anchoredPosition = new Vector2(-230f, 394f);
+
+            Outline outline = title.GetComponent<Outline>();
+            if (outline != null)
+                outline.enabled = false;
         }
+
+private void EnsureSongSelectBackground()
+        {
+            if (canvas.GetComponent<SciFiCurveBackground>() == null)
+                canvas.gameObject.AddComponent<SciFiCurveBackground>();
+        }
+
 
         private void BuildTuningPanel()
         {
@@ -53,7 +68,7 @@ canvas = FindAnyObjectByType<Canvas>();
             Image panelImage = panel.GetComponent<Image>();
             panelImage.sprite = PillButtonStyle.GetSprite();
             panelImage.type = Image.Type.Sliced;
-            panelImage.color = new Color(0.03f, 0.10f, 0.15f, 0.72f);
+            panelImage.color = new Color(0.02f, 0.08f, 0.12f, 0.44f);
 
             CreateSectionFrame(panel.transform, new Vector2(0f, 126f), new Vector2(860f, 304f));
             CreateHeader(panel.transform, "注意力阈值", 240f);
@@ -66,9 +81,9 @@ canvas = FindAnyObjectByType<Canvas>();
             CreateStepperRow(panel.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -208f);
         }
 
-        private static void CreateHeader(Transform parent, string value, float y)
+private static void CreateHeader(Transform parent, string value, float y)
         {
-            Text text = CreateText(parent, value, 20, TextAnchor.MiddleLeft);
+            Text text = CreateText(parent, value, 21, TextAnchor.MiddleLeft);
             RectTransform rect = text.rectTransform;
             rect.anchoredPosition = new Vector2(-205f, y);
             rect.sizeDelta = new Vector2(350f, 34f);
@@ -86,20 +101,22 @@ canvas = FindAnyObjectByType<Canvas>();
             Image rowImage = row.GetComponent<Image>();
             rowImage.sprite = PillButtonStyle.GetSprite();
             rowImage.type = Image.Type.Sliced;
-            rowImage.color = PillButtonStyle.Panel;
+            rowImage.color = new Color(0.02f, 0.08f, 0.12f, 0.78f);
 
             Text name = CreateText(row.transform, label, 20, TextAnchor.MiddleLeft);
             SetRect(name.rectTransform, new Vector2(-320f, 0f), new Vector2(132f, 60f));
             SongItemHoverEffect effect = row.AddComponent<SongItemHoverEffect>();
             effect.SetLabel(name);
+            effect.SetHoverScale(1.06f);
 
-            Button minus = CreateSmallButton(row.transform, "-", new Vector2(-135f, 0f));
-            Button plus = CreateSmallButton(row.transform, "+", new Vector2(272f, 0f));
+
+            Button minus = CreateSmallButton(row.transform, "-", new Vector2(-178f, 0f));
+            Button plus = CreateSmallButton(row.transform, "+", new Vector2(318f, 0f));
             Text valueText = CreateText(row.transform, string.Empty, 19, TextAnchor.MiddleCenter);
-            SetRect(valueText.rectTransform, new Vector2(195f, 0f), new Vector2(102f, 60f));
+            SetRect(valueText.rectTransform, new Vector2(224f, 0f), new Vector2(112f, 60f));
             valueText.color = Color.white;
 
-            Slider slider = CreateSlider(row.transform, new Vector2(35f, 0f), new Vector2(260f, 38f));
+            Slider slider = CreateSlider(row.transform, new Vector2(30f, 0f), new Vector2(300f, 38f));
             slider.minValue = min / Step;
             slider.maxValue = max / Step;
             slider.wholeNumbers = true;
@@ -123,10 +140,12 @@ canvas = FindAnyObjectByType<Canvas>();
             obj.transform.SetParent(parent, false);
             SetRect(obj.GetComponent<RectTransform>(), position, new Vector2(50f, 44f));
             Button button = obj.GetComponent<Button>();
-            PillButtonStyle.Apply(button, PillButtonStyle.Cyan);
+            PosterUIStyle.ApplyPosterButton(button, label == "+" ? PosterUIStyle.Blue : PosterUIStyle.Ink, false);
             Text text = PillButtonStyle.CreateLabel(obj.transform, label, 26);
             SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
             hover.SetLabel(text);
+            hover.SetHoverScale(1.06f);
+
             obj.AddComponent<ButtonSFX>();
             return button;
         }
@@ -138,12 +157,12 @@ canvas = FindAnyObjectByType<Canvas>();
             SetRect(obj.GetComponent<RectTransform>(), position, size);
             Slider slider = obj.GetComponent<Slider>();
 
-            Image background = CreateSliderImage(obj.transform, "Background", new Color(1f, 1f, 1f, 0.20f));
+            Image background = CreateSliderImage(obj.transform, "Background", new Color(0.82f, 0.86f, 0.88f, 0.30f));
             SetStretch(background.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
-            Image fill = CreateSliderImage(obj.transform, "Fill", new Color(1f, 1f, 1f, 0.82f));
+            Image fill = CreateSliderImage(obj.transform, "Fill", new Color(0.86f, 0.90f, 0.92f, 0.76f));
             SetStretch(fill.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
-            Image handle = CreateSliderImage(obj.transform, "Handle", Color.white);
-            handle.rectTransform.sizeDelta = new Vector2(18f, 38f);
+            Image handle = CreateSliderImage(obj.transform, "Handle", new Color(0.92f, 0.95f, 0.96f, 1f));
+            handle.rectTransform.sizeDelta = new Vector2(14f, 34f);
 
             slider.fillRect = fill.rectTransform;
             slider.handleRect = handle.rectTransform;
@@ -190,7 +209,7 @@ canvas = FindAnyObjectByType<Canvas>();
             rect.offsetMax = max;
         }
 
-        private void SetupBackButton()
+private void SetupBackButton()
         {
             GameObject existing = GameObject.Find("BackButton");
             if (existing != null) Destroy(existing);
@@ -199,7 +218,7 @@ canvas = FindAnyObjectByType<Canvas>();
             backObj.transform.SetParent(canvas.transform, false);
             SetRect(backObj.GetComponent<RectTransform>(), new Vector2(-690f, 394f), new Vector2(135f, 52f));
             Image hitImage = backObj.GetComponent<Image>();
-            hitImage.color = new Color(0.12f, 0.16f, 0.21f, 0f);
+            hitImage.color = Color.clear;
 
             Button button = backObj.GetComponent<Button>();
             button.targetGraphic = hitImage;
@@ -215,9 +234,6 @@ canvas = FindAnyObjectByType<Canvas>();
             icon.color = Color.white;
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-
-            SongItemHoverEffect hover = backObj.AddComponent<SongItemHoverEffect>();
-            hover.SetGraphic(icon);
         }
 
         private void OnBackClicked()
@@ -237,7 +253,32 @@ private static void CreateSectionFrame(Transform parent, Vector2 position, Vecto
             Image image = frame.GetComponent<Image>();
             image.sprite = PillButtonStyle.GetSprite();
             image.type = Image.Type.Sliced;
-            image.color = new Color(1f, 1f, 1f, 0.30f);
+            image.color = new Color(0.02f, 0.08f, 0.12f, 0.30f);
+            image.raycastTarget = false;
+        }
+
+
+private void SetupTopBar()
+        {
+            Transform oldTopBar = canvas.transform.Find("TopBar");
+            if (oldTopBar != null) Destroy(oldTopBar.gameObject);
+
+            Transform existing = canvas.transform.Find("TopBand");
+            GameObject topBar = existing != null ? existing.gameObject : new GameObject("TopBand", typeof(RectTransform), typeof(Image));
+            topBar.transform.SetParent(canvas.transform, false);
+            topBar.transform.SetAsFirstSibling();
+
+            RectTransform rect = topBar.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = new Vector2(0f, 338f);
+            rect.offsetMax = new Vector2(0f, 450f);
+
+            Image image = topBar.GetComponent<Image>();
+            if (image == null)
+                image = topBar.AddComponent<Image>();
+            image.color = new Color(0.02f, 0.08f, 0.12f, 0.78f);
             image.raycastTarget = false;
         }
 }

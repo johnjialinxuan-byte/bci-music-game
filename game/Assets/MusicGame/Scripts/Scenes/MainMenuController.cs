@@ -31,7 +31,7 @@ namespace MusicGame.Scenes
                 quitButton.onClick.AddListener(OnQuitClicked);
         }
 
-        private void ConfigurePresentation()
+private void ConfigurePresentation()
         {
             Canvas canvas = startButton != null ? startButton.GetComponentInParent<Canvas>() : null;
             if (canvas == null) return;
@@ -76,7 +76,7 @@ namespace MusicGame.Scenes
             StyleMenuButton(quitButton, new Vector2(-400f, -260f));
         }
 
-        private static void StyleMenuButton(Button button, Vector2 position)
+private static void StyleMenuButton(Button button, Vector2 position)
         {
             if (button == null) return;
             RectTransform rect = button.GetComponent<RectTransform>();
