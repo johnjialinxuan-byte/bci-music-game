@@ -3,6 +3,11 @@
     "title": "Oyasumi, Mother Goose",
     "bpm": 120.0,
     "songLength": 150.0,
+    "timingOffsetMs": 0.0,
+    "showQuarterGrid": true,
+    "showSixthGrid": false,
+    "showEighthGrid": false,
+    "showSixteenthGrid": true,
     "difficulty": 0,
     "level": 1,
     "notes": []
