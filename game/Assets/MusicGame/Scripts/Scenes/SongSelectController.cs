@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
@@ -39,8 +39,6 @@ namespace MusicGame.Scenes
         [SerializeField] private Color normalButtonColor = new Color(0.12f, 0.39f, 0.94f, 1f);
         [SerializeField] private Color hardButtonColor = new Color(0.84f, 0.14f, 0.22f, 1f);
         [SerializeField] private Color confirmButtonColor = new Color32(0x39, 0xC5, 0xBB, 0xFF);
-        [SerializeField, Range(0f, 1f)] private float pillFillAlpha = 0.24f;
-        [SerializeField] private float pillBorderWidth = 2.5f;
 
         [Header("Data")]
         [SerializeField] private List<SongData> availableSongs = new List<SongData>();
@@ -695,3 +693,4 @@ private void ConfigureParallax()
         }
 }
 }
+

@@ -20,7 +20,7 @@ namespace MusicGame.Scenes
                     "Powered by CRIWARE Audio Middleware\n\n" +
                     "developed by students from TJU\n\n" +
                     "Music provided by [乌鸦Producer]\n\n" +
-                    "v0.1.1";
+                    "v0.1.2";
             }
             SetupBackButton();
         }

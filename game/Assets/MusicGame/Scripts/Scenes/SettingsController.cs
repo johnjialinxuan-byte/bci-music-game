@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
@@ -9,30 +9,31 @@ namespace MusicGame.Scenes
     public class SettingsController : MonoBehaviour
     {
         private const float Step = 5f;
-        private Canvas canvas;
+
         [SerializeField] private Sprite backArrowSprite;
 
+        private Canvas canvas;
 
         private void Start()
         {
-            
             GameplaySettings.InitializeAttentionDefaults();
-canvas = FindAnyObjectByType<Canvas>();
+            canvas = FindAnyObjectByType<Canvas>();
             if (canvas == null) return;
-            EnsureSongSelectBackground();
 
+            EnsureSongSelectBackground();
             SetupTopBar();
             ConfigureTitle();
             SetupBackButton();
             BuildTuningPanel();
+            ConfigureParallax();
         }
 
-private void ConfigureTitle()
+        private void ConfigureTitle()
         {
             Text title = GameObject.Find("Title")?.GetComponent<Text>();
             if (title == null) return;
 
-            title.text = "设置";
+            title.text = "\u8bbe\u7f6e";
             title.fontSize = 42;
             title.fontStyle = FontStyle.Bold;
             title.alignment = TextAnchor.MiddleLeft;
@@ -48,40 +49,43 @@ private void ConfigureTitle()
                 outline.enabled = false;
         }
 
-private void EnsureSongSelectBackground()
+        private void EnsureSongSelectBackground()
         {
             if (canvas.GetComponent<SciFiCurveBackground>() == null)
                 canvas.gameObject.AddComponent<SciFiCurveBackground>();
         }
 
-
         private void BuildTuningPanel()
         {
             Transform existing = canvas.transform.Find("TuningPanel");
-            if (existing != null) Destroy(existing.gameObject);
+            if (existing != null)
+                Destroy(existing.gameObject);
 
             GameObject panel = new GameObject("TuningPanel", typeof(RectTransform), typeof(Image));
             panel.transform.SetParent(canvas.transform, false);
+
             RectTransform panelRect = panel.GetComponent<RectTransform>();
             panelRect.anchoredPosition = new Vector2(0f, -20f);
             panelRect.sizeDelta = new Vector2(950f, 620f);
+
             Image panelImage = panel.GetComponent<Image>();
             panelImage.sprite = PillButtonStyle.GetSprite();
             panelImage.type = Image.Type.Sliced;
             panelImage.color = new Color(0.02f, 0.08f, 0.12f, 0.44f);
 
             CreateSectionFrame(panel.transform, new Vector2(0f, 126f), new Vector2(860f, 304f));
-            CreateHeader(panel.transform, "注意力阈值", 240f);
+            CreateHeader(panel.transform, "\u6ce8\u610f\u529b\u9608\u503c", 240f);
             CreateStepperRow(panel.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, 170f);
             CreateStepperRow(panel.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, 94f);
             CreateStepperRow(panel.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, 18f);
+
             CreateSectionFrame(panel.transform, new Vector2(0f, -151f), new Vector2(860f, 222f));
-            CreateHeader(panel.transform, "Flick 判定范围", -70f);
+            CreateHeader(panel.transform, "Flick \u5224\u5b9a\u8303\u56f4", -70f);
             CreateStepperRow(panel.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -132f);
             CreateStepperRow(panel.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -208f);
         }
 
-private static void CreateHeader(Transform parent, string value, float y)
+        private static void CreateHeader(Transform parent, string value, float y)
         {
             Text text = CreateText(parent, value, 21, TextAnchor.MiddleLeft);
             RectTransform rect = text.rectTransform;
@@ -95,9 +99,11 @@ private static void CreateHeader(Transform parent, string value, float y)
         {
             GameObject row = new GameObject(label + "Row", typeof(RectTransform), typeof(Image));
             row.transform.SetParent(parent, false);
+
             RectTransform rowRect = row.GetComponent<RectTransform>();
             rowRect.anchoredPosition = new Vector2(0f, y);
             rowRect.sizeDelta = new Vector2(820f, 64f);
+
             Image rowImage = row.GetComponent<Image>();
             rowImage.sprite = PillButtonStyle.GetSprite();
             rowImage.type = Image.Type.Sliced;
@@ -105,13 +111,14 @@ private static void CreateHeader(Transform parent, string value, float y)
 
             Text name = CreateText(row.transform, label, 20, TextAnchor.MiddleLeft);
             SetRect(name.rectTransform, new Vector2(-320f, 0f), new Vector2(132f, 60f));
+
             SongItemHoverEffect effect = row.AddComponent<SongItemHoverEffect>();
             effect.SetLabel(name);
             effect.SetHoverScale(1.06f);
 
-
             Button minus = CreateSmallButton(row.transform, "-", new Vector2(-178f, 0f));
             Button plus = CreateSmallButton(row.transform, "+", new Vector2(318f, 0f));
+
             Text valueText = CreateText(row.transform, string.Empty, 19, TextAnchor.MiddleCenter);
             SetRect(valueText.rectTransform, new Vector2(224f, 0f), new Vector2(112f, 60f));
             valueText.color = Color.white;
@@ -128,6 +135,7 @@ private static void CreateHeader(Transform parent, string value, float y)
                 valueText.text = snapped + suffix;
                 onChanged(snapped);
             };
+
             slider.onValueChanged.AddListener(_ => update());
             minus.onClick.AddListener(() => slider.value -= 1f);
             plus.onClick.AddListener(() => slider.value += 1f);
@@ -139,8 +147,10 @@ private static void CreateHeader(Transform parent, string value, float y)
             GameObject obj = new GameObject(label == "+" ? "Plus" : "Minus", typeof(RectTransform), typeof(Image), typeof(Button));
             obj.transform.SetParent(parent, false);
             SetRect(obj.GetComponent<RectTransform>(), position, new Vector2(50f, 44f));
+
             Button button = obj.GetComponent<Button>();
             PosterUIStyle.ApplyPosterButton(button, label == "+" ? PosterUIStyle.Blue : PosterUIStyle.Ink, false);
+
             Text text = PillButtonStyle.CreateLabel(obj.transform, label, 26);
             SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
             hover.SetLabel(text);
@@ -155,12 +165,15 @@ private static void CreateHeader(Transform parent, string value, float y)
             GameObject obj = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
             obj.transform.SetParent(parent, false);
             SetRect(obj.GetComponent<RectTransform>(), position, size);
+
             Slider slider = obj.GetComponent<Slider>();
 
             Image background = CreateSliderImage(obj.transform, "Background", new Color(0.82f, 0.86f, 0.88f, 0.30f));
             SetStretch(background.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
+
             Image fill = CreateSliderImage(obj.transform, "Fill", new Color(0.86f, 0.90f, 0.92f, 0.76f));
             SetStretch(fill.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
+
             Image handle = CreateSliderImage(obj.transform, "Handle", new Color(0.92f, 0.95f, 0.96f, 1f));
             handle.rectTransform.sizeDelta = new Vector2(14f, 34f);
 
@@ -175,6 +188,7 @@ private static void CreateHeader(Transform parent, string value, float y)
         {
             GameObject obj = new GameObject(name, typeof(RectTransform), typeof(Image));
             obj.transform.SetParent(parent, false);
+
             Image image = obj.GetComponent<Image>();
             image.color = color;
             image.sprite = PillButtonStyle.GetSprite();
@@ -186,6 +200,7 @@ private static void CreateHeader(Transform parent, string value, float y)
         {
             GameObject obj = new GameObject("Text", typeof(RectTransform), typeof(Text));
             obj.transform.SetParent(parent, false);
+
             Text text = obj.GetComponent<Text>();
             text.text = value;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -209,14 +224,16 @@ private static void CreateHeader(Transform parent, string value, float y)
             rect.offsetMax = max;
         }
 
-private void SetupBackButton()
+        private void SetupBackButton()
         {
             GameObject existing = GameObject.Find("BackButton");
-            if (existing != null) Destroy(existing);
+            if (existing != null)
+                Destroy(existing);
 
             GameObject backObj = new GameObject("BackButton", typeof(RectTransform), typeof(Image), typeof(Button));
             backObj.transform.SetParent(canvas.transform, false);
             SetRect(backObj.GetComponent<RectTransform>(), new Vector2(-690f, 394f), new Vector2(135f, 52f));
+
             Image hitImage = backObj.GetComponent<Image>();
             hitImage.color = Color.clear;
 
@@ -229,6 +246,7 @@ private void SetupBackButton()
             GameObject iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
             iconObject.transform.SetParent(backObj.transform, false);
             SetRect(iconObject.GetComponent<RectTransform>(), Vector2.zero, new Vector2(40f, 40f));
+
             Image icon = iconObject.GetComponent<Image>();
             icon.sprite = backArrowSprite;
             icon.color = Color.white;
@@ -240,12 +258,12 @@ private void SetupBackButton()
         {
             GameStateManager.Instance.ChangeScene(GameScene.MainMenu);
         }
-    
 
-private static void CreateSectionFrame(Transform parent, Vector2 position, Vector2 size)
+        private static void CreateSectionFrame(Transform parent, Vector2 position, Vector2 size)
         {
             GameObject frame = new GameObject("SectionFrame", typeof(RectTransform), typeof(Image));
             frame.transform.SetParent(parent, false);
+
             RectTransform rect = frame.GetComponent<RectTransform>();
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
@@ -257,11 +275,11 @@ private static void CreateSectionFrame(Transform parent, Vector2 position, Vecto
             image.raycastTarget = false;
         }
 
-
-private void SetupTopBar()
+        private void SetupTopBar()
         {
             Transform oldTopBar = canvas.transform.Find("TopBar");
-            if (oldTopBar != null) Destroy(oldTopBar.gameObject);
+            if (oldTopBar != null)
+                Destroy(oldTopBar.gameObject);
 
             Transform existing = canvas.transform.Find("TopBand");
             GameObject topBar = existing != null ? existing.gameObject : new GameObject("TopBand", typeof(RectTransform), typeof(Image));
@@ -281,6 +299,29 @@ private void SetupTopBar()
             image.color = new Color(0.02f, 0.08f, 0.12f, 0.78f);
             image.raycastTarget = false;
         }
-}
-}
 
+        private void ConfigureParallax()
+        {
+            SongSelectParallax parallax = canvas.GetComponent<SongSelectParallax>();
+            if (parallax == null)
+                parallax = canvas.gameObject.AddComponent<SongSelectParallax>();
+
+            parallax.ClearTargets();
+            RegisterParallaxTarget(parallax, canvas.transform.Find("SciFiCurveBackground"), new Vector2(-18f, -10f));
+            RegisterParallaxTarget(parallax, canvas.transform.Find("TuningPanel"), new Vector2(7f, 4f));
+            RegisterParallaxTarget(parallax, canvas.transform.Find("Title"), new Vector2(3f, 2f));
+            parallax.ResetBaseTransforms();
+        }
+
+        private static void RegisterParallaxTarget(SongSelectParallax parallax, Transform target, Vector2 motion)
+        {
+            if (parallax == null || target == null) return;
+
+            RectTransform rect = target as RectTransform;
+            if (rect == null)
+                rect = target.GetComponent<RectTransform>();
+
+            parallax.RegisterTarget(rect, motion);
+        }
+    }
+}
