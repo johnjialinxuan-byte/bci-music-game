@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -36,6 +37,14 @@ namespace MusicGame.Audio
 
         private CriAtomExPlayer sfxPlayer;
 
+        private CriAtomExPlayer previewPlayer;
+        private CriAtomExPlayback previewPlayback;
+        private bool hasPreviewPlayback;
+        private Coroutine previewRoutine;
+        private SongData currentPreviewSong;
+        private float previewVolume;
+        private int previewRequestId;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -53,6 +62,7 @@ namespace MusicGame.Audio
             if (Instance != this) return;
 
             StopSong();
+            StopPreviewImmediate();
             foreach (string loadedCueSheet in loadedCueSheets)
             {
                 CriAtom.RemoveCueSheet(loadedCueSheet);
@@ -61,6 +71,9 @@ namespace MusicGame.Audio
 
             player?.Dispose();
             player = null;
+
+            previewPlayer?.Dispose();
+            previewPlayer = null;
 
             if (ownsAcfRegistration)
             {
@@ -170,6 +183,194 @@ namespace MusicGame.Audio
                 string playableCue = playFirstCueByIndex ? "#0" : cueName;
                 Debug.LogError($"[AudioManager] CRIWARE failed to start '{cueSheetName}/{playableCue}'.");
             }
+        }
+
+        public void PlaySongPreview(SongData song, float fadeDuration = 0.45f)
+        {
+            previewRequestId++;
+            if (previewRoutine != null)
+                StopCoroutine(previewRoutine);
+            previewRoutine = StartCoroutine(SwitchPreviewRoutine(song, Mathf.Max(0f, fadeDuration), previewRequestId));
+        }
+
+        public void StopSongPreview(float fadeDuration = 0.35f)
+        {
+            previewRequestId++;
+            if (previewRoutine != null)
+                StopCoroutine(previewRoutine);
+            previewRoutine = StartCoroutine(StopPreviewRoutine(Mathf.Max(0f, fadeDuration), previewRequestId));
+        }
+
+        public void StopPreviewImmediate()
+        {
+            previewRequestId++;
+            if (previewRoutine != null)
+            {
+                StopCoroutine(previewRoutine);
+                previewRoutine = null;
+            }
+            currentPreviewSong = null;
+            StopPreviewPlayback();
+        }
+
+        private IEnumerator StopPreviewRoutine(float fadeDuration, int requestId)
+        {
+            currentPreviewSong = null;
+            if (hasPreviewPlayback)
+                yield return FadePreviewTo(0f, fadeDuration, requestId);
+            if (requestId == previewRequestId)
+                StopPreviewPlayback();
+        }
+
+        private IEnumerator SwitchPreviewRoutine(SongData song, float fadeDuration, int requestId)
+        {
+            currentPreviewSong = song;
+
+            if (hasPreviewPlayback)
+            {
+                yield return FadePreviewTo(0f, fadeDuration, requestId);
+                if (requestId != previewRequestId) yield break;
+                StopPreviewPlayback();
+            }
+
+            if (song == null || string.IsNullOrWhiteSpace(song.cueSheetName))
+                yield break;
+
+            while (requestId == previewRequestId && currentPreviewSong == song)
+            {
+                float segmentDuration = StartPreviewSegment(song);
+                if (segmentDuration <= 0f)
+                    yield break;
+
+                yield return FadePreviewTo(1f, fadeDuration, requestId);
+                if (requestId != previewRequestId) yield break;
+
+                float holdDuration = Mathf.Max(0.1f, segmentDuration - fadeDuration * 2f);
+                float elapsed = 0f;
+                while (elapsed < holdDuration && requestId == previewRequestId && currentPreviewSong == song)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+
+                if (requestId != previewRequestId || currentPreviewSong != song)
+                    yield break;
+
+                yield return FadePreviewTo(0f, fadeDuration, requestId);
+                if (requestId != previewRequestId) yield break;
+                StopPreviewPlayback();
+            }
+        }
+
+        private float StartPreviewSegment(SongData song)
+        {
+            if (song == null || string.IsNullOrWhiteSpace(song.cueSheetName))
+                return 0f;
+            if (!EnsureCueSheetLoaded(song.cueSheetName))
+                return 0f;
+
+            CriAtomExAcb acb = CriAtom.GetAcb(song.cueSheetName);
+            if (acb == null)
+            {
+                Debug.LogError($"[AudioManager] Preview ACB not found: {song.cueSheetName}");
+                return 0f;
+            }
+
+            bool playFirstCueByIndex = string.IsNullOrWhiteSpace(song.cueName);
+            CriAtomEx.CueInfo cueInfo;
+            bool hasCueInfo;
+            string playableCue = song.cueName;
+            if (playFirstCueByIndex)
+            {
+                CriAtomEx.CueInfo[] cueInfos = acb.GetCueInfoList();
+                if (cueInfos == null || cueInfos.Length == 0)
+                    return 0f;
+                cueInfo = cueInfos[0];
+                playableCue = cueInfo.name;
+                hasCueInfo = true;
+                playFirstCueByIndex = string.IsNullOrWhiteSpace(playableCue);
+            }
+            else
+            {
+                hasCueInfo = acb.GetCueInfo(song.cueName, out cueInfo);
+            }
+
+            float cueDuration = 0f;
+            if (hasCueInfo && cueInfo.length > 0)
+            {
+                cueDuration = cueInfo.length / 1000f;
+            }
+            else if (hasCueInfo)
+            {
+                CriAtomEx.WaveformInfo waveformInfo;
+                bool hasWaveformInfo = playFirstCueByIndex
+                    ? acb.GetWaveFormInfo(cueInfo.id, out waveformInfo)
+                    : acb.GetWaveFormInfo(playableCue, out waveformInfo);
+                if (hasWaveformInfo && waveformInfo.samplingRate > 0 && waveformInfo.numSamples > 0)
+                    cueDuration = (float)waveformInfo.numSamples / waveformInfo.samplingRate;
+            }
+
+            float previewStart = Mathf.Max(0f, song.previewStartTime);
+            float requestedDuration = song.previewDuration > 0f ? song.previewDuration : 30f;
+            float segmentDuration = requestedDuration;
+            if (cueDuration > 0f)
+            {
+                if (previewStart >= cueDuration)
+                    previewStart = 0f;
+                segmentDuration = Mathf.Max(1f, Mathf.Min(requestedDuration, cueDuration - previewStart));
+            }
+
+            previewPlayer ??= new CriAtomExPlayer(true);
+            previewPlayer.Stop();
+            previewPlayer.Loop(false);
+            previewPlayer.SetVolume(0f);
+            previewPlayer.SetStartTime((long)(previewStart * 1000f));
+            if (playFirstCueByIndex)
+                previewPlayer.SetCueIndex(acb, 0);
+            else
+                previewPlayer.SetCue(acb, playableCue);
+
+            previewPlayback = previewPlayer.Start();
+            hasPreviewPlayback = previewPlayback.id != CriAtomExPlayback.invalidId;
+            previewVolume = 0f;
+            return hasPreviewPlayback ? segmentDuration : 0f;
+        }
+
+private IEnumerator FadePreviewTo(float targetVolume, float duration, int requestId)
+        {
+            if (!hasPreviewPlayback || previewPlayer == null)
+                yield break;
+
+            float startVolume = previewVolume;
+            if (duration <= 0f)
+            {
+                ApplyPreviewVolume(targetVolume);
+                yield break;
+            }
+
+            float elapsed = 0f;
+            while (elapsed < duration && requestId == previewRequestId)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                ApplyPreviewVolume(Mathf.Lerp(startVolume, targetVolume, t));
+                yield return null;
+            }
+
+            if (requestId == previewRequestId)
+                ApplyPreviewVolume(targetVolume);
+        }
+
+        private void StopPreviewPlayback()
+        {
+            if (hasPreviewPlayback)
+            {
+                previewPlayback.Stop();
+                hasPreviewPlayback = false;
+            }
+
+            previewPlayer?.Stop();
+            previewVolume = 0f;
         }
 
         public void StopSong()
@@ -314,5 +515,16 @@ namespace MusicGame.Audio
             criAtomReady = true;
             return true;
         }
-    }
+    
+
+private void ApplyPreviewVolume(float volume)
+        {
+            previewVolume = volume;
+            if (previewPlayer == null) return;
+
+            previewPlayer.SetVolume(previewVolume);
+            if (hasPreviewPlayback)
+                previewPlayer.Update(previewPlayback);
+        }
+}
 }

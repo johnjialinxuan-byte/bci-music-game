@@ -10,9 +10,7 @@ namespace MusicGame.Editor
     {
         private ChartData currentChart;
         private Vector2 scrollPos;
-        private int selectedNoteIndex = -1;
         private float currentTime = 0f;
-        private bool isPlaying = false;
 
         [MenuItem("MusicGame/Chart Editor")]
         public static void ShowWindow()

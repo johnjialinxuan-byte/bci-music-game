@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
@@ -51,6 +51,8 @@ namespace MusicGame.Scenes
 
         private void Start()
         {
+            EnsureAudioManager();
+
             EnsureConfirmButton();
             ConfigureTopBand();
             ConfigureLayout();
@@ -297,7 +299,8 @@ private void SelectSong(SongData song)
             if (GameStateManager.Instance != null)
                 UpdateCoverFrameColor(GameStateManager.Instance.SelectedDifficulty);
 
-            Audio.AudioManager.Instance?.StopSong();
+            EnsureAudioManager();
+            Audio.AudioManager.Instance?.PlaySongPreview(song);
         }
 
         private void UpdateSelectedSongEffect()
@@ -322,7 +325,7 @@ private void SelectSong(SongData song)
             if (selectedSong == null || isStartingGameplay || GameStateManager.Instance == null) return;
 
             isStartingGameplay = true;
-            Audio.AudioManager.Instance?.StopSong();
+            Audio.AudioManager.Instance?.StopPreviewImmediate();
             GameStateManager.Instance.ChangeScene(GameScene.Gameplay);
         }
 
@@ -521,7 +524,7 @@ private Sprite GetRectButtonSprite()
 
         private void OnBackClicked()
         {
-            Audio.AudioManager.Instance.StopSong();
+            Audio.AudioManager.Instance?.StopPreviewImmediate();
             GameStateManager.Instance.ChangeScene(GameScene.MainMenu);
         }
 
@@ -691,6 +694,14 @@ private void ConfigureParallax()
 
             parallax.RegisterTarget(rect, motion, tilt, tiltDegrees);
         }
-}
-}
 
+
+private static void EnsureAudioManager()
+        {
+            if (Audio.AudioManager.Instance != null) return;
+
+            GameObject audioObject = new GameObject("AudioManager");
+            audioObject.AddComponent<Audio.AudioManager>();
+        }
+}
+}

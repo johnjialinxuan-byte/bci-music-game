@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
@@ -309,7 +309,6 @@ namespace MusicGame.Scenes
             parallax.ClearTargets();
             RegisterParallaxTarget(parallax, canvas.transform.Find("SciFiCurveBackground"), new Vector2(-18f, -10f));
             RegisterParallaxTarget(parallax, canvas.transform.Find("TuningPanel"), new Vector2(7f, 4f));
-            RegisterParallaxTarget(parallax, canvas.transform.Find("Title"), new Vector2(3f, 2f));
             parallax.ResetBaseTransforms();
         }
 

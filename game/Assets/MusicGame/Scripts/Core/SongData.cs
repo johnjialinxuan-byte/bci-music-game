@@ -12,6 +12,7 @@ namespace MusicGame.Core
         public string artist;
         public float bpm;
         public float previewStartTime;
+        public float previewDuration = 30f;
         public Sprite coverImage;
         public string cueSheetName;
         public string cueName;
