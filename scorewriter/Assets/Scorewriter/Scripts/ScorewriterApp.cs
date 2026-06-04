@@ -21,8 +21,13 @@ namespace Scorewriter
         private const float LaneWidth = 128f;
         private const float MarkerSize = 34f;
         private const float HoldLineWidth = 12f;
+        private const float PreviewApproachTime = 2f;
 
         private readonly List<ScorewriterSong> songs = new List<ScorewriterSong>();
+        private readonly List<Image> clickPreviewImages = new List<Image>();
+        private readonly List<Image> roundPreviewImages = new List<Image>();
+        private readonly List<Image> slidePreviewImages = new List<Image>();
+        private readonly Dictionary<string, Sprite> resourceSpriteCache = new Dictionary<string, Sprite>();
         private readonly int[] snapDivisions = { 4, 6, 8, 16, 0 };
 
         private ScorewriterCriAudioPlayer audioPlayer;
@@ -31,12 +36,17 @@ namespace Scorewriter
         private ScorewriterNoteKind placementKind = ScorewriterNoteKind.Hold;
         private ScorewriterLane placementStartLane = ScorewriterLane.TopLeft;
         private ScorewriterLane placementEndLane = ScorewriterLane.TopLeft;
+        private ScorewriterNoteColor placementColor = ScorewriterNoteColor.White;
         private int songIndex;
         private int snapIndex = 3;
+        private float timelinePanelWidth = 760f;
         private float currentTime;
         private bool followPlayback = true;
         private bool suppressSliderEvent;
         private bool autoPlayOnStart = true;
+        private bool draggingTimelineHold;
+        private bool ignoreNextTimelineClick;
+        private ScorewriterNote timelineDragNote;
 
         private Font font;
         private Sprite whiteSprite;
@@ -51,6 +61,7 @@ namespace Scorewriter
         private RectTransform previewSurface;
         private RectTransform previewNoteLayer;
         private Slider timeSlider;
+        private LayoutElement timelinePanelLayout;
 
         private Text songTitleText;
         private Text timeText;
@@ -72,6 +83,13 @@ namespace Scorewriter
         private Toggle sixthGridToggle;
         private Toggle eighthGridToggle;
         private Toggle sixteenthGridToggle;
+        private Button holdIconButton;
+        private Button roundIconButton;
+        private Button slideIconButton;
+        private Button whiteColorButton;
+        private Button mikuColorButton;
+        private Button redColorButton;
+        private Button blueColorButton;
 
         private ScorewriterSong CurrentSong => songs[Mathf.Clamp(songIndex, 0, songs.Count - 1)];
         private float SongLength => Mathf.Max(8f, chart?.songLength ?? CurrentSong.songLength);
@@ -124,12 +142,69 @@ namespace Scorewriter
             if (eventData.button != PointerEventData.InputButton.Left)
                 return;
 
+            if (ignoreNextTimelineClick)
+            {
+                ignoreNextTimelineClick = false;
+                return;
+            }
+
             if (!TryTimelinePoint(eventData, out Vector2 localPoint))
                 return;
 
             ScorewriterLane lane = LaneFromX(localPoint.x);
             float time = SnapTime(localPoint.y / TimelinePixelsPerSecond);
             AddNote(time, lane);
+        }
+
+        public void BeginTimelineDrag(PointerEventData eventData)
+        {
+            if (eventData.button != PointerEventData.InputButton.Left || placementKind != ScorewriterNoteKind.Hold)
+                return;
+
+            if (!TryTimelinePoint(eventData, out Vector2 localPoint))
+                return;
+
+            ScorewriterLane lane = LaneFromX(localPoint.x);
+            float time = SnapTime(localPoint.y / TimelinePixelsPerSecond);
+            timelineDragNote = AddNote(time, lane);
+            timelineDragNote.endLane = lane;
+            timelineDragNote.duration = MinimumHoldDuration();
+            draggingTimelineHold = true;
+            ignoreNextTimelineClick = true;
+            RefreshNotes();
+        }
+
+        public void HandleTimelineDrag(PointerEventData eventData)
+        {
+            if (!draggingTimelineHold || timelineDragNote == null || !TryTimelinePoint(eventData, out Vector2 localPoint))
+                return;
+
+            ScorewriterLane lane = LaneFromX(localPoint.x);
+            float time = Mathf.Clamp(SnapTime(localPoint.y / TimelinePixelsPerSecond), 0f, SongLength);
+            timelineDragNote.endLane = lane;
+            timelineDragNote.duration = Mathf.Max(MinimumHoldDuration(), time - timelineDragNote.time);
+            placementEndLane = lane;
+            durationInput.SetTextWithoutNotify(FormatFloat(timelineDragNote.duration));
+            UpdatePlacementButtonLabels();
+            UpdateSelectedLabel();
+            RefreshNotes();
+        }
+
+        public void EndTimelineDrag(PointerEventData eventData)
+        {
+            if (!draggingTimelineHold)
+                return;
+
+            draggingTimelineHold = false;
+            timelineDragNote = null;
+            Invoke(nameof(ClearIgnoredTimelineClick), 0.05f);
+            SortNotes();
+            RefreshNotes();
+        }
+
+        private void ClearIgnoredTimelineClick()
+        {
+            ignoreNextTimelineClick = false;
         }
 
         public void SelectNote(ScorewriterNote note)
@@ -140,6 +215,7 @@ namespace Scorewriter
                 placementKind = selectedNote.kind;
                 placementStartLane = selectedNote.startLane;
                 placementEndLane = selectedNote.endLane;
+                placementColor = selectedNote.noteColor;
                 durationInput.SetTextWithoutNotify(FormatFloat(selectedNote.duration));
                 thresholdInput.SetTextWithoutNotify(selectedNote.threshold.ToString(CultureInfo.InvariantCulture));
                 tailSlideToggle.SetIsOnWithoutNotify(selectedNote.hasTailSlide);
@@ -161,7 +237,7 @@ namespace Scorewriter
             if (editsTail)
             {
                 note.endLane = lane;
-                note.duration = Mathf.Max(GetSnapStep(), time - note.time);
+                note.duration = Mathf.Max(MinimumHoldDuration(), time - note.time);
                 placementEndLane = note.endLane;
             }
             else
@@ -170,7 +246,7 @@ namespace Scorewriter
                 note.time = time;
                 note.startLane = lane;
                 if (note.kind == ScorewriterNoteKind.Hold)
-                    note.duration = Mathf.Max(GetSnapStep(), endTime - note.time);
+                    note.duration = Mathf.Max(MinimumHoldDuration(), endTime - note.time);
                 placementStartLane = note.startLane;
             }
 
@@ -185,6 +261,30 @@ namespace Scorewriter
         {
             SortNotes();
             RefreshNotes();
+        }
+
+        public void HandlePlayheadDrag(PointerEventData eventData)
+        {
+            if (timelineContent == null)
+                return;
+
+            bool ok = RectTransformUtility.ScreenPointToLocalPointInRectangle(timelineContent, eventData.position, eventData.pressEventCamera, out Vector2 localPoint);
+            if (!ok)
+                return;
+
+            currentTime = Mathf.Clamp(localPoint.y / TimelinePixelsPerSecond, 0f, SongLength);
+            audioPlayer.Seek(CurrentSong, ChartTimeToAudioTime(currentTime));
+            UpdateTransportUi();
+            UpdatePlayhead();
+            RenderPreview();
+        }
+
+        public void AdjustTimelineWidth(float delta)
+        {
+            timelinePanelWidth = Mathf.Clamp(timelinePanelWidth + delta, 560f, 1120f);
+            if (timelinePanelLayout != null)
+                timelinePanelLayout.preferredWidth = timelinePanelWidth;
+            Canvas.ForceUpdateCanvases();
         }
 
         private void BuildSongList()
@@ -323,7 +423,7 @@ namespace Scorewriter
             bpmInput = CreateInput(header, "120", 78f, 42f, OnBpmEdited);
             CreateLabel(header, "长度", 14, TextAnchor.MiddleRight, 46f, 42f, new Color(0.72f, 0.77f, 0.84f, 1f));
             lengthInput = CreateInput(header, "150", 82f, 42f, OnLengthEdited);
-            CreateLabel(header, "Offset(ms)", 14, TextAnchor.MiddleRight, 82f, 42f, new Color(0.72f, 0.77f, 0.84f, 1f));
+            CreateLabel(header, "偏移(ms)", 14, TextAnchor.MiddleRight, 82f, 42f, new Color(0.72f, 0.77f, 0.84f, 1f));
             offsetInput = CreateInput(header, "0", 86f, 42f, OnOffsetEdited);
             CreateButton(header, "加载", 70f, 42f, () => LoadChartForCurrentSong(true));
             CreateButton(header, "保存", 70f, 42f, SaveEditorChart);
@@ -342,14 +442,24 @@ namespace Scorewriter
             bodyLayout.childForceExpandWidth = false;
 
             BuildTimelinePanel(body);
+            BuildResizeHandle(body);
             BuildPreviewPanel(body);
+        }
+
+        private void BuildResizeHandle(RectTransform body)
+        {
+            RectTransform handle = CreateRect("TimelineResizeHandle", body);
+            SetLayout(handle, 10f, -1f, 0f, 1f);
+            Image image = AddImage(handle.gameObject, new Color(0.14f, 0.17f, 0.21f, 1f));
+            image.raycastTarget = true;
+            handle.gameObject.AddComponent<ScorewriterPanelResizeHandle>().Bind(this);
         }
 
         private void BuildTimelinePanel(RectTransform body)
         {
             RectTransform panel = CreateRect("TimelinePanel", body);
             AddImage(panel.gameObject, new Color(0.078f, 0.086f, 0.103f, 1f));
-            SetLayout(panel, 690f, -1f, 0f, 1f);
+            timelinePanelLayout = SetLayout(panel, timelinePanelWidth, -1f, 0f, 1f);
             VerticalLayoutGroup layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 8f;
             layout.padding = new RectOffset(10, 10, 10, 10);
@@ -368,6 +478,9 @@ namespace Scorewriter
 
             Button typeButton = CreateButton(tools, "", 116f, 42f, CyclePlacementKind);
             typeButtonText = typeButton.GetComponentInChildren<Text>();
+            holdIconButton = CreateIconButton(tools, LoadToolbarSprite("click"), () => SetPlacementKind(ScorewriterNoteKind.Hold));
+            roundIconButton = CreateIconButton(tools, LoadToolbarSprite("round"), () => SetPlacementKind(ScorewriterNoteKind.Round));
+            slideIconButton = CreateIconButton(tools, LoadToolbarSprite("slide"), () => SetPlacementKind(ScorewriterNoteKind.Slide));
             Button startButton = CreateButton(tools, "", 94f, 42f, CycleStartLane);
             startLaneButtonText = startButton.GetComponentInChildren<Text>();
             Button endButton = CreateButton(tools, "", 94f, 42f, CycleEndLane);
@@ -389,7 +502,14 @@ namespace Scorewriter
             CreateLabel(fields, "阈值", 13, TextAnchor.MiddleRight, 48f, 36f, new Color(0.75f, 0.80f, 0.86f, 1f));
             thresholdInput = CreateInput(fields, "10", 64f, 36f, OnThresholdEdited);
             tailSlideToggle = CreateToggle(fields, "尾部滑动", false, OnTailSlideChanged, 118f, 36f);
-            selectedText = CreateLabel(fields, "未选择音符", 13, TextAnchor.MiddleLeft, 260f, 36f, new Color(0.73f, 0.82f, 0.95f, 1f));
+            CreateLabel(fields, "颜色", 13, TextAnchor.MiddleRight, 42f, 36f, new Color(0.75f, 0.80f, 0.86f, 1f));
+            whiteColorButton = CreateColorButton(fields, ScorewriterNoteColor.White);
+            mikuColorButton = CreateColorButton(fields, ScorewriterNoteColor.Miku);
+            redColorButton = CreateColorButton(fields, ScorewriterNoteColor.Red);
+            blueColorButton = CreateColorButton(fields, ScorewriterNoteColor.Blue);
+            selectedText = CreateLabel(fields, "未选择音符", 13, TextAnchor.MiddleLeft, 220f, 36f, new Color(0.73f, 0.82f, 0.95f, 1f));
+
+            BuildNotePreviewStrip(panel, "LeftNoteIconPreview", 38f);
 
             RectTransform gridFields = CreateRect("GridFields", panel);
             SetLayout(gridFields, -1f, 38f, 0f, 0f);
@@ -442,7 +562,9 @@ namespace Scorewriter
             playhead.anchorMin = new Vector2(0f, 0f);
             playhead.anchorMax = new Vector2(0f, 0f);
             playhead.pivot = new Vector2(0f, 0.5f);
-            AddImage(playhead.gameObject, new Color(1f, 0.84f, 0.28f, 1f));
+            Image playheadImage = AddImage(playhead.gameObject, new Color(1f, 0.84f, 0.28f, 0.86f));
+            playheadImage.raycastTarget = true;
+            playhead.gameObject.AddComponent<ScorewriterPlayheadHandle>().Bind(this);
         }
 
         private void BuildPreviewPanel(RectTransform body)
@@ -459,6 +581,7 @@ namespace Scorewriter
             layout.childForceExpandWidth = true;
 
             CreateLabel(panel, "预览", 22, TextAnchor.MiddleLeft, -1f, 34f, Color.white);
+            BuildNotePreviewStrip(panel, "RightNoteIconPreview", 36f);
             previewSurface = CreateRect("PreviewSurface", panel);
             AddImage(previewSurface.gameObject, new Color(0.028f, 0.033f, 0.042f, 1f));
             SetLayout(previewSurface, -1f, -1f, 1f, 1f);
@@ -467,6 +590,40 @@ namespace Scorewriter
             Stretch(previewNoteLayer);
 
             statusText = CreateLabel(panel, "", 14, TextAnchor.MiddleLeft, -1f, 34f, new Color(0.76f, 0.84f, 0.94f, 1f));
+        }
+
+        private void BuildNotePreviewStrip(Transform parent, string name, float height)
+        {
+            RectTransform strip = CreateRect(name, parent);
+            SetLayout(strip, -1f, height, 0f, 0f);
+            HorizontalLayoutGroup layout = strip.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlHeight = true;
+            layout.childControlWidth = false;
+
+            CreateLabel(strip, "图标预览", 13, TextAnchor.MiddleRight, 72f, height, new Color(0.75f, 0.80f, 0.86f, 1f));
+            CreateNotePreviewIcon(strip, "click", clickPreviewImages);
+            CreateNotePreviewIcon(strip, "round", roundPreviewImages);
+            CreateNotePreviewIcon(strip, "slide", slidePreviewImages);
+        }
+
+        private void CreateNotePreviewIcon(Transform parent, string shape, List<Image> bucket)
+        {
+            RectTransform slot = CreateRect($"NoteIcon_{shape}", parent);
+            SetLayout(slot, 34f, 34f, 0f, 0f);
+            Image background = AddImage(slot.gameObject, new Color(0.035f, 0.041f, 0.052f, 1f));
+            background.raycastTarget = false;
+
+            RectTransform icon = CreateRect("Svg", slot);
+            Stretch(icon);
+            icon.offsetMin = new Vector2(4f, 4f);
+            icon.offsetMax = new Vector2(-4f, -4f);
+            Image image = AddImage(icon.gameObject, Color.white);
+            image.sprite = LoadNoteSprite(placementColor, shape);
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            bucket.Add(image);
         }
 
         private void BuildPreviewBase()
@@ -494,8 +651,8 @@ namespace Scorewriter
             CreateButton(transport, "停止", 72f, 46f, StopPlayback);
             CreateButton(transport, "-1s", 58f, 46f, () => SeekRelative(-1f));
             CreateButton(transport, "+1s", 58f, 46f, () => SeekRelative(1f));
-            CreateButton(transport, "Offset -10", 92f, 46f, () => AdjustOffset(-10f));
-            CreateButton(transport, "Offset +10", 92f, 46f, () => AdjustOffset(10f));
+            CreateButton(transport, "偏移-10", 92f, 46f, () => AdjustOffset(-10f));
+            CreateButton(transport, "偏移+10", 92f, 46f, () => AdjustOffset(10f));
             Button followButton = CreateButton(transport, followPlayback ? "跟随开" : "跟随关", 104f, 46f, ToggleFollowPlayback);
             followButtonText = followButton.GetComponentInChildren<Text>();
 
@@ -514,7 +671,7 @@ namespace Scorewriter
             timelineContent.sizeDelta = new Vector2(width, height);
             SetLayerSize(timelineGridLayer, width, height);
             SetLayerSize(timelineNoteLayer, width, height);
-            playhead.sizeDelta = new Vector2(width, 3f);
+            playhead.sizeDelta = new Vector2(width, 12f);
 
             BuildGrid(width, height);
             RefreshNotes();
@@ -605,7 +762,7 @@ namespace Scorewriter
         private void CreateTimelineNote(ScorewriterNote note)
         {
             Vector2 start = TimelinePosition(note.startLane, note.time);
-            Color color = GetLaneColor(note.startLane);
+            Color color = GetNoteColor(note.noteColor);
             bool isSelected = selectedNote == note;
 
             if (note.kind == ScorewriterNoteKind.Hold)
@@ -613,7 +770,7 @@ namespace Scorewriter
                 Vector2 end = TimelinePosition(note.endLane, note.EndTime);
                 CreateConnector(timelineNoteLayer, start, end, isSelected ? new Color(1f, 0.9f, 0.2f, 0.78f) : new Color(color.r, color.g, color.b, 0.45f), HoldLineWidth, note, false);
                 CreateMarker(timelineNoteLayer, note, start, "click", color, isSelected, false);
-                CreateMarker(timelineNoteLayer, note, end, "slide", GetLaneColor(note.endLane), isSelected, true);
+                CreateMarker(timelineNoteLayer, note, end, "slide", color, isSelected, true);
                 return;
             }
 
@@ -633,7 +790,7 @@ namespace Scorewriter
 
             Image image = AddImage(marker.gameObject, Color.white);
             image.sprite = LoadNoteSprite(note, shape);
-            image.color = isSelected ? Color.white : color;
+            image.color = Color.white;
             image.raycastTarget = true;
 
             if (shape == "slide" && image.sprite == circleSprite)
@@ -665,44 +822,73 @@ namespace Scorewriter
                 return;
 
             ClearChildren(previewNoteLayer);
+            bool realtimeOnly = audioPlayer != null && audioPlayer.IsPlaying;
             foreach (ScorewriterNote note in chart.notes)
             {
+                bool editorPinned = !realtimeOnly && note == selectedNote;
                 if (note.kind == ScorewriterNoteKind.Hold)
                 {
-                    bool visible = note == selectedNote || (currentTime >= note.time - 1.5f && currentTime <= note.EndTime + 0.45f);
-                    if (!visible)
+                    bool holdInRealtimeWindow = currentTime >= note.time - PreviewApproachTime && currentTime <= note.EndTime + 0.45f;
+                    if (!holdInRealtimeWindow && !editorPinned)
                         continue;
 
                     Vector2 start = PreviewPosition(note.startLane);
                     Vector2 end = PreviewPosition(note.endLane);
-                    Color lineColor = GetLaneColor(note.startLane);
-                    float alpha = note == selectedNote ? 0.94f : currentTime >= note.time && currentTime <= note.EndTime ? 0.86f : 0.38f;
-                    lineColor.a = alpha;
-                    CreateConnector(previewNoteLayer, start, end, lineColor, 10f, note, true);
+                    Color iconTint = Color.white;
 
-                    if (currentTime >= note.time && currentTime <= note.EndTime)
+                    if (currentTime < note.time || editorPinned && !holdInRealtimeWindow)
+                    {
+                        float approach = Mathf.InverseLerp(note.time - PreviewApproachTime, note.time, currentTime);
+                        float holdScale = editorPinned ? 1.18f : Mathf.Lerp(0.72f, 1.16f, approach);
+                        CreatePreviewMarker(note.startLane, note, "click", iconTint, holdScale, editorPinned);
+                    }
+                    else if (currentTime <= note.EndTime)
                     {
                         float normalized = Mathf.InverseLerp(note.time, note.EndTime, currentTime);
-                        CreatePreviewMarker(Vector2.Lerp(start, end, normalized), note, "round", Color.white, 1.18f);
+                        CreatePreviewMarker(Vector2.Lerp(start, end, normalized), note, "round", iconTint, 1.16f, editorPinned);
+
+                        if (note.EndTime - currentTime <= 0.75f || note.hasTailSlide)
+                            CreatePreviewMarker(note.endLane, note, "slide", iconTint, 0.92f, editorPinned);
                     }
                     else
                     {
-                        CreatePreviewMarker(start, note, "click", GetLaneColor(note.startLane), 0.96f);
+                        CreatePreviewMarker(note.endLane, note, "slide", iconTint, 0.98f, editorPinned);
                     }
+
+                    if (editorPinned && holdInRealtimeWindow)
+                        CreatePreviewMarker(note.startLane, note, "click", iconTint, 0.72f, true);
                     continue;
                 }
 
                 float delta = note.time - currentTime;
-                if (note != selectedNote && (delta < -0.35f || delta > 1.5f))
+                bool noteInRealtimeWindow = delta >= -0.35f && delta <= PreviewApproachTime;
+                if (!noteInRealtimeWindow && !editorPinned)
                     continue;
 
-                float scale = note == selectedNote ? 1.28f : Mathf.Lerp(1.2f, 0.72f, Mathf.Clamp01(delta / 1.5f));
+                float noteScale = editorPinned ? 1.28f : Mathf.Lerp(1.22f, 0.68f, Mathf.Clamp01(delta / PreviewApproachTime));
                 string shape = note.kind == ScorewriterNoteKind.Slide ? "slide" : "round";
-                CreatePreviewMarker(PreviewPosition(note.startLane), note, shape, GetLaneColor(note.startLane), scale);
+                CreatePreviewMarker(note.startLane, note, shape, Color.white, noteScale, editorPinned);
             }
         }
 
-        private void CreatePreviewMarker(Vector2 position, ScorewriterNote note, string shape, Color color, float scale)
+        private void CreatePreviewMarker(ScorewriterLane lane, ScorewriterNote note, string shape, Color color, float scale, bool selected)
+        {
+            RectTransform marker = CreateRect("PreviewNote", previewNoteLayer);
+            Vector2 anchor = PreviewAnchor(lane);
+            marker.anchorMin = anchor;
+            marker.anchorMax = anchor;
+            marker.pivot = new Vector2(0.5f, 0.5f);
+            marker.anchoredPosition = Vector2.zero;
+            marker.sizeDelta = Vector2.one * 62f * scale;
+            Image image = AddImage(marker.gameObject, color);
+            image.sprite = LoadNoteSprite(note, shape);
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            if (selected)
+                CreatePreviewSelectionRing(marker);
+        }
+
+        private void CreatePreviewMarker(Vector2 position, ScorewriterNote note, string shape, Color color, float scale, bool selected)
         {
             RectTransform marker = CreateRect("PreviewNote", previewNoteLayer);
             marker.anchorMin = new Vector2(0.5f, 0.5f);
@@ -712,7 +898,22 @@ namespace Scorewriter
             marker.sizeDelta = Vector2.one * 58f * scale;
             Image image = AddImage(marker.gameObject, color);
             image.sprite = LoadNoteSprite(note, shape);
+            image.preserveAspect = true;
             image.raycastTarget = false;
+            if (selected)
+                CreatePreviewSelectionRing(marker);
+        }
+
+        private void CreatePreviewSelectionRing(RectTransform parent)
+        {
+            RectTransform ring = CreateRect("SelectedRing", parent);
+            Stretch(ring);
+            ring.offsetMin = new Vector2(-8f, -8f);
+            ring.offsetMax = new Vector2(8f, 8f);
+            Image image = AddImage(ring.gameObject, new Color(1f, 0.86f, 0.22f, 0.42f));
+            image.sprite = circleSprite;
+            image.raycastTarget = false;
+            ring.SetAsFirstSibling();
         }
 
         private void AddNoteAtCurrentTime()
@@ -720,7 +921,7 @@ namespace Scorewriter
             AddNote(SnapTime(currentTime), placementStartLane);
         }
 
-        private void AddNote(float time, ScorewriterLane lane)
+        private ScorewriterNote AddNote(float time, ScorewriterLane lane)
         {
             ScorewriterNote note = new ScorewriterNote
             {
@@ -729,7 +930,8 @@ namespace Scorewriter
                 kind = placementKind,
                 startLane = lane,
                 endLane = placementEndLane,
-                duration = placementKind == ScorewriterNoteKind.Hold ? Mathf.Max(GetSnapStep(), ParseFloat(durationInput.text, GetSnapStep() * 4f)) : 0f,
+                noteColor = placementColor,
+                duration = placementKind == ScorewriterNoteKind.Hold ? Mathf.Max(MinimumHoldDuration(), ParseFloat(durationInput.text, MinimumHoldDuration() * 4f)) : 0f,
                 threshold = Mathf.RoundToInt(ParseFloat(thresholdInput.text, 10f)),
                 hasTailSlide = tailSlideToggle != null && tailSlideToggle.isOn
             };
@@ -744,6 +946,7 @@ namespace Scorewriter
             SelectNote(note);
             CenterTimelineOnTime(currentTime);
             SetStatus($"已添加 {KindLabel(note.kind)}，时间 {FormatTime(note.time)}。");
+            return note;
         }
 
         private void DeleteSelectedNote()
@@ -771,12 +974,50 @@ namespace Scorewriter
                 }
                 else
                 {
-                    selectedNote.duration = Mathf.Max(selectedNote.duration, GetSnapStep());
+                    selectedNote.duration = Mathf.Max(selectedNote.duration, MinimumHoldDuration());
                     selectedNote.endLane = placementEndLane;
                 }
                 durationInput.SetTextWithoutNotify(FormatFloat(selectedNote.duration));
                 RefreshNotes();
             }
+            UpdatePlacementButtonLabels();
+            UpdateSelectedLabel();
+        }
+
+        private void SetPlacementKind(ScorewriterNoteKind kind)
+        {
+            placementKind = kind;
+            if (selectedNote != null)
+            {
+                selectedNote.kind = kind;
+                if (selectedNote.kind == ScorewriterNoteKind.Hold)
+                {
+                    selectedNote.duration = Mathf.Max(selectedNote.duration, MinimumHoldDuration());
+                    selectedNote.endLane = placementEndLane;
+                }
+                else
+                {
+                    selectedNote.duration = 0f;
+                    selectedNote.endLane = selectedNote.startLane;
+                }
+                durationInput.SetTextWithoutNotify(FormatFloat(selectedNote.duration));
+                RefreshNotes();
+            }
+
+            UpdatePlacementButtonLabels();
+            UpdateSelectedLabel();
+        }
+
+        private void SetPlacementColor(ScorewriterNoteColor color)
+        {
+            placementColor = color;
+            if (selectedNote != null)
+            {
+                selectedNote.noteColor = color;
+                RefreshNotes();
+                RenderPreview();
+            }
+
             UpdatePlacementButtonLabels();
             UpdateSelectedLabel();
         }
@@ -822,12 +1063,12 @@ namespace Scorewriter
 
         private void OnDurationEdited(string value)
         {
-            float duration = Mathf.Max(0f, ParseFloat(value, GetSnapStep()));
+            float duration = Mathf.Max(0f, ParseFloat(value, MinimumHoldDuration()));
             durationInput.SetTextWithoutNotify(FormatFloat(duration));
             if (selectedNote == null)
                 return;
 
-            selectedNote.duration = selectedNote.kind == ScorewriterNoteKind.Hold ? Mathf.Max(GetSnapStep(), duration) : 0f;
+            selectedNote.duration = selectedNote.kind == ScorewriterNoteKind.Hold ? Mathf.Max(MinimumHoldDuration(), duration) : 0f;
             RefreshNotes();
             UpdateSelectedLabel();
         }
@@ -1085,6 +1326,7 @@ namespace Scorewriter
                 endY = end.y,
                 endZ = end.z,
                 editorKind = note.kind.ToString(),
+                editorColor = note.noteColor.ToString(),
                 startLane = (int)note.startLane,
                 endLane = (int)note.endLane
             };
@@ -1162,6 +1404,14 @@ namespace Scorewriter
                 endLaneButtonText.text = $"终点 {ScorewriterLaneUtility.GetShortName(placementEndLane)}";
             if (snapButtonText != null)
                 snapButtonText.text = $"吸附 {SnapLabel()}";
+            SetIconButtonState(holdIconButton, placementKind == ScorewriterNoteKind.Hold);
+            SetIconButtonState(roundIconButton, placementKind == ScorewriterNoteKind.Round);
+            SetIconButtonState(slideIconButton, placementKind == ScorewriterNoteKind.Slide);
+            SetColorButtonState(whiteColorButton, placementColor == ScorewriterNoteColor.White);
+            SetColorButtonState(mikuColorButton, placementColor == ScorewriterNoteColor.Miku);
+            SetColorButtonState(redColorButton, placementColor == ScorewriterNoteColor.Red);
+            SetColorButtonState(blueColorButton, placementColor == ScorewriterNoteColor.Blue);
+            UpdateNotePreviewIcons();
         }
 
         private void UpdateSelectedLabel()
@@ -1175,7 +1425,7 @@ namespace Scorewriter
                 return;
             }
 
-            selectedText.text = $"{KindLabel(selectedNote.kind)} {FormatTime(selectedNote.time)} {ScorewriterLaneUtility.GetShortName(selectedNote.startLane)}->{ScorewriterLaneUtility.GetShortName(selectedNote.endLane)}";
+            selectedText.text = $"{KindLabel(selectedNote.kind)} {ColorLabel(selectedNote.noteColor)} {FormatTime(selectedNote.time)} {ScorewriterLaneUtility.GetShortName(selectedNote.startLane)}->{ScorewriterLaneUtility.GetShortName(selectedNote.endLane)}";
         }
 
         private bool TryTimelinePoint(PointerEventData eventData, out Vector2 localPoint)
@@ -1206,9 +1456,28 @@ namespace Scorewriter
         private Vector2 PreviewPosition(ScorewriterLane lane)
         {
             Rect rect = previewSurface.rect;
-            float x = lane == ScorewriterLane.TopLeft || lane == ScorewriterLane.BottomLeft ? -rect.width * 0.25f : rect.width * 0.25f;
-            float y = lane == ScorewriterLane.TopLeft || lane == ScorewriterLane.TopRight ? rect.height * 0.25f : -rect.height * 0.25f;
+            float width = rect.width > 1f ? rect.width : 640f;
+            float height = rect.height > 1f ? rect.height : 420f;
+            float x = lane == ScorewriterLane.TopLeft || lane == ScorewriterLane.BottomLeft ? -width * 0.25f : width * 0.25f;
+            float y = lane == ScorewriterLane.TopLeft || lane == ScorewriterLane.TopRight ? height * 0.25f : -height * 0.25f;
             return new Vector2(x, y);
+        }
+
+        private static Vector2 PreviewAnchor(ScorewriterLane lane)
+        {
+            switch (lane)
+            {
+                case ScorewriterLane.TopLeft:
+                    return new Vector2(0.25f, 0.75f);
+                case ScorewriterLane.TopRight:
+                    return new Vector2(0.75f, 0.75f);
+                case ScorewriterLane.BottomLeft:
+                    return new Vector2(0.25f, 0.25f);
+                case ScorewriterLane.BottomRight:
+                    return new Vector2(0.75f, 0.25f);
+                default:
+                    return new Vector2(0.5f, 0.5f);
+            }
         }
 
         private float SnapTime(float time)
@@ -1228,6 +1497,12 @@ namespace Scorewriter
 
             float beat = 60f / Mathf.Max(1f, chart?.bpm ?? 120f);
             return beat * 4f / division;
+        }
+
+        private float MinimumHoldDuration()
+        {
+            float snap = GetSnapStep();
+            return snap > 0.001f ? snap : 0.1f;
         }
 
         private string SnapLabel()
@@ -1251,15 +1526,79 @@ namespace Scorewriter
             }
         }
 
+        private static string ColorLabel(ScorewriterNoteColor color)
+        {
+            switch (color)
+            {
+                case ScorewriterNoteColor.Miku:
+                    return "青";
+                case ScorewriterNoteColor.Red:
+                    return "红";
+                case ScorewriterNoteColor.Blue:
+                    return "蓝";
+                default:
+                    return "白";
+            }
+        }
+
         private Sprite LoadNoteSprite(ScorewriterNote note, string shape)
         {
-            int direction = ScorewriterLaneUtility.DirectionFromLanes(note.startLane, note.endLane);
-            string color = DirectionColorName(direction);
-            Sprite sprite = Resources.Load<Sprite>($"Images/Notes/{color}_{shape}");
+            return LoadNoteSprite(note.noteColor, shape);
+        }
+
+        private Sprite LoadNoteSprite(ScorewriterNoteColor noteColor, string shape)
+        {
+            string color = NoteColorName(noteColor);
+            Sprite sprite = LoadResourceSprite($"Images/Notes/{color}_{shape}") ?? LoadResourceSprite($"Notes/{color}_{shape}");
             if (sprite != null)
                 return sprite;
 
             return shape == "slide" ? whiteSprite : circleSprite;
+        }
+
+        private Sprite LoadToolbarSprite(string shape)
+        {
+            Sprite sprite = LoadResourceSprite($"Images/Notes/white_{shape}") ?? LoadResourceSprite($"Notes/white_{shape}");
+            return sprite != null ? sprite : circleSprite;
+        }
+
+        private void UpdateNotePreviewIcons()
+        {
+            UpdateNotePreviewIconList(clickPreviewImages, "click");
+            UpdateNotePreviewIconList(roundPreviewImages, "round");
+            UpdateNotePreviewIconList(slidePreviewImages, "slide");
+        }
+
+        private void UpdateNotePreviewIconList(List<Image> images, string shape)
+        {
+            Sprite sprite = LoadNoteSprite(placementColor, shape);
+            foreach (Image image in images)
+            {
+                if (image == null)
+                    continue;
+
+                image.sprite = sprite;
+                image.color = Color.white;
+                image.preserveAspect = true;
+            }
+        }
+
+        private Sprite LoadResourceSprite(string path)
+        {
+            if (resourceSpriteCache.TryGetValue(path, out Sprite cached))
+                return cached;
+
+            Sprite sprite = Resources.Load<Sprite>(path);
+            if (sprite == null)
+            {
+                Texture2D texture = Resources.Load<Texture2D>(path);
+                if (texture != null)
+                    sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            }
+
+            if (sprite != null)
+                resourceSpriteCache[path] = sprite;
+            return sprite;
         }
 
         private static string DirectionColorName(int direction)
@@ -1274,6 +1613,36 @@ namespace Scorewriter
                     return "blue";
                 default:
                     return "white";
+            }
+        }
+
+        private static string NoteColorName(ScorewriterNoteColor color)
+        {
+            switch (color)
+            {
+                case ScorewriterNoteColor.Miku:
+                    return "miku";
+                case ScorewriterNoteColor.Red:
+                    return "red";
+                case ScorewriterNoteColor.Blue:
+                    return "blue";
+                default:
+                    return "white";
+            }
+        }
+
+        private static Color GetNoteColor(ScorewriterNoteColor color)
+        {
+            switch (color)
+            {
+                case ScorewriterNoteColor.Miku:
+                    return new Color(0.18f, 0.92f, 1f, 1f);
+                case ScorewriterNoteColor.Red:
+                    return new Color(1f, 0.2f, 0.24f, 1f);
+                case ScorewriterNoteColor.Blue:
+                    return new Color(0.24f, 0.45f, 1f, 1f);
+                default:
+                    return new Color(0.92f, 0.95f, 1f, 1f);
             }
         }
 
@@ -1400,7 +1769,7 @@ namespace Scorewriter
             rect.pivot = new Vector2(0.5f, 0.5f);
         }
 
-        private static void SetLayout(RectTransform rect, float preferredWidth, float preferredHeight, float flexibleWidth, float flexibleHeight)
+        private static LayoutElement SetLayout(RectTransform rect, float preferredWidth, float preferredHeight, float flexibleWidth, float flexibleHeight)
         {
             LayoutElement element = rect.gameObject.GetComponent<LayoutElement>() ?? rect.gameObject.AddComponent<LayoutElement>();
             if (preferredWidth >= 0f)
@@ -1409,6 +1778,7 @@ namespace Scorewriter
                 element.preferredHeight = preferredHeight;
             element.flexibleWidth = flexibleWidth;
             element.flexibleHeight = flexibleHeight;
+            return element;
         }
 
         private Image AddImage(GameObject obj, Color color)
@@ -1453,6 +1823,57 @@ namespace Scorewriter
             Text text = CreateLabel(rect, label, 14, TextAnchor.MiddleCenter, -1f, -1f, Color.white);
             Stretch(text.rectTransform);
             return button;
+        }
+
+        private Button CreateIconButton(Transform parent, Sprite icon, UnityEngine.Events.UnityAction action)
+        {
+            RectTransform rect = CreateRect("IconButton", parent);
+            SetLayout(rect, 38f, 42f, 0f, 0f);
+            Image background = AddImage(rect.gameObject, new Color(0.16f, 0.19f, 0.23f, 1f));
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = background;
+            button.onClick.AddListener(action);
+
+            RectTransform iconRect = CreateRect("Icon", rect);
+            Stretch(iconRect);
+            iconRect.offsetMin = new Vector2(7f, 8f);
+            iconRect.offsetMax = new Vector2(-7f, -8f);
+            Image image = AddImage(iconRect.gameObject, Color.white);
+            image.sprite = icon ?? circleSprite;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            return button;
+        }
+
+        private static void SetIconButtonState(Button button, bool active)
+        {
+            if (button == null || button.targetGraphic == null)
+                return;
+
+            button.targetGraphic.color = active
+                ? new Color(0.92f, 0.70f, 0.16f, 1f)
+                : new Color(0.16f, 0.19f, 0.23f, 1f);
+        }
+
+        private Button CreateColorButton(Transform parent, ScorewriterNoteColor color)
+        {
+            RectTransform rect = CreateRect("ColorButton", parent);
+            SetLayout(rect, 30f, 36f, 0f, 0f);
+            Image image = AddImage(rect.gameObject, GetNoteColor(color));
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() => SetPlacementColor(color));
+            return button;
+        }
+
+        private static void SetColorButtonState(Button button, bool active)
+        {
+            if (button == null)
+                return;
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+                rect.localScale = active ? Vector3.one * 1.16f : Vector3.one;
         }
 
         private InputField CreateInput(Transform parent, string value, float width, float height, UnityEngine.Events.UnityAction<string> onEndEdit)

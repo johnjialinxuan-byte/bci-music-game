@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: e0ff1baf0e3d94af6bbe7bf9a45202e8
+guid: c1b1f3a15832d410c976f51c8947d559
 ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -39,7 +39,7 @@ ScriptedImporter:
   useSVGPixelsPerUnit: 0
   spriteData:
     TessellationDetail: 0
-    SpriteName: miku_slideSprite
+    SpriteName: blue_roundSprite
     SpritePivot: {x: 0.5, y: 0.5}
     SpriteAlignment: 0
     SpriteBorder: {x: 0, y: 0, z: 0, w: 0}
@@ -47,7 +47,7 @@ ScriptedImporter:
       serializedVersion: 2
       x: 0
       y: 0
-      width: 616.2341
+      width: 443
       height: 443
-    SpriteID: ef3d2a0becdd647a397f676b2debab6e
+    SpriteID: d4ae1f8ccad0f487197dd8d9000cfdd1
     PhysicsOutlines: []

@@ -19,6 +19,14 @@ namespace Scorewriter
         BottomRight
     }
 
+    public enum ScorewriterNoteColor
+    {
+        White,
+        Miku,
+        Red,
+        Blue
+    }
+
     [Serializable]
     public sealed class ScorewriterSong
     {
@@ -43,6 +51,7 @@ namespace Scorewriter
         public ScorewriterNoteKind kind;
         public ScorewriterLane startLane;
         public ScorewriterLane endLane;
+        public ScorewriterNoteColor noteColor = ScorewriterNoteColor.White;
         public float duration;
         public int threshold = 10;
         public bool hasTailSlide;
@@ -102,6 +111,7 @@ namespace Scorewriter
         public float endY;
         public float endZ;
         public string editorKind;
+        public string editorColor;
         public int startLane;
         public int endLane;
         public List<GamePathPointExport> attentionPoints = new List<GamePathPointExport>();
