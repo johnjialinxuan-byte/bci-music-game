@@ -13,13 +13,22 @@ namespace MusicGame.Scenes
         [SerializeField] private Sprite backArrowSprite;
 
         private Canvas canvas;
+        private bool initialized;
 
-        private void Start()
+
+private void Start()
         {
-            GameplaySettings.InitializeAttentionDefaults();
-            canvas = FindAnyObjectByType<Canvas>();
-            if (canvas == null) return;
+            InitializeSettings();
+        }
 
+private void InitializeSettings()
+        {
+            if (initialized) return;
+
+            GameplaySettings.InitializeAttentionDefaults();
+            if (!EnsureCanvas()) return;
+
+            initialized = true;
             EnsureSongSelectBackground();
             SetupTopBar();
             ConfigureTitle();
@@ -27,6 +36,7 @@ namespace MusicGame.Scenes
             BuildTuningPanel();
             ConfigureParallax();
         }
+
 
         private void ConfigureTitle()
         {
@@ -55,13 +65,15 @@ namespace MusicGame.Scenes
                 canvas.gameObject.AddComponent<SciFiCurveBackground>();
         }
 
-        private void BuildTuningPanel()
+private void BuildTuningPanel()
         {
+            if (!EnsureCanvas()) return;
+
             Transform existing = canvas.transform.Find("TuningPanel");
             if (existing != null)
                 Destroy(existing.gameObject);
 
-            GameObject panel = new GameObject("TuningPanel", typeof(RectTransform), typeof(Image));
+            GameObject panel = new GameObject("TuningPanel", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
             panel.transform.SetParent(canvas.transform, false);
 
             RectTransform panelRect = panel.GetComponent<RectTransform>();
@@ -72,17 +84,53 @@ namespace MusicGame.Scenes
             panelImage.sprite = PillButtonStyle.GetSprite();
             panelImage.type = Image.Type.Sliced;
             panelImage.color = new Color(0.02f, 0.08f, 0.12f, 0.44f);
+            panelImage.raycastTarget = true;
 
-            CreateSectionFrame(panel.transform, new Vector2(0f, 126f), new Vector2(860f, 304f));
-            CreateHeader(panel.transform, "\u6ce8\u610f\u529b\u9608\u503c", 240f);
-            CreateStepperRow(panel.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, 170f);
-            CreateStepperRow(panel.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, 94f);
-            CreateStepperRow(panel.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, 18f);
+            GameObject viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+            viewport.transform.SetParent(panel.transform, false);
+            RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = new Vector2(24f, 24f);
+            viewportRect.offsetMax = new Vector2(-24f, -24f);
 
-            CreateSectionFrame(panel.transform, new Vector2(0f, -151f), new Vector2(860f, 222f));
-            CreateHeader(panel.transform, "Flick \u5224\u5b9a\u8303\u56f4", -70f);
-            CreateStepperRow(panel.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -132f);
-            CreateStepperRow(panel.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -208f);
+            GameObject content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(viewport.transform, false);
+            RectTransform contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0.5f, 1f);
+            contentRect.anchorMax = new Vector2(0.5f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.anchoredPosition = Vector2.zero;
+            contentRect.sizeDelta = new Vector2(890f, 980f);
+
+            ScrollRect scrollRect = panel.GetComponent<ScrollRect>();
+            scrollRect.viewport = viewportRect;
+            scrollRect.content = contentRect;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Elastic;
+            scrollRect.elasticity = 0.16f;
+            scrollRect.inertia = true;
+            scrollRect.decelerationRate = 0.12f;
+            scrollRect.scrollSensitivity = 52f;
+            
+            scrollRect.verticalScrollbar = CreateSettingsScrollbar(panel.transform);
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+scrollRect.verticalNormalizedPosition = 1f;
+
+
+            CreateSectionFrame(content.transform, new Vector2(0f, -110f), new Vector2(860f, 304f));
+            CreateHeader(content.transform, "\u6ce8\u610f\u529b\u9608\u503c", -2f);
+            CreateStepperRow(content.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, -72f);
+            CreateStepperRow(content.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, -148f);
+            CreateStepperRow(content.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, -224f);
+
+            CreateSectionFrame(content.transform, new Vector2(0f, -390f), new Vector2(860f, 222f));
+            CreateHeader(content.transform, "Flick \u5224\u5b9a\u8303\u56f4", -310f);
+            CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -372f);
+            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -448f);
+
+            CreateCommunicationSection(content.transform, -670f);
         }
 
         private static void CreateHeader(Transform parent, string value, float y)
@@ -302,6 +350,8 @@ namespace MusicGame.Scenes
 
         private void ConfigureParallax()
         {
+            if (!EnsureCanvas()) return;
+
             SongSelectParallax parallax = canvas.GetComponent<SongSelectParallax>();
             if (parallax == null)
                 parallax = canvas.gameObject.AddComponent<SongSelectParallax>();
@@ -322,5 +372,176 @@ namespace MusicGame.Scenes
 
             parallax.RegisterTarget(rect, motion);
         }
-    }
+    
+
+private static InputField CreateIpInput(Transform parent, Vector2 position, Vector2 size)
+        {
+            GameObject obj = new GameObject("IpInput", typeof(RectTransform), typeof(Image), typeof(InputField));
+            obj.transform.SetParent(parent, false);
+            SetRect(obj.GetComponent<RectTransform>(), position, size);
+
+            Image image = obj.GetComponent<Image>();
+            image.sprite = PillButtonStyle.GetSprite();
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.86f, 0.90f, 0.92f, 0.20f);
+
+            Text text = CreateText(obj.transform, string.Empty, 20, TextAnchor.MiddleLeft);
+            SetStretch(text.rectTransform, new Vector2(16f, 4f), new Vector2(-16f, -4f));
+            text.color = Color.white;
+
+            Text placeholder = CreateText(obj.transform, CommunicationSettings.DefaultRemoteIp, 20, TextAnchor.MiddleLeft);
+            SetStretch(placeholder.rectTransform, new Vector2(16f, 4f), new Vector2(-16f, -4f));
+            placeholder.color = new Color(1f, 1f, 1f, 0.42f);
+
+            InputField input = obj.GetComponent<InputField>();
+            input.textComponent = text;
+            input.placeholder = placeholder;
+            input.characterLimit = 32;
+            input.contentType = InputField.ContentType.Standard;
+            input.targetGraphic = image;
+            return input;
+        }
+
+
+private static void ApplyModeButtonState(Button button, bool selected)
+        {
+            if (button == null) return;
+            Image image = button.GetComponent<Image>();
+            if (image != null)
+                image.color = selected ? new Color(0.08f, 0.42f, 0.52f, 0.92f) : new Color(0.02f, 0.08f, 0.12f, 0.78f);
+
+            Text text = button.GetComponentInChildren<Text>(true);
+            if (text != null)
+                text.color = selected ? new Color(0.28f, 0.93f, 1f, 1f) : Color.white;
+        }
+
+
+private static Button CreateModeButton(Transform parent, string label, Vector2 position)
+        {
+            GameObject obj = new GameObject(label + "ModeButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            obj.transform.SetParent(parent, false);
+            SetRect(obj.GetComponent<RectTransform>(), position, new Vector2(180f, 52f));
+
+            Button button = obj.GetComponent<Button>();
+            Image image = obj.GetComponent<Image>();
+            image.sprite = PillButtonStyle.GetSprite();
+            image.type = Image.Type.Sliced;
+            button.targetGraphic = image;
+
+            Text text = PillButtonStyle.CreateLabel(obj.transform, label, 20);
+            SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
+            hover.SetLabel(text);
+            hover.SetHoverScale(1.04f);
+            obj.AddComponent<ButtonSFX>();
+            return button;
+        }
+
+
+private void CreateCommunicationSection(Transform parent, float centerY)
+        {
+            CreateSectionFrame(parent, new Vector2(0f, centerY), new Vector2(860f, 250f));
+            CreateHeader(parent, "\u901a\u4fe1\u8bbe\u7f6e", centerY + 86f);
+
+            Text modeLabel = CreateText(parent, "MODE", 20, TextAnchor.MiddleLeft);
+            SetRect(modeLabel.rectTransform, new Vector2(-320f, centerY + 24f), new Vector2(132f, 52f));
+
+            Button localButton = CreateModeButton(parent, "\u672c\u5730", new Vector2(-72f, centerY + 24f));
+            Button remoteButton = CreateModeButton(parent, "\u8de8\u8bbe\u5907", new Vector2(156f, centerY + 24f));
+
+            GameObject ipRow = new GameObject("IpRow", typeof(RectTransform), typeof(Image));
+            ipRow.transform.SetParent(parent, false);
+            SetRect(ipRow.GetComponent<RectTransform>(), new Vector2(0f, centerY - 56f), new Vector2(820f, 64f));
+            Image rowImage = ipRow.GetComponent<Image>();
+            rowImage.sprite = PillButtonStyle.GetSprite();
+            rowImage.type = Image.Type.Sliced;
+            rowImage.color = new Color(0.02f, 0.08f, 0.12f, 0.78f);
+
+            Text ipLabel = CreateText(ipRow.transform, "IP", 20, TextAnchor.MiddleLeft);
+            SetRect(ipLabel.rectTransform, new Vector2(-320f, 0f), new Vector2(120f, 58f));
+
+            InputField ipInput = CreateIpInput(ipRow.transform, new Vector2(92f, 0f), new Vector2(520f, 46f));
+            ipInput.text = CommunicationSettings.RemoteIp;
+            ipInput.onEndEdit.AddListener(value => CommunicationSettings.RemoteIp = value);
+
+            Action refresh = () =>
+            {
+                bool remote = CommunicationSettings.Mode == CommunicationMode.Remote;
+                ipRow.SetActive(remote);
+                ApplyModeButtonState(localButton, !remote);
+                ApplyModeButtonState(remoteButton, remote);
+            };
+
+            localButton.onClick.AddListener(() =>
+            {
+                CommunicationSettings.Mode = CommunicationMode.Local;
+                refresh();
+            });
+            remoteButton.onClick.AddListener(() =>
+            {
+                CommunicationSettings.Mode = CommunicationMode.Remote;
+                CommunicationSettings.RemoteIp = ipInput.text;
+                refresh();
+            });
+            refresh();
+        }
+
+
+private bool EnsureCanvas()
+        {
+            if (canvas != null) return true;
+
+            canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+                canvas = FindAnyObjectByType<Canvas>();
+            return canvas != null;
+        }
+
+
+private void OnEnable()
+        {
+            InitializeSettings();
+        }
+
+
+private static Scrollbar CreateSettingsScrollbar(Transform parent)
+        {
+            GameObject scrollbarObject = new GameObject("VerticalScrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            scrollbarObject.transform.SetParent(parent, false);
+            RectTransform scrollbarRect = scrollbarObject.GetComponent<RectTransform>();
+            scrollbarRect.anchorMin = new Vector2(1f, 0f);
+            scrollbarRect.anchorMax = new Vector2(1f, 1f);
+            scrollbarRect.pivot = new Vector2(1f, 0.5f);
+            scrollbarRect.offsetMin = new Vector2(-20f, 36f);
+            scrollbarRect.offsetMax = new Vector2(-10f, -36f);
+
+            Image background = scrollbarObject.GetComponent<Image>();
+            background.sprite = PillButtonStyle.GetSprite();
+            background.type = Image.Type.Sliced;
+            background.color = new Color(0.82f, 0.90f, 0.94f, 0.14f);
+
+            GameObject slidingArea = new GameObject("SlidingArea", typeof(RectTransform));
+            slidingArea.transform.SetParent(scrollbarObject.transform, false);
+            RectTransform slidingRect = slidingArea.GetComponent<RectTransform>();
+            slidingRect.anchorMin = Vector2.zero;
+            slidingRect.anchorMax = Vector2.one;
+            slidingRect.offsetMin = Vector2.zero;
+            slidingRect.offsetMax = Vector2.zero;
+
+            GameObject handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleObject.transform.SetParent(slidingArea.transform, false);
+            RectTransform handleRect = handleObject.GetComponent<RectTransform>();
+            handleRect.sizeDelta = new Vector2(10f, 90f);
+
+            Image handle = handleObject.GetComponent<Image>();
+            handle.sprite = PillButtonStyle.GetSprite();
+            handle.type = Image.Type.Sliced;
+            handle.color = new Color(0.28f, 0.93f, 1f, 0.72f);
+
+            Scrollbar scrollbar = scrollbarObject.GetComponent<Scrollbar>();
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.targetGraphic = handle;
+            scrollbar.handleRect = handleRect;
+            return scrollbar;
+        }
+}
 }

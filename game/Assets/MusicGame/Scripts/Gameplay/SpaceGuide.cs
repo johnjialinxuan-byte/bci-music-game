@@ -65,8 +65,8 @@ namespace MusicGame.Gameplay
                 CreateDashedLine($"PerspectiveDash_{i}", nearCorners[i], farCorners[i], true);
             }
 
-            CreateDashedLine("CenterVerticalDash", Vector3.down * height * 0.5f, Vector3.up * height * 0.5f, false);
-            CreateDashedLine("CenterHorizontalDash", Vector3.left * width * 0.5f, Vector3.right * width * 0.5f, false);
+            CreateSolidLine("CenterVerticalLine", Vector3.down * height * 0.5f, Vector3.up * height * 0.5f);
+            CreateSolidLine("CenterHorizontalLine", Vector3.left * width * 0.5f, Vector3.right * width * 0.5f);
             UpdatePerspectiveDashes();
         }
 
@@ -160,5 +160,26 @@ namespace MusicGame.Gameplay
             public int Index { get; }
             public int Count { get; }
         }
-    }
+    
+
+private void CreateSolidLine(string lineName, Vector3 start, Vector3 end)
+        {
+            GameObject line = new GameObject(lineName);
+            line.transform.SetParent(transform, false);
+
+            LineRenderer renderer = line.AddComponent<LineRenderer>();
+            renderer.sharedMaterial = lineMaterial;
+            renderer.useWorldSpace = false;
+            renderer.positionCount = 2;
+            renderer.startWidth = lineWidth * 2.2f;
+            renderer.endWidth = lineWidth * 2.2f;
+
+            Color solidColor = guideColor;
+            solidColor.a = Mathf.Min(0.18f, guideColor.a * 0.48f);
+            renderer.startColor = solidColor;
+            renderer.endColor = solidColor;
+            renderer.SetPosition(0, start);
+            renderer.SetPosition(1, end);
+        }
+}
 }

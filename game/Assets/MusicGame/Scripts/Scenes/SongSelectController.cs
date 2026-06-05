@@ -295,7 +295,7 @@ private void SelectSong(SongData song)
 
             if (titleText != null) titleText.text = song.title;
             if (artistText != null) artistText.text = song.artist;
-            if (coverImage != null) coverImage.sprite = song.coverImage;
+            ApplyCoverSprite(song);
             if (GameStateManager.Instance != null)
                 UpdateCoverFrameColor(GameStateManager.Instance.SelectedDifficulty);
 
@@ -546,7 +546,7 @@ private Sprite GetRectButtonSprite()
             {
                 rectMask = viewport.gameObject.AddComponent<RectMask2D>();
             }
-            rectMask.padding = new Vector4(-120f, -6f, -120f, -6f);
+            rectMask.padding = new Vector4(-120f, 0f, -120f, 0f);
         }
     
 
@@ -562,7 +562,7 @@ private void ConfigureSongListLayout()
                 viewportRect.anchorMax = new Vector2(0.5f, 0.5f);
                 viewportRect.pivot = new Vector2(0.5f, 0.5f);
                 viewportRect.anchoredPosition = new Vector2(SongListX, -18f);
-                viewportRect.sizeDelta = new Vector2(SongItemWidth + 28f, 610f);
+                viewportRect.sizeDelta = new Vector2(SongItemWidth + 28f, 560f);
             }
 
             RectTransform contentRect = songListContent.GetComponent<RectTransform>();
@@ -579,7 +579,7 @@ private void ConfigureSongListLayout()
             if (layout != null)
             {
                 layout.spacing = 18f;
-                layout.padding = new RectOffset(14, 0, 22, 28);
+                layout.padding = new RectOffset(14, 0, 26, 36);
                 layout.childAlignment = TextAnchor.UpperLeft;
                 layout.childControlWidth = false;
                 layout.childControlHeight = true;
@@ -600,6 +600,9 @@ private void ConfigureLayout()
             {
                 coverFrameRect.anchoredPosition = new Vector2(DetailCenterX, detailY);
                 coverFrameRect.sizeDelta = new Vector2(388f, 388f);
+                if (coverFrame.GetComponent<RectMask2D>() == null)
+                    coverFrame.gameObject.AddComponent<RectMask2D>();
+
             }
 
             RectTransform coverImageRect = coverImage != null ? coverImage.rectTransform : null;
@@ -610,6 +613,7 @@ private void ConfigureLayout()
                 else
                     coverImageRect.anchoredPosition = new Vector2(DetailCenterX, detailY);
                 coverImageRect.sizeDelta = new Vector2(370f, 370f);
+
             }
 
             if (titleText != null)
@@ -702,6 +706,66 @@ private static void EnsureAudioManager()
 
             GameObject audioObject = new GameObject("AudioManager");
             audioObject.AddComponent<Audio.AudioManager>();
+        }
+
+
+private void ApplyCoverSprite(SongData song)
+        {
+            if (coverImage == null) return;
+
+            float targetSize = 370f;
+            Transform imageParent = coverImage.transform.parent;
+            if (coverFrame != null)
+            {
+                RectTransform frameRect = coverFrame.rectTransform;
+                if (frameRect.sizeDelta.x > 0f && frameRect.sizeDelta.y > 0f)
+                    targetSize = Mathf.Min(frameRect.sizeDelta.x, frameRect.sizeDelta.y) - 18f;
+                imageParent = EnsureCoverViewport(targetSize).transform;
+            }
+
+            if (imageParent != null && coverImage.transform.parent != imageParent)
+                coverImage.transform.SetParent(imageParent, false);
+
+            coverImage.sprite = song != null ? song.coverImage : null;
+            coverImage.type = Image.Type.Simple;
+            coverImage.preserveAspect = true;
+            coverImage.raycastTarget = false;
+
+            RectTransform imageRect = coverImage.rectTransform;
+            imageRect.anchorMin = new Vector2(0.5f, 0.5f);
+            imageRect.anchorMax = new Vector2(0.5f, 0.5f);
+            imageRect.pivot = new Vector2(0.5f, 0.5f);
+            imageRect.anchoredPosition = Vector2.zero;
+
+            if (coverImage.sprite == null)
+            {
+                imageRect.sizeDelta = new Vector2(targetSize, targetSize);
+                return;
+            }
+
+            Rect spriteRect = coverImage.sprite.rect;
+            float aspect = spriteRect.width / Mathf.Max(1f, spriteRect.height);
+            imageRect.sizeDelta = aspect >= 1f
+                ? new Vector2(targetSize * aspect, targetSize)
+                : new Vector2(targetSize, targetSize / aspect);
+        }
+
+
+private RectTransform EnsureCoverViewport(float size)
+        {
+            if (coverFrame == null) return null;
+
+            Transform existing = coverFrame.transform.Find("CoverViewport");
+            GameObject viewport = existing != null ? existing.gameObject : new GameObject("CoverViewport", typeof(RectTransform), typeof(RectMask2D));
+            viewport.transform.SetParent(coverFrame.transform, false);
+
+            RectTransform rect = viewport.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(size, size);
+            return rect;
         }
 }
 }

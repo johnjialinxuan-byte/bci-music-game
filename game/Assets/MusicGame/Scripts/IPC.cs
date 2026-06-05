@@ -1,9 +1,11 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using MusicGame.Core;
+
 
 /// <summary>
 /// BCI platform IPC client for Unity.
@@ -12,7 +14,7 @@ using System.Threading;
 public class IPC : MonoBehaviour
 {
     [Header("Connection")]
-    public string ip = "172.23.172.176";
+    public string ip = CommunicationSettings.DefaultRemoteIp;
     public int port = 8000;
     public bool autoConnectOnStart = true;
 
@@ -54,6 +56,8 @@ public class IPC : MonoBehaviour
 
     public void Connect()
     {
+        ip = CommunicationSettings.CurrentIp;
+
         if (IsConnected) return;
 
         try
