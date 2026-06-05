@@ -31,6 +31,12 @@ namespace Scorewriter
         public void OnDrag(PointerEventData eventData)
         {
             app?.HandleNoteDrag(note, editsTail, eventData);
+            if (app != null)
+            {
+                RectTransform rect = transform as RectTransform;
+                if (rect != null)
+                    rect.anchoredPosition = app.TimelineHandlePosition(note, editsTail);
+            }
             eventData.Use();
         }
 

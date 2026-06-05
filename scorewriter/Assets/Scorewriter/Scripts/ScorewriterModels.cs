@@ -16,7 +16,8 @@ namespace Scorewriter
         TopLeft,
         TopRight,
         BottomLeft,
-        BottomRight
+        BottomRight,
+        Center
     }
 
     public enum ScorewriterNoteColor
@@ -135,6 +136,8 @@ namespace Scorewriter
                     return new Vector3(-X, -Y, Z);
                 case ScorewriterLane.BottomRight:
                     return new Vector3(X, -Y, Z);
+                case ScorewriterLane.Center:
+                    return new Vector3(0f, 0f, Z);
                 default:
                     return new Vector3(0f, 0f, Z);
             }
@@ -152,6 +155,8 @@ namespace Scorewriter
                     return "左下";
                 case ScorewriterLane.BottomRight:
                     return "右下";
+                case ScorewriterLane.Center:
+                    return "中间";
                 default:
                     return "?";
             }

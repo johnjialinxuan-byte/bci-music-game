@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 #endif
 #if UNITY_EDITOR
@@ -17,16 +18,27 @@ namespace Scorewriter
     [RequireComponent(typeof(ScorewriterCriAudioPlayer))]
     public sealed class ScorewriterApp : MonoBehaviour
     {
-        private const float TimelinePixelsPerSecond = 92f;
+        private const float DefaultTimelinePixelsPerSecond = 92f;
+        private const float MinTimelinePixelsPerSecond = 36f;
+        private const float MaxTimelinePixelsPerSecond = 220f;
         private const float LaneWidth = 128f;
         private const float MarkerSize = 34f;
         private const float HoldLineWidth = 12f;
         private const float PreviewApproachTime = 2f;
         private const float PreviewHitWindow = 0.18f;
+        private const float SongTitleScrollSpeed = 36f;
 
         private readonly List<ScorewriterSong> songs = new List<ScorewriterSong>();
         private readonly Dictionary<string, Sprite> resourceSpriteCache = new Dictionary<string, Sprite>();
         private readonly int[] snapDivisions = { 4, 6, 8, 16, 0 };
+        private readonly ScorewriterLane[] laneVisualOrder =
+        {
+            ScorewriterLane.TopLeft,
+            ScorewriterLane.TopRight,
+            ScorewriterLane.Center,
+            ScorewriterLane.BottomLeft,
+            ScorewriterLane.BottomRight
+        };
 
         private ScorewriterCriAudioPlayer audioPlayer;
         private ScorewriterChart chart;
@@ -38,12 +50,14 @@ namespace Scorewriter
         private int songIndex;
         private int snapIndex = 3;
         private float timelinePanelWidth = 760f;
+        private float timelinePixelsPerSecond = DefaultTimelinePixelsPerSecond;
         private float currentTime;
         private float previewRenderedTime = float.NaN;
         private bool previewDirty = true;
         private bool followPlayback = true;
         private bool suppressSliderEvent;
-        private bool autoPlayOnStart = true;
+        private bool autoPlayOnStart = false;
+        private bool timelineClickAddEnabled = false;
         private bool draggingTimelineHold;
         private bool ignoreNextTimelineClick;
         private ScorewriterNote timelineDragNote;
@@ -63,6 +77,7 @@ namespace Scorewriter
         private RectTransform previewNoteLayer;
         private Slider timeSlider;
         private LayoutElement timelinePanelLayout;
+        private RectTransform songTitleViewport;
 
         private Text songTitleText;
         private Text timeText;
@@ -73,6 +88,10 @@ namespace Scorewriter
         private Text snapButtonText;
         private Text playButtonText;
         private Text followButtonText;
+        private Text clickAddButtonText;
+        private Text deleteButtonText;
+        private Text tailSlideToggleText;
+        private Text shortcutHintText;
         private Text selectedText;
         private InputField bpmInput;
         private InputField lengthInput;
@@ -91,6 +110,7 @@ namespace Scorewriter
         private Button mikuColorButton;
         private Button redColorButton;
         private Button blueColorButton;
+        private float songTitleScrollTime;
 
         private ScorewriterSong CurrentSong => songs[Mathf.Clamp(songIndex, 0, songs.Count - 1)];
         private float SongLength => Mathf.Max(8f, chart?.songLength ?? CurrentSong.songLength);
@@ -121,6 +141,8 @@ namespace Scorewriter
 
         private void Update()
         {
+            HandleKeyboardShortcuts();
+
             if (audioPlayer.IsPlaying || audioPlayer.IsPaused)
                 currentTime = Mathf.Clamp(audioPlayer.CurrentTime + ChartOffsetSeconds, 0f, SongLength);
 
@@ -132,16 +154,227 @@ namespace Scorewriter
 
             UpdateTransportUi();
             UpdatePlayhead();
+            UpdateSongTitleScroll();
             RenderPreview();
 
             if (followPlayback && audioPlayer.IsPlaying)
                 CenterTimelineOnTime(currentTime);
         }
 
+        private void HandleKeyboardShortcuts()
+        {
+            if (IsEditingTextInput())
+                return;
+
+            if (TryHandleTimelineZoom())
+                return;
+
+            if (IsCtrlHeld() && WasSPressed())
+            {
+                SaveEditorChart();
+                return;
+            }
+
+            if (IsCtrlHeld() && WasXPressed())
+            {
+                ExportGameJson();
+                return;
+            }
+
+            if (WasNumberPressed(1))
+                ToggleGridVisibility(4);
+            if (WasNumberPressed(2))
+                ToggleGridVisibility(6);
+            if (WasNumberPressed(3))
+                ToggleGridVisibility(8);
+            if (WasNumberPressed(4))
+                ToggleGridVisibility(16);
+            if (WasSpacePressed())
+                TogglePlayback();
+            if (WasWPressed())
+                ToggleTimelineClickAdd();
+            if (WasSPressed())
+                CyclePlacementKind();
+            if (WasVPressed() && tailSlideToggle != null)
+                tailSlideToggle.isOn = !tailSlideToggle.isOn;
+            if (WasFPressed())
+                CycleSnap();
+            if (WasDPressed())
+                DeleteSelectedNote();
+        }
+
+        private bool TryHandleTimelineZoom()
+        {
+            if (!IsAltHeld())
+                return false;
+
+            float scroll = GetMouseScrollDelta();
+            if (Mathf.Abs(scroll) < 0.01f)
+                return false;
+
+            float before = timelinePixelsPerSecond;
+            float factor = scroll > 0f ? 1.12f : 1f / 1.12f;
+            timelinePixelsPerSecond = Mathf.Clamp(timelinePixelsPerSecond * factor, MinTimelinePixelsPerSecond, MaxTimelinePixelsPerSecond);
+            if (Mathf.Approximately(before, timelinePixelsPerSecond))
+                return true;
+
+            RebuildTimeline();
+            CenterTimelineOnTime(currentTime);
+            SetStatus($"轨道缩放：{timelinePixelsPerSecond / DefaultTimelinePixelsPerSecond:0.##}x");
+            return true;
+        }
+
+        private static bool IsEditingTextInput()
+        {
+            GameObject selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            return selected != null && (selected.GetComponent<InputField>() != null || selected.GetComponentInParent<InputField>() != null);
+        }
+
+        private static bool WasSpacePressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.Space);
+#endif
+        }
+
+        private static bool WasWPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.wKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.W);
+#endif
+        }
+
+        private static bool WasSPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.sKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.S);
+#endif
+        }
+
+        private static bool WasVPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.vKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.V);
+#endif
+        }
+
+        private static bool WasFPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.F);
+#endif
+        }
+
+        private static bool WasDPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.dKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.D);
+#endif
+        }
+
+        private static bool WasXPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.xKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.X);
+#endif
+        }
+
+        private static bool WasNumberPressed(int number)
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (Keyboard.current == null)
+                return false;
+
+            switch (number)
+            {
+                case 1:
+                    return Keyboard.current.digit1Key.wasPressedThisFrame;
+                case 2:
+                    return Keyboard.current.digit2Key.wasPressedThisFrame;
+                case 3:
+                    return Keyboard.current.digit3Key.wasPressedThisFrame;
+                case 4:
+                    return Keyboard.current.digit4Key.wasPressedThisFrame;
+                default:
+                    return false;
+            }
+#else
+            switch (number)
+            {
+                case 1:
+                    return Input.GetKeyDown(KeyCode.Alpha1);
+                case 2:
+                    return Input.GetKeyDown(KeyCode.Alpha2);
+                case 3:
+                    return Input.GetKeyDown(KeyCode.Alpha3);
+                case 4:
+                    return Input.GetKeyDown(KeyCode.Alpha4);
+                default:
+                    return false;
+            }
+#endif
+        }
+
+        private static bool IsCtrlHeld()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed);
+#else
+            return Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+#endif
+        }
+
+        private static bool IsAltHeld()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && (Keyboard.current.leftAltKey.isPressed || Keyboard.current.rightAltKey.isPressed);
+#else
+            return Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+#endif
+        }
+
+        private static bool IsShiftHeld()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
+#else
+            return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+#endif
+        }
+
+        private static float GetMouseScrollDelta()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Mouse.current != null ? Mouse.current.scroll.ReadValue().y : 0f;
+#else
+            return Input.mouseScrollDelta.y;
+#endif
+        }
+
         public void HandleTimelineClick(PointerEventData eventData)
         {
             if (eventData.button != PointerEventData.InputButton.Left)
                 return;
+
+            if (!timelineClickAddEnabled)
+            {
+                ClearSelectedNote();
+                return;
+            }
 
             if (ignoreNextTimelineClick)
             {
@@ -153,20 +386,20 @@ namespace Scorewriter
                 return;
 
             ScorewriterLane lane = LaneFromX(localPoint.x);
-            float time = SnapTime(localPoint.y / TimelinePixelsPerSecond);
+            float time = SnapTime(localPoint.y / timelinePixelsPerSecond);
             AddNote(time, lane);
         }
 
         public void BeginTimelineDrag(PointerEventData eventData)
         {
-            if (eventData.button != PointerEventData.InputButton.Left || placementKind != ScorewriterNoteKind.Hold)
+            if (eventData.button != PointerEventData.InputButton.Left || placementKind != ScorewriterNoteKind.Hold || !timelineClickAddEnabled)
                 return;
 
             if (!TryTimelinePoint(eventData, out Vector2 localPoint))
                 return;
 
             ScorewriterLane lane = LaneFromX(localPoint.x);
-            float time = SnapTime(localPoint.y / TimelinePixelsPerSecond);
+            float time = SnapTime(localPoint.y / timelinePixelsPerSecond);
             timelineDragNote = AddNote(time, lane);
             timelineDragNote.endLane = lane;
             timelineDragNote.duration = MinimumHoldDuration();
@@ -181,7 +414,8 @@ namespace Scorewriter
                 return;
 
             ScorewriterLane lane = LaneFromX(localPoint.x);
-            float time = Mathf.Clamp(SnapTime(localPoint.y / TimelinePixelsPerSecond), 0f, SongLength);
+            float rawTime = localPoint.y / timelinePixelsPerSecond;
+            float time = Mathf.Clamp(IsShiftHeld() ? SnapTime(rawTime) : rawTime, 0f, SongLength);
             timelineDragNote.endLane = lane;
             timelineDragNote.duration = Mathf.Max(MinimumHoldDuration(), time - timelineDragNote.time);
             placementEndLane = lane;
@@ -211,6 +445,18 @@ namespace Scorewriter
         public void SelectNote(ScorewriterNote note)
         {
             ApplySelectedNote(note, true);
+        }
+
+        private void ClearSelectedNote()
+        {
+            if (selectedNote == null)
+                return;
+
+            selectedNote = null;
+            previewDirty = true;
+            RefreshNotes();
+            UpdateSelectedLabel();
+            RenderPreview();
         }
 
         public void BeginNoteDrag(ScorewriterNote note)
@@ -245,7 +491,7 @@ namespace Scorewriter
                 return;
 
             ScorewriterLane lane = LaneFromX(localPoint.x);
-            float time = Mathf.Clamp(SnapTime(localPoint.y / TimelinePixelsPerSecond), 0f, SongLength);
+            float time = Mathf.Clamp(SnapTime(localPoint.y / timelinePixelsPerSecond), 0f, SongLength);
 
             if (editsTail)
             {
@@ -267,13 +513,23 @@ namespace Scorewriter
             durationInput.SetTextWithoutNotify(FormatFloat(note.duration));
             UpdatePlacementButtonLabels();
             UpdateSelectedLabel();
-            RefreshNotes();
+            previewDirty = true;
+            UpdatePlayhead();
+            RenderPreview();
         }
 
         public void EndNoteDrag()
         {
             SortNotes();
             RefreshNotes();
+        }
+
+        public Vector2 TimelineHandlePosition(ScorewriterNote note, bool tail)
+        {
+            if (note == null)
+                return Vector2.zero;
+
+            return TimelinePosition(tail ? note.endLane : note.startLane, tail ? note.EndTime : note.time);
         }
 
         public void HandlePlayheadDrag(PointerEventData eventData)
@@ -285,7 +541,7 @@ namespace Scorewriter
             if (!ok)
                 return;
 
-            currentTime = Mathf.Clamp(localPoint.y / TimelinePixelsPerSecond, 0f, SongLength);
+            currentTime = Mathf.Clamp(localPoint.y / timelinePixelsPerSecond, 0f, SongLength);
             audioPlayer.Seek(CurrentSong, ChartTimeToAudioTime(currentTime));
             UpdateTransportUi();
             UpdatePlayhead();
@@ -433,7 +689,17 @@ namespace Scorewriter
 
             CreateLabel(header, "制谱器", 24, TextAnchor.MiddleLeft, 110f, 42f, new Color(0.86f, 0.91f, 1f, 1f));
             CreateButton(header, "<", 42f, 42f, () => SwitchSong(-1));
-            songTitleText = CreateLabel(header, "", 18, TextAnchor.MiddleLeft, 270f, 42f, Color.white);
+            songTitleViewport = CreateRect("SongTitleViewport", header);
+            SetLayout(songTitleViewport, 270f, 42f, 0f, 0f);
+            songTitleViewport.gameObject.AddComponent<RectMask2D>();
+
+            songTitleText = CreateLabel(songTitleViewport, "", 18, TextAnchor.MiddleLeft, -1f, -1f, Color.white);
+            RectTransform titleRect = songTitleText.rectTransform;
+            titleRect.anchorMin = new Vector2(0f, 0f);
+            titleRect.anchorMax = new Vector2(0f, 1f);
+            titleRect.pivot = new Vector2(0f, 0.5f);
+            titleRect.anchoredPosition = Vector2.zero;
+            titleRect.sizeDelta = new Vector2(270f, 0f);
             CreateButton(header, ">", 42f, 42f, () => SwitchSong(1));
 
             CreateLabel(header, "BPM", 14, TextAnchor.MiddleRight, 46f, 42f, new Color(0.72f, 0.77f, 0.84f, 1f));
@@ -493,7 +759,7 @@ namespace Scorewriter
             toolsLayout.childControlHeight = true;
             toolsLayout.childControlWidth = false;
 
-            Button typeButton = CreateButton(tools, "", 116f, 42f, CyclePlacementKind);
+            Button typeButton = CreateButton(tools, "", 128f, 42f, CyclePlacementKind);
             typeButtonText = typeButton.GetComponentInChildren<Text>();
             holdIconButton = CreateIconButton(tools, LoadToolbarSprite("click"), () => SetPlacementKind(ScorewriterNoteKind.Hold));
             roundIconButton = CreateIconButton(tools, LoadToolbarSprite("round"), () => SetPlacementKind(ScorewriterNoteKind.Round));
@@ -502,7 +768,7 @@ namespace Scorewriter
             startLaneButtonText = startButton.GetComponentInChildren<Text>();
             Button endButton = CreateButton(tools, "", 94f, 42f, CycleEndLane);
             endLaneButtonText = endButton.GetComponentInChildren<Text>();
-            Button snapButton = CreateButton(tools, "", 104f, 42f, CycleSnap);
+            Button snapButton = CreateButton(tools, "", 112f, 42f, CycleSnap);
             snapButtonText = snapButton.GetComponentInChildren<Text>();
             CreateButton(tools, "添加", 68f, 42f, AddNoteAtCurrentTime);
             CreateButton(tools, "删除", 82f, 42f, DeleteSelectedNote);
@@ -524,7 +790,15 @@ namespace Scorewriter
             mikuColorButton = CreateColorButton(fields, ScorewriterNoteColor.Miku);
             redColorButton = CreateColorButton(fields, ScorewriterNoteColor.Red);
             blueColorButton = CreateColorButton(fields, ScorewriterNoteColor.Blue);
-            selectedText = CreateLabel(fields, "未选择音符", 13, TextAnchor.MiddleLeft, 220f, 36f, new Color(0.73f, 0.82f, 0.95f, 1f));
+            RectTransform selectedRow = CreateRect("SelectedNoteRow", panel);
+            SetLayout(selectedRow, -1f, 28f, 0f, 0f);
+            HorizontalLayoutGroup selectedLayout = selectedRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            selectedLayout.spacing = 0f;
+            selectedLayout.childAlignment = TextAnchor.MiddleLeft;
+            selectedLayout.childControlHeight = true;
+            selectedLayout.childControlWidth = false;
+            CreateSpacer(selectedRow, 506f, 28f);
+            selectedText = CreateLabel(selectedRow, "未选择音符", 13, TextAnchor.MiddleLeft, 360f, 28f, new Color(0.73f, 0.82f, 0.95f, 1f));
 
             BuildNotePreviewStrip(panel, "LeftNoteIconPreview", 38f);
 
@@ -582,6 +856,10 @@ namespace Scorewriter
             Image playheadImage = AddImage(playhead.gameObject, new Color(1f, 0.84f, 0.28f, 0.86f));
             playheadImage.raycastTarget = true;
             playhead.gameObject.AddComponent<ScorewriterPlayheadHandle>().Bind(this);
+
+            shortcutHintText = CreateLabel(timelineViewport, ShortcutHintText(), 13, TextAnchor.UpperLeft, 310f, 220f, new Color(0.78f, 0.84f, 0.92f, 1f));
+            shortcutHintText.raycastTarget = false;
+            PositionShortcutHint();
         }
 
         private void BuildPreviewPanel(RectTransform body)
@@ -598,13 +876,12 @@ namespace Scorewriter
             layout.childForceExpandWidth = true;
 
             CreateLabel(panel, "预览", 22, TextAnchor.MiddleLeft, -1f, 34f, Color.white);
-            BuildNotePreviewStrip(panel, "RightNoteIconPreview", 36f);
             previewSurface = CreateRect("PreviewSurface", panel);
             AddImage(previewSurface.gameObject, new Color(0.028f, 0.033f, 0.042f, 1f));
             LayoutElement previewLayout = SetLayout(previewSurface, -1f, -1f, 1f, 1f);
             previewLayout.minHeight = 320f;
 
-            // Centered, aspect-locked play field. Keeps the 4-lane preview fully
+            // Centered, aspect-locked play field. Keeps the preview fully
             // on-screen no matter how wide/short the Game view (CanvasScaler) makes
             // the surrounding panel — previously an extreme aspect pushed the notes
             // off the right edge so the preview looked empty/missing.
@@ -615,10 +892,9 @@ namespace Scorewriter
             previewField.sizeDelta = Vector2.zero;
             AspectRatioFitter fieldFitter = previewField.gameObject.AddComponent<AspectRatioFitter>();
             fieldFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fieldFitter.aspectRatio = 1f;
+            fieldFitter.aspectRatio = 16f / 9f;
 
             BuildPreviewBase();
-            BuildPreviewSvgReference();
             previewNoteLayer = CreateRect("PreviewNotes", previewField);
             Stretch(previewNoteLayer);
 
@@ -720,8 +996,10 @@ namespace Scorewriter
             layout.childControlHeight = true;
             layout.childControlWidth = false;
 
-            Button playButton = CreateButton(transport, "播放", 86f, 46f, TogglePlayback);
+            Button playButton = CreateButton(transport, "播放(空格)", 112f, 46f, TogglePlayback);
             playButtonText = playButton.GetComponentInChildren<Text>();
+            Button clickAddButton = CreateButton(transport, timelineClickAddEnabled ? "添加开(W)" : "添加关(W)", 104f, 46f, ToggleTimelineClickAdd);
+            clickAddButtonText = clickAddButton.GetComponentInChildren<Text>();
             CreateButton(transport, "停止", 72f, 46f, StopPlayback);
             CreateButton(transport, "-1s", 58f, 46f, () => SeekRelative(-1f));
             CreateButton(transport, "+1s", 58f, 46f, () => SeekRelative(1f));
@@ -740,18 +1018,51 @@ namespace Scorewriter
             if (timelineContent == null)
                 return;
 
-            float width = LaneWidth * 4f;
-            float height = SongLength * TimelinePixelsPerSecond;
+            float width = LaneWidth * laneVisualOrder.Length;
+            float height = SongLength * timelinePixelsPerSecond;
             timelineContent.sizeDelta = new Vector2(width, height);
             SetLayerSize(timelineGridLayer, width, height);
             SetLayerSize(timelineNoteLayer, width, height);
             playhead.sizeDelta = new Vector2(width, 12f);
 
             BuildGrid(width, height);
+            PositionShortcutHint();
             RefreshNotes();
             UpdatePlayhead();
             Canvas.ForceUpdateCanvases();
             timelineScroll.verticalNormalizedPosition = Mathf.Clamp01(currentTime / SongLength);
+        }
+
+        private void PositionShortcutHint()
+        {
+            if (shortcutHintText == null)
+                return;
+
+            RectTransform rect = shortcutHintText.rectTransform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(LaneWidth * laneVisualOrder.Length + 74f, -18f);
+            rect.sizeDelta = new Vector2(320f, 230f);
+            shortcutHintText.text = ShortcutHintText();
+        }
+
+        private static string ShortcutHintText()
+        {
+            return "播放暂停：空格\n"
+                + "添加开关：W\n"
+                + "音符类型：S\n"
+                + "尾部滑动：V\n"
+                + "吸附切换：F\n"
+                + "删除音符：D\n"
+                + "网格1/4：1\n"
+                + "网格1/6：2\n"
+                + "网格1/8：3\n"
+                + "网格1/16：4\n"
+                + "轨道缩放：Alt+滚轮\n"
+                + "拖动吸附：Shift\n"
+                + "保存谱面：Ctrl+S\n"
+                + "导出JSON：Ctrl+X";
         }
 
         private void BuildGrid(float width, float height)
@@ -761,11 +1072,12 @@ namespace Scorewriter
             {
                 new Color(1f, 1f, 1f, 0.035f),
                 new Color(0.2f, 0.92f, 1f, 0.04f),
+                new Color(1f, 0.90f, 0.35f, 0.10f),
                 new Color(0.24f, 0.43f, 1f, 0.04f),
                 new Color(1f, 0.2f, 0.24f, 0.04f)
             };
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < laneVisualOrder.Length; i++)
             {
                 RectTransform lane = CreateRect($"Lane_{i}", timelineGridLayer);
                 lane.anchorMin = new Vector2(0f, 0f);
@@ -775,7 +1087,7 @@ namespace Scorewriter
                 lane.sizeDelta = new Vector2(LaneWidth, height);
                 AddImage(lane.gameObject, laneColors[i]);
 
-                Text label = CreateLabel(lane, ScorewriterLaneUtility.GetShortName((ScorewriterLane)i), 18, TextAnchor.LowerCenter, LaneWidth, 34f, new Color(1f, 1f, 1f, 0.72f));
+                Text label = CreateLabel(lane, ScorewriterLaneUtility.GetShortName(laneVisualOrder[i]), 18, TextAnchor.LowerCenter, LaneWidth, 34f, new Color(1f, 1f, 1f, 0.72f));
                 RectTransform labelRect = label.rectTransform;
                 labelRect.anchorMin = new Vector2(0f, 0f);
                 labelRect.anchorMax = new Vector2(0f, 0f);
@@ -783,7 +1095,7 @@ namespace Scorewriter
                 labelRect.anchoredPosition = new Vector2(0f, 34f);
             }
 
-            for (int i = 0; i <= 4; i++)
+            for (int i = 0; i <= laneVisualOrder.Length; i++)
                 CreateGridLine(i * LaneWidth, true, new Color(1f, 1f, 1f, 0.16f), width, height, 2f, true);
 
             float beat = 60f / Mathf.Max(1f, chart.bpm);
@@ -799,7 +1111,7 @@ namespace Scorewriter
             float measure = beat * 4f;
             for (float t = 0f; t <= SongLength + 0.001f; t += measure)
             {
-                float y = t * TimelinePixelsPerSecond;
+                float y = t * timelinePixelsPerSecond;
                 CreateHorizontalLine(y, width, 3f, new Color(1f, 1f, 1f, 0.38f), "Measure");
                 Text label = CreateLabel(timelineGridLayer, FormatTime(t), 12, TextAnchor.MiddleLeft, 72f, 22f, new Color(1f, 1f, 1f, 0.62f));
                 RectTransform rect = label.rectTransform;
@@ -818,7 +1130,7 @@ namespace Scorewriter
 
             for (float t = 0f; t <= SongLength + 0.001f; t += step)
             {
-                float y = t * TimelinePixelsPerSecond;
+                float y = t * timelinePixelsPerSecond;
                 CreateHorizontalLine(y, width, thickness, color, $"{division}th");
             }
         }
@@ -845,7 +1157,7 @@ namespace Scorewriter
                 Vector2 end = TimelinePosition(note.endLane, note.EndTime);
                 CreateConnector(timelineNoteLayer, start, end, isSelected ? new Color(1f, 0.9f, 0.2f, 0.78f) : new Color(color.r, color.g, color.b, 0.45f), HoldLineWidth, note, false);
                 CreateMarker(timelineNoteLayer, note, start, "click", color, isSelected, false);
-                CreateMarker(timelineNoteLayer, note, end, "slide", color, isSelected, true);
+                CreateMarker(timelineNoteLayer, note, end, note.hasTailSlide ? "slide" : "round", color, isSelected, true);
                 return;
             }
 
@@ -936,7 +1248,7 @@ namespace Scorewriter
 
                     if (atTail || editorPinned && note.hasTailSlide)
                     {
-                        CreatePreviewMarker(note.endLane, note, "slide", iconTint, 0.98f, editorPinned);
+                        CreatePreviewMarker(note.endLane, note, note.hasTailSlide ? "slide" : "round", iconTint, 0.98f, editorPinned);
                     }
                     continue;
                 }
@@ -1105,7 +1417,7 @@ namespace Scorewriter
 
         private void CycleStartLane()
         {
-            placementStartLane = (ScorewriterLane)(((int)placementStartLane + 1) % 4);
+            placementStartLane = NextLane(placementStartLane);
             if (selectedNote != null)
             {
                 selectedNote.startLane = placementStartLane;
@@ -1117,7 +1429,7 @@ namespace Scorewriter
 
         private void CycleEndLane()
         {
-            placementEndLane = (ScorewriterLane)(((int)placementEndLane + 1) % 4);
+            placementEndLane = NextLane(placementEndLane);
             if (selectedNote != null)
             {
                 selectedNote.endLane = placementEndLane;
@@ -1140,6 +1452,13 @@ namespace Scorewriter
             followPlayback = !followPlayback;
             UpdateTransportUi();
             SetStatus(followPlayback ? "已开启播放跟随。" : "已关闭播放跟随。");
+        }
+
+        private void ToggleTimelineClickAdd()
+        {
+            timelineClickAddEnabled = !timelineClickAddEnabled;
+            UpdateTransportUi();
+            SetStatus(timelineClickAddEnabled ? "时间轴点击可添加音符。" : "时间轴点击仅选择已有音符。");
         }
 
         private void OnDurationEdited(string value)
@@ -1166,7 +1485,11 @@ namespace Scorewriter
         private void OnTailSlideChanged(bool value)
         {
             if (selectedNote != null)
+            {
                 selectedNote.hasTailSlide = value;
+                RefreshNotes();
+                RenderPreview();
+            }
             UpdateSelectedLabel();
         }
 
@@ -1230,6 +1553,30 @@ namespace Scorewriter
             RebuildTimeline();
         }
 
+        private void ToggleGridVisibility(int division)
+        {
+            if (chart == null)
+                return;
+
+            switch (division)
+            {
+                case 4:
+                    SetGridVisibility(4, !chart.showQuarterGrid);
+                    break;
+                case 6:
+                    SetGridVisibility(6, !chart.showSixthGrid);
+                    break;
+                case 8:
+                    SetGridVisibility(8, !chart.showEighthGrid);
+                    break;
+                case 16:
+                    SetGridVisibility(16, !chart.showSixteenthGrid);
+                    break;
+            }
+
+            ApplySongToControls();
+        }
+
         private void TogglePlayback()
         {
             if (audioPlayer.IsPlaying)
@@ -1266,12 +1613,18 @@ namespace Scorewriter
 
         private void OnTimeSliderChanged(float value)
         {
-            if (suppressSliderEvent || audioPlayer.IsPlaying)
+            if (suppressSliderEvent)
                 return;
 
             currentTime = Mathf.Clamp(value * SongLength, 0f, SongLength);
-            audioPlayer.SetManualTime(ChartTimeToAudioTime(currentTime));
+            if (audioPlayer.IsPlaying || audioPlayer.IsPaused)
+                audioPlayer.Seek(CurrentSong, ChartTimeToAudioTime(currentTime));
+            else
+                audioPlayer.SetManualTime(ChartTimeToAudioTime(currentTime));
             UpdatePlayhead();
+            RenderPreview();
+            if (followPlayback)
+                CenterTimelineOnTime(currentTime);
         }
 
         private void StartPlaybackFromCurrentTime()
@@ -1295,7 +1648,6 @@ namespace Scorewriter
             ApplySongToControls();
             RebuildTimeline();
             SetStatus($"已选择：{CurrentSong.DisplayName}。");
-            StartPlaybackFromCurrentTime();
         }
 
         private void LoadChartForCurrentSong(bool reportMissing)
@@ -1418,7 +1770,11 @@ namespace Scorewriter
         private void ApplySongToControls()
         {
             if (songTitleText != null)
+            {
                 songTitleText.text = $"{CurrentSong.DisplayName}  [{CurrentSong.cueSheetName}]";
+                songTitleScrollTime = 0f;
+                UpdateSongTitleScroll();
+            }
             if (bpmInput != null)
                 bpmInput.SetTextWithoutNotify(FormatFloat(CurrentSong.bpm));
             if (lengthInput != null)
@@ -1448,7 +1804,9 @@ namespace Scorewriter
                 timeText.text = $"{FormatTime(currentTime)} / {FormatTime(SongLength)}";
 
             if (playButtonText != null)
-                playButtonText.text = audioPlayer.IsPlaying ? "暂停" : audioPlayer.IsPaused ? "继续" : "播放";
+                playButtonText.text = audioPlayer.IsPlaying ? "暂停(空格)" : audioPlayer.IsPaused ? "继续(空格)" : "播放(空格)";
+            if (clickAddButtonText != null)
+                clickAddButtonText.text = timelineClickAddEnabled ? "添加开(W)" : "添加关(W)";
             if (followButtonText != null)
                 followButtonText.text = followPlayback ? "跟随开" : "跟随关";
         }
@@ -1458,7 +1816,43 @@ namespace Scorewriter
             if (playhead == null)
                 return;
 
-            playhead.anchoredPosition = new Vector2(0f, currentTime * TimelinePixelsPerSecond);
+            playhead.anchoredPosition = new Vector2(0f, currentTime * timelinePixelsPerSecond);
+        }
+
+        private void UpdateSongTitleScroll()
+        {
+            if (songTitleText == null || songTitleViewport == null)
+                return;
+
+            RectTransform textRect = songTitleText.rectTransform;
+            float viewportWidth = Mathf.Max(1f, songTitleViewport.rect.width);
+            float textWidth = Mathf.Max(viewportWidth, songTitleText.preferredWidth + 8f);
+            textRect.sizeDelta = new Vector2(textWidth, 0f);
+
+            float overflow = textWidth - viewportWidth;
+            if (overflow <= 0.5f)
+            {
+                songTitleScrollTime = 0f;
+                textRect.anchoredPosition = Vector2.zero;
+                return;
+            }
+
+            songTitleScrollTime += Time.unscaledDeltaTime;
+            float pauseSeconds = 0.8f;
+            float travelSeconds = overflow / SongTitleScrollSpeed;
+            float cycle = pauseSeconds * 2f + travelSeconds * 2f;
+            float t = Mathf.Repeat(songTitleScrollTime, cycle);
+            float x;
+            if (t < pauseSeconds)
+                x = 0f;
+            else if (t < pauseSeconds + travelSeconds)
+                x = -Mathf.Lerp(0f, overflow, (t - pauseSeconds) / Mathf.Max(0.001f, travelSeconds));
+            else if (t < pauseSeconds + travelSeconds + pauseSeconds)
+                x = -overflow;
+            else
+                x = -Mathf.Lerp(overflow, 0f, (t - pauseSeconds - travelSeconds - pauseSeconds) / Mathf.Max(0.001f, travelSeconds));
+
+            textRect.anchoredPosition = new Vector2(x, 0f);
         }
 
         private void CenterTimelineOnTime(float time)
@@ -1471,20 +1865,20 @@ namespace Scorewriter
             if (contentHeight <= viewportHeight)
                 return;
 
-            float target = time * TimelinePixelsPerSecond - viewportHeight * 0.45f;
+            float target = time * timelinePixelsPerSecond - viewportHeight * 0.45f;
             timelineScroll.verticalNormalizedPosition = Mathf.Clamp01(target / (contentHeight - viewportHeight));
         }
 
         private void UpdatePlacementButtonLabels()
         {
             if (typeButtonText != null)
-                typeButtonText.text = $"类型 {KindLabel(placementKind)}";
+                typeButtonText.text = $"类型 {KindLabel(placementKind)}(S)";
             if (startLaneButtonText != null)
                 startLaneButtonText.text = $"起点 {ScorewriterLaneUtility.GetShortName(placementStartLane)}";
             if (endLaneButtonText != null)
                 endLaneButtonText.text = $"终点 {ScorewriterLaneUtility.GetShortName(placementEndLane)}";
             if (snapButtonText != null)
-                snapButtonText.text = $"吸附 {SnapLabel()}";
+                snapButtonText.text = $"吸附 {SnapLabel()}(F)";
             SetIconButtonState(holdIconButton, placementKind == ScorewriterNoteKind.Hold);
             SetIconButtonState(roundIconButton, placementKind == ScorewriterNoteKind.Round);
             SetIconButtonState(slideIconButton, placementKind == ScorewriterNoteKind.Slide);
@@ -1518,19 +1912,37 @@ namespace Scorewriter
             if (!ok)
                 return false;
 
-            localPoint.x = Mathf.Clamp(localPoint.x, 0f, LaneWidth * 4f - 0.01f);
-            localPoint.y = Mathf.Clamp(localPoint.y, 0f, SongLength * TimelinePixelsPerSecond);
+            localPoint.x = Mathf.Clamp(localPoint.x, 0f, LaneWidth * laneVisualOrder.Length - 0.01f);
+            localPoint.y = Mathf.Clamp(localPoint.y, 0f, SongLength * timelinePixelsPerSecond);
             return true;
         }
 
         private ScorewriterLane LaneFromX(float x)
         {
-            return (ScorewriterLane)Mathf.Clamp(Mathf.FloorToInt(x / LaneWidth), 0, 3);
+            int index = Mathf.Clamp(Mathf.FloorToInt(x / LaneWidth), 0, laneVisualOrder.Length - 1);
+            return laneVisualOrder[index];
+        }
+
+        private int LaneVisualIndex(ScorewriterLane lane)
+        {
+            for (int i = 0; i < laneVisualOrder.Length; i++)
+            {
+                if (laneVisualOrder[i] == lane)
+                    return i;
+            }
+
+            return 0;
+        }
+
+        private ScorewriterLane NextLane(ScorewriterLane lane)
+        {
+            int index = LaneVisualIndex(lane);
+            return laneVisualOrder[(index + 1) % laneVisualOrder.Length];
         }
 
         private Vector2 TimelinePosition(ScorewriterLane lane, float time)
         {
-            return new Vector2((int)lane * LaneWidth + LaneWidth * 0.5f, Mathf.Clamp(time, 0f, SongLength) * TimelinePixelsPerSecond);
+            return new Vector2(LaneVisualIndex(lane) * LaneWidth + LaneWidth * 0.5f, Mathf.Clamp(time, 0f, SongLength) * timelinePixelsPerSecond);
         }
 
         private Vector2 PreviewPosition(ScorewriterLane lane)
@@ -1538,6 +1950,8 @@ namespace Scorewriter
             Rect rect = previewField.rect;
             float width = rect.width > 1f ? rect.width : 640f;
             float height = rect.height > 1f ? rect.height : 420f;
+            if (lane == ScorewriterLane.Center)
+                return Vector2.zero;
             float x = lane == ScorewriterLane.TopLeft || lane == ScorewriterLane.BottomLeft ? -width * 0.25f : width * 0.25f;
             float y = lane == ScorewriterLane.TopLeft || lane == ScorewriterLane.TopRight ? height * 0.25f : -height * 0.25f;
             return new Vector2(x, y);
@@ -1555,6 +1969,8 @@ namespace Scorewriter
                     return new Vector2(0.25f, 0.25f);
                 case ScorewriterLane.BottomRight:
                     return new Vector2(0.75f, 0.25f);
+                case ScorewriterLane.Center:
+                    return new Vector2(0.5f, 0.5f);
                 default:
                     return new Vector2(0.5f, 0.5f);
             }
@@ -1750,6 +2166,8 @@ namespace Scorewriter
                     return new Color(0.24f, 0.45f, 1f, 1f);
                 case ScorewriterLane.BottomRight:
                     return new Color(1f, 0.2f, 0.24f, 1f);
+                case ScorewriterLane.Center:
+                    return new Color(1f, 0.86f, 0.24f, 1f);
                 default:
                     return Color.white;
             }
@@ -1914,6 +2332,11 @@ namespace Scorewriter
 
             Text text = CreateLabel(rect, label, 14, TextAnchor.MiddleCenter, -1f, -1f, Color.white);
             Stretch(text.rectTransform);
+            if (action != null && action.Method.Name == nameof(DeleteSelectedNote))
+            {
+                text.text = "删除(D)";
+                deleteButtonText = text;
+            }
             return button;
         }
 
@@ -1937,6 +2360,12 @@ namespace Scorewriter
             return button;
         }
 
+        private void CreateSpacer(Transform parent, float width, float height)
+        {
+            RectTransform spacer = CreateRect("Spacer", parent);
+            SetLayout(spacer, width, height, 0f, 0f);
+        }
+
         private static void SetIconButtonState(Button button, bool active)
         {
             if (button == null || button.targetGraphic == null)
@@ -1955,17 +2384,47 @@ namespace Scorewriter
             Button button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             button.onClick.AddListener(() => SetPlacementColor(color));
+            CreateColorSelectionBorder(rect);
             return button;
         }
 
-        private static void SetColorButtonState(Button button, bool active)
+        private void SetColorButtonState(Button button, bool active)
         {
             if (button == null)
                 return;
 
             RectTransform rect = button.GetComponent<RectTransform>();
             if (rect != null)
-                rect.localScale = active ? Vector3.one * 1.16f : Vector3.one;
+                rect.localScale = Vector3.one;
+
+            Transform border = button.transform.Find("SelectionBorder");
+            if (border != null)
+                border.gameObject.SetActive(active);
+        }
+
+        private void CreateColorSelectionBorder(RectTransform parent)
+        {
+            RectTransform border = CreateRect("SelectionBorder", parent);
+            Stretch(border);
+            border.offsetMin = new Vector2(-2f, -2f);
+            border.offsetMax = new Vector2(2f, 2f);
+            border.gameObject.SetActive(false);
+
+            CreateBorderLine(border, "Top", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, 0f), new Vector2(0f, 3f));
+            CreateBorderLine(border, "Bottom", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 0f), new Vector2(0f, 3f));
+            CreateBorderLine(border, "Left", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(0f, 0f), new Vector2(3f, 0f));
+            CreateBorderLine(border, "Right", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(0f, 0f), new Vector2(3f, 0f));
+        }
+
+        private void CreateBorderLine(RectTransform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPosition, Vector2 sizeDelta)
+        {
+            RectTransform line = CreateRect(name, parent);
+            line.anchorMin = anchorMin;
+            line.anchorMax = anchorMax;
+            line.pivot = pivot;
+            line.anchoredPosition = anchoredPosition;
+            line.sizeDelta = sizeDelta;
+            AddImage(line.gameObject, new Color(1f, 0.86f, 0.12f, 1f)).raycastTarget = false;
         }
 
         private InputField CreateInput(Transform parent, string value, float width, float height, UnityEngine.Events.UnityAction<string> onEndEdit)
@@ -2010,6 +2469,12 @@ namespace Scorewriter
             Text text = CreateLabel(rect, label, 13, TextAnchor.MiddleLeft, -1f, -1f, new Color(0.85f, 0.9f, 0.98f, 1f));
             Stretch(text.rectTransform);
             text.rectTransform.offsetMin = new Vector2(34f, 0f);
+            if (onChanged != null && onChanged.Method.Name == nameof(OnTailSlideChanged))
+            {
+                text.text = "尾部滑动(V)";
+                tailSlideToggleText = text;
+                SetLayout(rect, 132f, height, 0f, 0f);
+            }
 
             toggle.targetGraphic = boxImage;
             toggle.graphic = checkImage;
@@ -2046,11 +2511,11 @@ namespace Scorewriter
 
             RectTransform handleArea = CreateRect("Handle Slide Area", root);
             Stretch(handleArea);
-            handleArea.offsetMin = new Vector2(8f, 0f);
-            handleArea.offsetMax = new Vector2(-8f, 0f);
+            handleArea.offsetMin = new Vector2(8f, 13f);
+            handleArea.offsetMax = new Vector2(-8f, -13f);
 
             RectTransform handle = CreateRect("Handle", handleArea);
-            handle.sizeDelta = new Vector2(18f, 30f);
+            handle.sizeDelta = new Vector2(8f, 0f);
             Image handleImage = AddImage(handle.gameObject, new Color(1f, 0.84f, 0.24f, 1f));
 
             slider.fillRect = fill;
