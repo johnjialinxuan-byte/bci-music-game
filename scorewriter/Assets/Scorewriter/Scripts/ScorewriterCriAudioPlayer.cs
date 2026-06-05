@@ -144,7 +144,10 @@ namespace Scorewriter
         {
             string acfPath = ResolveAssetPath(song.acfAssetPath);
             if (string.IsNullOrEmpty(acfPath) || !File.Exists(acfPath))
+            {
+                Debug.LogError($"[ScorewriterCriAudioPlayer] Missing ACF: {acfPath}");
                 return;
+            }
 
             if (registeredAcfPath == acfPath)
                 return;
@@ -171,8 +174,17 @@ namespace Scorewriter
                 return;
             }
 
+            if (!string.IsNullOrEmpty(loadedCueSheetName) && loadedCueSheetName != song.cueSheetName)
+            {
+                CriAtom.RemoveCueSheet(loadedCueSheetName);
+                loadedCueSheetName = null;
+            }
+
             if (CriAtom.GetAcb(song.cueSheetName) == null)
+            {
                 CriAtom.AddCueSheet(song.cueSheetName, acbPath, null);
+                Debug.Log($"[ScorewriterCriAudioPlayer] Loaded ACB: {song.cueSheetName} -> {acbPath}");
+            }
 
             loadedCueSheetName = song.cueSheetName;
         }
@@ -185,7 +197,15 @@ namespace Scorewriter
             if (Path.IsPathRooted(assetRelativePath))
                 return assetRelativePath;
 
-            return Path.Combine(Application.dataPath, assetRelativePath);
+            string streamingPath = Path.Combine(Application.streamingAssetsPath, assetRelativePath);
+            if (File.Exists(streamingPath))
+                return streamingPath;
+
+            string dataPath = Path.Combine(Application.dataPath, assetRelativePath);
+            if (File.Exists(dataPath))
+                return dataPath;
+
+            return streamingPath;
         }
     }
 }

@@ -128,6 +128,7 @@ namespace Scorewriter
             LoadChartForCurrentSong(false);
             ApplySongToControls();
             RebuildTimeline();
+            audioPlayer.EnsureInitialized(CurrentSong);
             UpdatePlacementButtonLabels();
             SetStatus("已就绪。");
         }
@@ -1640,7 +1641,7 @@ namespace Scorewriter
 
         private void SwitchSong(int delta)
         {
-            SaveEditorChart();
+            TrySaveEditorChartForSwitch();
             audioPlayer.Stop();
             currentTime = 0f;
             songIndex = (songIndex + delta + songs.Count) % songs.Count;
@@ -1648,6 +1649,18 @@ namespace Scorewriter
             ApplySongToControls();
             RebuildTimeline();
             SetStatus($"已选择：{CurrentSong.DisplayName}。");
+        }
+
+        private void TrySaveEditorChartForSwitch()
+        {
+            try
+            {
+                SaveEditorChart();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[Scorewriter] Auto-save before switching song failed, switching anyway: {ex.Message}");
+            }
         }
 
         private void LoadChartForCurrentSong(bool reportMissing)
