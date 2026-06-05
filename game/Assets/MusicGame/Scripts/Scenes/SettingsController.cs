@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
@@ -77,7 +79,7 @@ private void BuildTuningPanel()
             panel.transform.SetParent(canvas.transform, false);
 
             RectTransform panelRect = panel.GetComponent<RectTransform>();
-            panelRect.anchoredPosition = new Vector2(0f, -20f);
+            panelRect.anchoredPosition = new Vector2(0f, -34f);
             panelRect.sizeDelta = new Vector2(950f, 620f);
 
             Image panelImage = panel.GetComponent<Image>();
@@ -92,7 +94,7 @@ private void BuildTuningPanel()
             viewportRect.anchorMin = Vector2.zero;
             viewportRect.anchorMax = Vector2.one;
             viewportRect.offsetMin = new Vector2(24f, 24f);
-            viewportRect.offsetMax = new Vector2(-24f, -24f);
+            viewportRect.offsetMax = new Vector2(-48f, -24f);
 
             GameObject content = new GameObject("Content", typeof(RectTransform));
             content.transform.SetParent(viewport.transform, false);
@@ -101,7 +103,7 @@ private void BuildTuningPanel()
             contentRect.anchorMax = new Vector2(0.5f, 1f);
             contentRect.pivot = new Vector2(0.5f, 1f);
             contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = new Vector2(890f, 980f);
+            contentRect.sizeDelta = new Vector2(890f, 760f);
 
             ScrollRect scrollRect = panel.GetComponent<ScrollRect>();
             scrollRect.viewport = viewportRect;
@@ -112,31 +114,32 @@ private void BuildTuningPanel()
             scrollRect.elasticity = 0.16f;
             scrollRect.inertia = true;
             scrollRect.decelerationRate = 0.12f;
-            scrollRect.scrollSensitivity = 52f;
-            
+            scrollRect.scrollSensitivity = 42f;
             scrollRect.verticalScrollbar = CreateSettingsScrollbar(panel.transform);
-            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-scrollRect.verticalNormalizedPosition = 1f;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            contentRect.anchoredPosition = Vector2.zero;
+            StartCoroutine(ResetScrollPositionNextFrame(scrollRect));
 
 
-            CreateSectionFrame(content.transform, new Vector2(0f, -110f), new Vector2(860f, 304f));
-            CreateHeader(content.transform, "\u6ce8\u610f\u529b\u9608\u503c", -2f);
-            CreateStepperRow(content.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, -72f);
-            CreateStepperRow(content.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, -148f);
-            CreateStepperRow(content.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, -224f);
+            CreateSectionFrame(content.transform, new Vector2(0f, -126f), new Vector2(860f, 250f));
+            CreateHeader(content.transform, "\u6ce8\u610f\u529b\u9608\u503c", -30f);
+            CreateStepperRow(content.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, -88f);
+            CreateStepperRow(content.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, -154f);
+            CreateStepperRow(content.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, -220f);
 
-            CreateSectionFrame(content.transform, new Vector2(0f, -390f), new Vector2(860f, 222f));
-            CreateHeader(content.transform, "Flick \u5224\u5b9a\u8303\u56f4", -310f);
-            CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -372f);
-            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -448f);
+            CreateSectionFrame(content.transform, new Vector2(0f, -350f), new Vector2(860f, 180f));
+            CreateHeader(content.transform, "Flick \u5224\u5b9a\u8303\u56f4", -288f);
+            CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -344f);
+            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -410f);
 
-            CreateCommunicationSection(content.transform, -670f);
+            CreateCommunicationSection(content.transform, -585f);
         }
 
         private static void CreateHeader(Transform parent, string value, float y)
         {
             Text text = CreateText(parent, value, 21, TextAnchor.MiddleLeft);
             RectTransform rect = text.rectTransform;
+            SetTopAnchor(rect);
             rect.anchoredPosition = new Vector2(-205f, y);
             rect.sizeDelta = new Vector2(350f, 34f);
             text.fontStyle = FontStyle.Bold;
@@ -149,6 +152,7 @@ scrollRect.verticalNormalizedPosition = 1f;
             row.transform.SetParent(parent, false);
 
             RectTransform rowRect = row.GetComponent<RectTransform>();
+            SetTopAnchor(rowRect);
             rowRect.anchoredPosition = new Vector2(0f, y);
             rowRect.sizeDelta = new Vector2(820f, 64f);
 
@@ -223,7 +227,7 @@ scrollRect.verticalNormalizedPosition = 1f;
             SetStretch(fill.rectTransform, new Vector2(0f, 14f), new Vector2(0f, -14f));
 
             Image handle = CreateSliderImage(obj.transform, "Handle", new Color(0.92f, 0.95f, 0.96f, 1f));
-            handle.rectTransform.sizeDelta = new Vector2(14f, 34f);
+            handle.rectTransform.sizeDelta = new Vector2(12f, 10f);
 
             slider.fillRect = fill.rectTransform;
             slider.handleRect = handle.rectTransform;
@@ -263,6 +267,14 @@ scrollRect.verticalNormalizedPosition = 1f;
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
         }
+
+        private static void SetTopAnchor(RectTransform rect)
+        {
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+        }
+
 
         private static void SetStretch(RectTransform rect, Vector2 min, Vector2 max)
         {
@@ -313,6 +325,7 @@ scrollRect.verticalNormalizedPosition = 1f;
             frame.transform.SetParent(parent, false);
 
             RectTransform rect = frame.GetComponent<RectTransform>();
+            SetTopAnchor(rect);
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
 
@@ -410,9 +423,15 @@ private static void ApplyModeButtonState(Button button, bool selected)
             if (image != null)
                 image.color = selected ? new Color(0.08f, 0.42f, 0.52f, 0.92f) : new Color(0.02f, 0.08f, 0.12f, 0.78f);
 
-            Text text = button.GetComponentInChildren<Text>(true);
-            if (text != null)
-                text.color = selected ? new Color(0.28f, 0.93f, 1f, 1f) : Color.white;
+            SetChildTextColor(button.transform, Color.white);
+        }
+
+
+private static void SetChildTextColor(Transform root, Color color)
+        {
+            Text[] labels = root.GetComponentsInChildren<Text>(true);
+            foreach (Text label in labels)
+                label.color = color;
         }
 
 
@@ -420,7 +439,9 @@ private static Button CreateModeButton(Transform parent, string label, Vector2 p
         {
             GameObject obj = new GameObject(label + "ModeButton", typeof(RectTransform), typeof(Image), typeof(Button));
             obj.transform.SetParent(parent, false);
-            SetRect(obj.GetComponent<RectTransform>(), position, new Vector2(180f, 52f));
+            RectTransform rect = obj.GetComponent<RectTransform>();
+            SetTopAnchor(rect);
+            SetRect(rect, position, new Vector2(180f, 52f));
 
             Button button = obj.GetComponent<Button>();
             Image image = obj.GetComponent<Image>();
@@ -430,8 +451,8 @@ private static Button CreateModeButton(Transform parent, string label, Vector2 p
 
             Text text = PillButtonStyle.CreateLabel(obj.transform, label, 20);
             SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
-            hover.SetLabel(text);
             hover.SetHoverScale(1.04f);
+            SetChildTextColor(obj.transform, Color.white);
             obj.AddComponent<ButtonSFX>();
             return button;
         }
@@ -443,6 +464,7 @@ private void CreateCommunicationSection(Transform parent, float centerY)
             CreateHeader(parent, "\u901a\u4fe1\u8bbe\u7f6e", centerY + 86f);
 
             Text modeLabel = CreateText(parent, "MODE", 20, TextAnchor.MiddleLeft);
+            SetTopAnchor(modeLabel.rectTransform);
             SetRect(modeLabel.rectTransform, new Vector2(-320f, centerY + 24f), new Vector2(132f, 52f));
 
             Button localButton = CreateModeButton(parent, "\u672c\u5730", new Vector2(-72f, centerY + 24f));
@@ -450,7 +472,9 @@ private void CreateCommunicationSection(Transform parent, float centerY)
 
             GameObject ipRow = new GameObject("IpRow", typeof(RectTransform), typeof(Image));
             ipRow.transform.SetParent(parent, false);
-            SetRect(ipRow.GetComponent<RectTransform>(), new Vector2(0f, centerY - 56f), new Vector2(820f, 64f));
+            RectTransform ipRowRect = ipRow.GetComponent<RectTransform>();
+            SetTopAnchor(ipRowRect);
+            SetRect(ipRowRect, new Vector2(0f, centerY - 56f), new Vector2(820f, 64f));
             Image rowImage = ipRow.GetComponent<Image>();
             rowImage.sprite = PillButtonStyle.GetSprite();
             rowImage.type = Image.Type.Sliced;
@@ -542,6 +566,21 @@ private static Scrollbar CreateSettingsScrollbar(Transform parent)
             scrollbar.targetGraphic = handle;
             scrollbar.handleRect = handleRect;
             return scrollbar;
+        }
+
+
+private IEnumerator ResetScrollPositionNextFrame(ScrollRect scrollRect)
+        {
+            yield return new WaitForEndOfFrame();
+            if (scrollRect == null || scrollRect.content == null || scrollRect.viewport == null) yield break;
+
+            Canvas.ForceUpdateCanvases();
+            scrollRect.StopMovement();
+            scrollRect.velocity = Vector2.zero;
+            scrollRect.verticalNormalizedPosition = 1f;
+            scrollRect.content.anchoredPosition = new Vector2(scrollRect.content.anchoredPosition.x, 0f);
+            if (scrollRect.verticalScrollbar != null)
+                scrollRect.verticalScrollbar.SetValueWithoutNotify(1f);
         }
 }
 }
