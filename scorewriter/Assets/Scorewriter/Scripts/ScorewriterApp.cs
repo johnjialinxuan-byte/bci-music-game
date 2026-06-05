@@ -22,11 +22,9 @@ namespace Scorewriter
         private const float MarkerSize = 34f;
         private const float HoldLineWidth = 12f;
         private const float PreviewApproachTime = 2f;
+        private const float PreviewHitWindow = 0.18f;
 
         private readonly List<ScorewriterSong> songs = new List<ScorewriterSong>();
-        private readonly List<Image> clickPreviewImages = new List<Image>();
-        private readonly List<Image> roundPreviewImages = new List<Image>();
-        private readonly List<Image> slidePreviewImages = new List<Image>();
         private readonly Dictionary<string, Sprite> resourceSpriteCache = new Dictionary<string, Sprite>();
         private readonly int[] snapDivisions = { 4, 6, 8, 16, 0 };
 
@@ -209,6 +207,16 @@ namespace Scorewriter
 
         public void SelectNote(ScorewriterNote note)
         {
+            ApplySelectedNote(note, true);
+        }
+
+        public void BeginNoteDrag(ScorewriterNote note)
+        {
+            ApplySelectedNote(note, false);
+        }
+
+        private void ApplySelectedNote(ScorewriterNote note, bool refreshHandles)
+        {
             selectedNote = note;
             if (selectedNote != null)
             {
@@ -222,7 +230,8 @@ namespace Scorewriter
             }
 
             UpdatePlacementButtonLabels();
-            RefreshNotes();
+            if (refreshHandles)
+                RefreshNotes();
             UpdateSelectedLabel();
         }
 
@@ -584,8 +593,10 @@ namespace Scorewriter
             BuildNotePreviewStrip(panel, "RightNoteIconPreview", 36f);
             previewSurface = CreateRect("PreviewSurface", panel);
             AddImage(previewSurface.gameObject, new Color(0.028f, 0.033f, 0.042f, 1f));
-            SetLayout(previewSurface, -1f, -1f, 1f, 1f);
+            LayoutElement previewLayout = SetLayout(previewSurface, -1f, -1f, 1f, 1f);
+            previewLayout.minHeight = 320f;
             BuildPreviewBase();
+            BuildPreviewSvgReference();
             previewNoteLayer = CreateRect("PreviewNotes", previewSurface);
             Stretch(previewNoteLayer);
 
@@ -597,33 +608,50 @@ namespace Scorewriter
             RectTransform strip = CreateRect(name, parent);
             SetLayout(strip, -1f, height, 0f, 0f);
             HorizontalLayoutGroup layout = strip.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8f;
+            layout.spacing = 5f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlHeight = true;
             layout.childControlWidth = false;
 
-            CreateLabel(strip, "图标预览", 13, TextAnchor.MiddleRight, 72f, height, new Color(0.75f, 0.80f, 0.86f, 1f));
-            CreateNotePreviewIcon(strip, "click", clickPreviewImages);
-            CreateNotePreviewIcon(strip, "round", roundPreviewImages);
-            CreateNotePreviewIcon(strip, "slide", slidePreviewImages);
+            CreateLabel(strip, "SVG预览", 13, TextAnchor.MiddleRight, 66f, height, new Color(0.75f, 0.80f, 0.86f, 1f));
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.White, "click");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.White, "round");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.White, "slide");
+            CreateNotePreviewGap(strip, height);
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Miku, "click");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Miku, "round");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Miku, "slide");
+            CreateNotePreviewGap(strip, height);
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Red, "click");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Red, "round");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Red, "slide");
+            CreateNotePreviewGap(strip, height);
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Blue, "click");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Blue, "round");
+            CreateNotePreviewIcon(strip, ScorewriterNoteColor.Blue, "slide");
         }
 
-        private void CreateNotePreviewIcon(Transform parent, string shape, List<Image> bucket)
+        private void CreateNotePreviewGap(Transform parent, float height)
         {
-            RectTransform slot = CreateRect($"NoteIcon_{shape}", parent);
-            SetLayout(slot, 34f, 34f, 0f, 0f);
+            RectTransform gap = CreateRect("NoteIconGap", parent);
+            SetLayout(gap, 6f, height, 0f, 0f);
+        }
+
+        private void CreateNotePreviewIcon(Transform parent, ScorewriterNoteColor color, string shape)
+        {
+            RectTransform slot = CreateRect($"NoteIcon_{NoteColorName(color)}_{shape}", parent);
+            SetLayout(slot, 30f, 30f, 0f, 0f);
             Image background = AddImage(slot.gameObject, new Color(0.035f, 0.041f, 0.052f, 1f));
             background.raycastTarget = false;
 
             RectTransform icon = CreateRect("Svg", slot);
             Stretch(icon);
-            icon.offsetMin = new Vector2(4f, 4f);
-            icon.offsetMax = new Vector2(-4f, -4f);
+            icon.offsetMin = new Vector2(3f, 3f);
+            icon.offsetMax = new Vector2(-3f, -3f);
             Image image = AddImage(icon.gameObject, Color.white);
-            image.sprite = LoadNoteSprite(placementColor, shape);
+            image.sprite = LoadNoteSprite(color, shape);
             image.preserveAspect = true;
             image.raycastTarget = false;
-            bucket.Add(image);
         }
 
         private void BuildPreviewBase()
@@ -632,6 +660,25 @@ namespace Scorewriter
             CreatePreviewQuadrant("右上", 0.5f, 0.5f, 1f, 1f, new Color(0.13f, 0.23f, 0.25f, 1f));
             CreatePreviewQuadrant("左下", 0f, 0f, 0.5f, 0.5f, new Color(0.12f, 0.16f, 0.28f, 1f));
             CreatePreviewQuadrant("右下", 0.5f, 0f, 1f, 0.5f, new Color(0.25f, 0.13f, 0.15f, 1f));
+        }
+
+        private void BuildPreviewSvgReference()
+        {
+            RectTransform rack = CreateRect("PreviewSvgReference", previewSurface);
+            rack.anchorMin = new Vector2(0f, 0f);
+            rack.anchorMax = new Vector2(0f, 0f);
+            rack.pivot = new Vector2(0f, 0f);
+            rack.anchoredPosition = new Vector2(12f, 12f);
+            rack.sizeDelta = new Vector2(126f, 34f);
+            HorizontalLayoutGroup layout = rack.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 6f;
+            layout.childControlHeight = true;
+            layout.childControlWidth = false;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+
+            CreateNotePreviewIcon(rack, ScorewriterNoteColor.White, "click");
+            CreateNotePreviewIcon(rack, ScorewriterNoteColor.Miku, "round");
+            CreateNotePreviewIcon(rack, ScorewriterNoteColor.Red, "slide");
         }
 
         private void BuildTransport(RectTransform root)
@@ -811,9 +858,7 @@ namespace Scorewriter
             line.sizeDelta = new Vector2(thickness, distance);
             line.localEulerAngles = new Vector3(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg - 90f);
             Image image = AddImage(line.gameObject, color);
-            image.raycastTarget = !preview;
-            if (!preview)
-                line.gameObject.AddComponent<ScorewriterNoteHandle>().Bind(this, note, false);
+            image.raycastTarget = false;
         }
 
         private void RenderPreview()
@@ -828,44 +873,42 @@ namespace Scorewriter
                 bool editorPinned = !realtimeOnly && note == selectedNote;
                 if (note.kind == ScorewriterNoteKind.Hold)
                 {
-                    bool holdInRealtimeWindow = currentTime >= note.time - PreviewApproachTime && currentTime <= note.EndTime + 0.45f;
-                    if (!holdInRealtimeWindow && !editorPinned)
+                    bool atHead = Mathf.Abs(currentTime - note.time) <= PreviewHitWindow;
+                    bool insideHold = currentTime >= note.time && currentTime <= note.EndTime;
+                    bool atTail = Mathf.Abs(currentTime - note.EndTime) <= PreviewHitWindow;
+                    bool holdVisibleNow = atHead || insideHold || atTail;
+                    if (!holdVisibleNow && !editorPinned)
                         continue;
 
                     Vector2 start = PreviewPosition(note.startLane);
                     Vector2 end = PreviewPosition(note.endLane);
                     Color iconTint = Color.white;
 
-                    if (currentTime < note.time || editorPinned && !holdInRealtimeWindow)
+                    if (atHead || editorPinned && !holdVisibleNow)
                     {
-                        float approach = Mathf.InverseLerp(note.time - PreviewApproachTime, note.time, currentTime);
-                        float holdScale = editorPinned ? 1.18f : Mathf.Lerp(0.72f, 1.16f, approach);
+                        float holdScale = editorPinned ? 1.18f : 1.12f;
                         CreatePreviewMarker(note.startLane, note, "click", iconTint, holdScale, editorPinned);
                     }
-                    else if (currentTime <= note.EndTime)
+
+                    if (insideHold)
                     {
                         float normalized = Mathf.InverseLerp(note.time, note.EndTime, currentTime);
                         CreatePreviewMarker(Vector2.Lerp(start, end, normalized), note, "round", iconTint, 1.16f, editorPinned);
-
-                        if (note.EndTime - currentTime <= 0.75f || note.hasTailSlide)
-                            CreatePreviewMarker(note.endLane, note, "slide", iconTint, 0.92f, editorPinned);
                     }
-                    else
+
+                    if (atTail || editorPinned && note.hasTailSlide)
                     {
                         CreatePreviewMarker(note.endLane, note, "slide", iconTint, 0.98f, editorPinned);
                     }
-
-                    if (editorPinned && holdInRealtimeWindow)
-                        CreatePreviewMarker(note.startLane, note, "click", iconTint, 0.72f, true);
                     continue;
                 }
 
                 float delta = note.time - currentTime;
-                bool noteInRealtimeWindow = delta >= -0.35f && delta <= PreviewApproachTime;
-                if (!noteInRealtimeWindow && !editorPinned)
+                bool noteAtTime = Mathf.Abs(delta) <= PreviewHitWindow;
+                if (!noteAtTime && !editorPinned)
                     continue;
 
-                float noteScale = editorPinned ? 1.28f : Mathf.Lerp(1.22f, 0.68f, Mathf.Clamp01(delta / PreviewApproachTime));
+                float noteScale = editorPinned ? 1.28f : 1.1f;
                 string shape = note.kind == ScorewriterNoteKind.Slide ? "slide" : "round";
                 CreatePreviewMarker(note.startLane, note, shape, Color.white, noteScale, editorPinned);
             }
@@ -1411,7 +1454,6 @@ namespace Scorewriter
             SetColorButtonState(mikuColorButton, placementColor == ScorewriterNoteColor.Miku);
             SetColorButtonState(redColorButton, placementColor == ScorewriterNoteColor.Red);
             SetColorButtonState(blueColorButton, placementColor == ScorewriterNoteColor.Blue);
-            UpdateNotePreviewIcons();
         }
 
         private void UpdateSelectedLabel()
@@ -1562,33 +1604,16 @@ namespace Scorewriter
             return sprite != null ? sprite : circleSprite;
         }
 
-        private void UpdateNotePreviewIcons()
-        {
-            UpdateNotePreviewIconList(clickPreviewImages, "click");
-            UpdateNotePreviewIconList(roundPreviewImages, "round");
-            UpdateNotePreviewIconList(slidePreviewImages, "slide");
-        }
-
-        private void UpdateNotePreviewIconList(List<Image> images, string shape)
-        {
-            Sprite sprite = LoadNoteSprite(placementColor, shape);
-            foreach (Image image in images)
-            {
-                if (image == null)
-                    continue;
-
-                image.sprite = sprite;
-                image.color = Color.white;
-                image.preserveAspect = true;
-            }
-        }
-
         private Sprite LoadResourceSprite(string path)
         {
             if (resourceSpriteCache.TryGetValue(path, out Sprite cached))
                 return cached;
 
             Sprite sprite = Resources.Load<Sprite>(path);
+#if UNITY_EDITOR
+            if (sprite == null)
+                sprite = LoadEditorSvgSprite(path);
+#endif
             if (sprite == null)
             {
                 Texture2D texture = Resources.Load<Texture2D>(path);
@@ -1600,6 +1625,35 @@ namespace Scorewriter
                 resourceSpriteCache[path] = sprite;
             return sprite;
         }
+
+#if UNITY_EDITOR
+        private Sprite LoadEditorSvgSprite(string resourcePath)
+        {
+            string scorewriterPath = $"Assets/Scorewriter/Resources/{resourcePath}.svg";
+            Sprite sprite = LoadEditorSpriteAsset(scorewriterPath);
+            if (sprite != null)
+                return sprite;
+
+            string visibleCopyPath = $"Assets/{resourcePath}.svg";
+            return LoadEditorSpriteAsset(visibleCopyPath);
+        }
+
+        private Sprite LoadEditorSpriteAsset(string path)
+        {
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite != null)
+                return sprite;
+
+            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
+            foreach (UnityEngine.Object asset in assets)
+            {
+                if (asset is Sprite childSprite)
+                    return childSprite;
+            }
+
+            return null;
+        }
+#endif
 
         private static string DirectionColorName(int direction)
         {

@@ -24,7 +24,7 @@ namespace Scorewriter
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            app?.SelectNote(note);
+            app?.BeginNoteDrag(note);
             eventData.Use();
         }
 
