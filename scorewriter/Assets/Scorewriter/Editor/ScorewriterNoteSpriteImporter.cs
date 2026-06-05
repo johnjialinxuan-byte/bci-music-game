@@ -44,60 +44,47 @@ namespace Scorewriter.Editor
 
         private static bool ConfigureSvgImporter(string path)
         {
-            AssetImporter importer = AssetImporter.GetAtPath(path);
+            // Use the strongly-typed SVGImporter API. The previous version set the
+            // enum via SerializedProperty.enumValueIndex = 1, but for SVGType the
+            // value index 1 maps to VectorSprite (textureless) — NOT TexturedSprite.
+            // That silently reverted the notes to a mesh-only sprite that UnityEngine.UI.Image
+            // cannot render, so the vector graphics disappeared on every domain reload.
+            var importer = AssetImporter.GetAtPath(path) as Unity.VectorGraphics.Editor.SVGImporter;
             if (importer == null)
                 return false;
 
-            SerializedObject serializedImporter = new SerializedObject(importer);
-            SerializedProperty svgType = serializedImporter.FindProperty("m_SvgType") ?? serializedImporter.FindProperty("svgType");
-            bool changed = SetPropertyValue(svgType, 1);
+            bool changed = false;
 
+            if (importer.SvgType != Unity.VectorGraphics.Editor.SVGType.TexturedSprite)
+            {
+                importer.SvgType = Unity.VectorGraphics.Editor.SVGType.TexturedSprite;
+                changed = true;
+            }
+
+            // Keep the rasterized texture crisp at the sizes we display notes at.
+            if (importer.TextureSize != 256)
+            {
+                importer.TextureSize = 256;
+                changed = true;
+            }
+
+            // Preserve aspect (no stable public setter across versions -> serialized field).
+            SerializedObject serializedImporter = new SerializedObject(importer);
             SerializedProperty preserveAspect = serializedImporter.FindProperty("m_PreserveSVGImageAspect") ?? serializedImporter.FindProperty("preserveSVGImageAspect");
-            changed |= SetPropertyValue(preserveAspect, 1);
+            if (preserveAspect != null && preserveAspect.propertyType == SerializedPropertyType.Boolean && !preserveAspect.boolValue)
+            {
+                preserveAspect.boolValue = true;
+                serializedImporter.ApplyModifiedPropertiesWithoutUndo();
+                changed = true;
+            }
 
             if (!changed)
                 return false;
 
-            serializedImporter.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(importer);
             importer.SaveAndReimport();
-            Debug.Log($"[Scorewriter] 已刷新 SVG Sprite: {path}");
+            Debug.Log($"[Scorewriter] 已刷新 SVG Sprite (TexturedSprite): {path}");
             return true;
-        }
-
-        private static bool SetPropertyValue(SerializedProperty property, int value)
-        {
-            if (property == null)
-                return false;
-
-            if (property.propertyType == SerializedPropertyType.Enum)
-            {
-                if (property.enumValueIndex == value)
-                    return false;
-
-                property.enumValueIndex = value;
-                return true;
-            }
-
-            if (property.propertyType == SerializedPropertyType.Integer)
-            {
-                if (property.intValue == value)
-                    return false;
-
-                property.intValue = value;
-                return true;
-            }
-
-            if (property.propertyType == SerializedPropertyType.Boolean)
-            {
-                bool boolValue = value != 0;
-                if (property.boolValue == boolValue)
-                    return false;
-
-                property.boolValue = boolValue;
-                return true;
-            }
-
-            return false;
         }
     }
 }

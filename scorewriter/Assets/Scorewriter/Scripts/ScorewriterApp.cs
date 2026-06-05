@@ -39,6 +39,8 @@ namespace Scorewriter
         private int snapIndex = 3;
         private float timelinePanelWidth = 760f;
         private float currentTime;
+        private float previewRenderedTime = float.NaN;
+        private bool previewDirty = true;
         private bool followPlayback = true;
         private bool suppressSliderEvent;
         private bool autoPlayOnStart = true;
@@ -57,6 +59,7 @@ namespace Scorewriter
         private RectTransform playhead;
         private ScrollRect timelineScroll;
         private RectTransform previewSurface;
+        private RectTransform previewField;
         private RectTransform previewNoteLayer;
         private Slider timeSlider;
         private LayoutElement timelinePanelLayout;
@@ -218,6 +221,7 @@ namespace Scorewriter
         private void ApplySelectedNote(ScorewriterNote note, bool refreshHandles)
         {
             selectedNote = note;
+            previewDirty = true;
             if (selectedNote != null)
             {
                 placementKind = selectedNote.kind;
@@ -390,7 +394,11 @@ namespace Scorewriter
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1600f, 900f);
-            scaler.matchWidthOrHeight = 0.5f;
+            // Match WIDTH (0) instead of 0.5: the editor is a landscape layout whose
+            // controls need ~1372px of horizontal room. Matching width pins the canvas
+            // width to the reference (1600) at every aspect ratio, so the right-hand
+            // preview panel can never be pushed off-screen on tall/narrow Game views.
+            scaler.matchWidthOrHeight = 0f;
 
             RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
             Stretch(canvasRect);
@@ -595,9 +603,23 @@ namespace Scorewriter
             AddImage(previewSurface.gameObject, new Color(0.028f, 0.033f, 0.042f, 1f));
             LayoutElement previewLayout = SetLayout(previewSurface, -1f, -1f, 1f, 1f);
             previewLayout.minHeight = 320f;
+
+            // Centered, aspect-locked play field. Keeps the 4-lane preview fully
+            // on-screen no matter how wide/short the Game view (CanvasScaler) makes
+            // the surrounding panel — previously an extreme aspect pushed the notes
+            // off the right edge so the preview looked empty/missing.
+            previewField = CreateRect("PreviewField", previewSurface);
+            previewField.anchorMin = new Vector2(0.5f, 0.5f);
+            previewField.anchorMax = new Vector2(0.5f, 0.5f);
+            previewField.pivot = new Vector2(0.5f, 0.5f);
+            previewField.sizeDelta = Vector2.zero;
+            AspectRatioFitter fieldFitter = previewField.gameObject.AddComponent<AspectRatioFitter>();
+            fieldFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fieldFitter.aspectRatio = 1f;
+
             BuildPreviewBase();
             BuildPreviewSvgReference();
-            previewNoteLayer = CreateRect("PreviewNotes", previewSurface);
+            previewNoteLayer = CreateRect("PreviewNotes", previewField);
             Stretch(previewNoteLayer);
 
             statusText = CreateLabel(panel, "", 14, TextAnchor.MiddleLeft, -1f, 34f, new Color(0.76f, 0.84f, 0.94f, 1f));
@@ -611,7 +633,12 @@ namespace Scorewriter
             layout.spacing = 5f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlHeight = true;
-            layout.childControlWidth = false;
+            // Must control width AND not force-expand: with childControlWidth=false the
+            // group reports the children's *current* widths as its min width, and
+            // childForceExpandWidth then stretches them to fill — a feedback loop that
+            // ballooned this strip to ~1675px and pushed the preview panel off-screen.
+            layout.childControlWidth = true;
+            layout.childForceExpandWidth = false;
 
             CreateLabel(strip, "SVG预览", 13, TextAnchor.MiddleRight, 66f, height, new Color(0.75f, 0.80f, 0.86f, 1f));
             CreateNotePreviewIcon(strip, ScorewriterNoteColor.White, "click");
@@ -798,6 +825,7 @@ namespace Scorewriter
 
         private void RefreshNotes()
         {
+            previewDirty = true;
             if (timelineNoteLayer == null || chart == null)
                 return;
 
@@ -865,6 +893,16 @@ namespace Scorewriter
         {
             if (previewNoteLayer == null || chart == null)
                 return;
+
+            // Skip the rebuild when nothing that affects the preview has changed.
+            // Rebuilding the preview every frame churns UI GameObjects and forces a
+            // full Canvas rebuild, which is the main source of editor stutter.
+            if (!previewDirty && !float.IsNaN(previewRenderedTime) &&
+                Mathf.Abs(currentTime - previewRenderedTime) < 0.01f)
+                return;
+
+            previewRenderedTime = currentTime;
+            previewDirty = false;
 
             ClearChildren(previewNoteLayer);
             bool realtimeOnly = audioPlayer != null && audioPlayer.IsPlaying;
@@ -1497,7 +1535,7 @@ namespace Scorewriter
 
         private Vector2 PreviewPosition(ScorewriterLane lane)
         {
-            Rect rect = previewSurface.rect;
+            Rect rect = previewField.rect;
             float width = rect.width > 1f ? rect.width : 640f;
             float height = rect.height > 1f ? rect.height : 420f;
             float x = lane == ScorewriterLane.TopLeft || lane == ScorewriterLane.BottomLeft ? -width * 0.25f : width * 0.25f;
@@ -2045,7 +2083,7 @@ namespace Scorewriter
 
         private void CreatePreviewQuadrant(string label, float minX, float minY, float maxX, float maxY, Color color)
         {
-            RectTransform rect = CreateRect($"Preview_{label}", previewSurface);
+            RectTransform rect = CreateRect($"Preview_{label}", previewField);
             rect.anchorMin = new Vector2(minX, minY);
             rect.anchorMax = new Vector2(maxX, maxY);
             rect.offsetMin = Vector2.zero;
