@@ -60,10 +60,8 @@ namespace MusicGame.Gameplay
                 new Vector3(-width * 0.16f, height * 0.16f, depth)
             };
 
-            for (int i = 0; i < nearCorners.Length; i++)
-            {
-                CreateDashedLine($"PerspectiveDash_{i}", nearCorners[i], farCorners[i], true);
-            }
+            // Perspective motion is now carried by the colored gameplay background lines.
+            // Keep the center guide only so the playfield stays readable.
 
             CreateSolidLine("CenterVerticalLine", Vector3.down * height * 0.5f, Vector3.up * height * 0.5f);
             CreateSolidLine("CenterHorizontalLine", Vector3.left * width * 0.5f, Vector3.right * width * 0.5f);
@@ -175,7 +173,7 @@ private void CreateSolidLine(string lineName, Vector3 start, Vector3 end)
             renderer.endWidth = lineWidth * 2.2f;
 
             Color solidColor = guideColor;
-            solidColor.a = Mathf.Min(0.18f, guideColor.a * 0.48f);
+            solidColor.a = Mathf.Min(0.09f, guideColor.a * 0.26f);
             renderer.startColor = solidColor;
             renderer.endColor = solidColor;
             renderer.SetPosition(0, start);

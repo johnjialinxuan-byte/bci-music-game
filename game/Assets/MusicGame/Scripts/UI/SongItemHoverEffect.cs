@@ -13,6 +13,7 @@ namespace MusicGame.UI
         [SerializeField] private Color hoverColor = new Color(0.18f, 0.95f, 1f, 1f);
         [SerializeField] private bool scaleTargetGraphic = true;
         [SerializeField] private bool scaleBackgroundGraphic = true;
+        [SerializeField] private bool changeTargetColor = true;
 
         private Vector3 targetScale = Vector3.one;
         private Color normalColor = Color.white;
@@ -49,6 +50,13 @@ public void SetHoverColor(Color color)
             hoverColor = color;
             UpdateVisualTarget();
         }
+
+public void SetColorChangeEnabled(bool enabled)
+        {
+            changeTargetColor = enabled;
+            UpdateVisualTarget();
+        }
+
 
 
 public void SetHoverScale(float scale)
@@ -117,8 +125,10 @@ private void UpdateVisualTarget()
         {
             bool emphasized = isPointerInside || isSelected;
             targetScale = Vector3.one * (isPointerInside ? hoverScale : 1f);
-            if (targetGraphic != null)
+            if (targetGraphic != null && changeTargetColor)
                 targetGraphic.color = emphasized ? hoverColor : normalColor;
+            else if (targetGraphic != null)
+                targetGraphic.color = normalColor;
         }
     }
 }

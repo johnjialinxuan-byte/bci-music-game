@@ -41,6 +41,8 @@ namespace MusicGame.Scenes
         private void SetupScene()
         {
             ConfigureHudDisplay();
+            ConfigureGameplayBackground();
+
 
             if (pauseButton != null)
                 pauseButton.onClick.AddListener(OnPause);
@@ -50,6 +52,9 @@ namespace MusicGame.Scenes
                 quitButton.onClick.AddListener(OnQuitToMenu);
             if (restartButton != null)
                 restartButton.onClick.AddListener(OnRestart);
+
+            ConfigurePauseMenuPanel();
+
 
             if (pauseMenuPanel != null)
                 pauseMenuPanel.SetActive(false);
@@ -159,19 +164,39 @@ namespace MusicGame.Scenes
             text.color = Color.white;
         }
 
-        private static void ConfigurePauseMenuButton(Button button)
+private static void ConfigurePauseMenuButton(Button button)
         {
             if (button == null) return;
 
             RectTransform rect = button.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(300f, 72f);
+            rect.sizeDelta = new Vector2(320f, 74f);
+
+            Image image = button.GetComponent<Image>();
+            if (image == null)
+                image = button.gameObject.AddComponent<Image>();
+            image.sprite = PillButtonStyle.GetSprite();
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.02f, 0.08f, 0.12f, 0.86f);
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.None;
 
             Text label = button.GetComponentInChildren<Text>(true);
-            if (label == null) return;
+            if (label != null)
+            {
+                label.rectTransform.sizeDelta = rect.sizeDelta;
+                label.fontSize = 34;
+                label.fontStyle = FontStyle.Bold;
+                label.alignment = TextAnchor.MiddleCenter;
+                label.color = Color.white;
+            }
 
-            label.rectTransform.sizeDelta = rect.sizeDelta;
-            label.fontSize = 40;
-            label.fontStyle = FontStyle.Bold;
+            SongItemHoverEffect hover = button.GetComponent<SongItemHoverEffect>();
+            if (hover == null)
+                hover = button.gameObject.AddComponent<SongItemHoverEffect>();
+            hover.SetLabel(label);
+            hover.SetBackgroundGraphic(image);
+            hover.SetHoverColor(new Color(0.18f, 0.95f, 1f, 1f));
+            hover.SetHoverScale(1.06f);
 
             if (button.GetComponent<ButtonSFX>() == null)
                 button.gameObject.AddComponent<ButtonSFX>();
@@ -293,7 +318,7 @@ if (currentChart == null)
             AudioManager.Instance.Pause();
             NoteManager.Instance.StopSpawning();
             if (pauseMenuPanel != null)
-                pauseMenuPanel.SetActive(true);
+                StartCoroutine(ShowPauseMenuCoroutine());
         }
 
         private void OnResume()
@@ -350,10 +375,10 @@ if (currentChart == null)
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
         }
 
-        private void OnQuitToMenu()
+private void OnQuitToMenu()
         {
             AudioManager.Instance.StopSong();
-            GameStateManager.Instance.ChangeScene(GameScene.MainMenu);
+            GameStateManager.Instance.ChangeScene(GameScene.SongSelect);
         }
 
         private void OnGUI()
@@ -368,5 +393,127 @@ if (currentChart == null)
             };
             GUI.Label(new Rect(0, 0, Screen.width, Screen.height), countdownDisplay, style);
         }
-    }
+    
+
+private void ConfigureGameplayBackground()
+        {
+            Canvas gameplayCanvas = GetComponentInParent<Canvas>();
+            if (gameplayCanvas == null)
+                gameplayCanvas = FindAnyObjectByType<Canvas>();
+            if (gameplayCanvas == null) return;
+
+            SciFiCurveBackground background = gameplayCanvas.GetComponent<SciFiCurveBackground>();
+            if (background == null)
+                background = gameplayCanvas.gameObject.AddComponent<SciFiCurveBackground>();
+
+            background.ConfigurePerspectiveFlow(
+                12,
+                36,
+                1700f,
+                900f,
+                58f,
+                1.8f,
+                0.68f,
+                new Color(0.05f, 0.95f, 1f, 0.095f),
+                new Color(0.55f, 0.25f, 1f, 0.075f));
+        }
+
+
+private void ConfigurePauseMenuPanel()
+        {
+            if (pauseMenuPanel == null) return;
+
+            RectTransform rect = pauseMenuPanel.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(620f, 430f);
+            }
+
+            Image panelImage = pauseMenuPanel.GetComponent<Image>();
+            if (panelImage == null)
+                panelImage = pauseMenuPanel.AddComponent<Image>();
+            panelImage.sprite = PillButtonStyle.GetSprite();
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.02f, 0.08f, 0.12f, 0.86f);
+            panelImage.raycastTarget = true;
+
+            CanvasGroup group = pauseMenuPanel.GetComponent<CanvasGroup>();
+            if (group == null)
+                group = pauseMenuPanel.AddComponent<CanvasGroup>();
+            group.alpha = 1f;
+            group.interactable = true;
+            group.blocksRaycasts = true;
+
+            PositionPauseMenuButton(resumeButton, 92f);
+            PositionPauseMenuButton(restartButton, 0f);
+            PositionPauseMenuButton(quitButton, -92f);
+            SetButtonLabel(resumeButton, "继续");
+            SetButtonLabel(restartButton, "重新开始");
+            SetButtonLabel(quitButton, "返回选歌");
+
+            Text[] labels = pauseMenuPanel.GetComponentsInChildren<Text>(true);
+            foreach (Text label in labels)
+            {
+                label.color = Color.white;
+                label.fontStyle = FontStyle.Bold;
+            }
+        }
+
+        private IEnumerator ShowPauseMenuCoroutine()
+        {
+            if (pauseMenuPanel == null) yield break;
+
+            pauseMenuPanel.SetActive(true);
+            CanvasGroup group = pauseMenuPanel.GetComponent<CanvasGroup>();
+            RectTransform rect = pauseMenuPanel.GetComponent<RectTransform>();
+            if (group == null || rect == null) yield break;
+
+            group.alpha = 0f;
+            rect.localScale = Vector3.one * 0.94f;
+            float elapsed = 0f;
+            const float duration = 0.18f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+                group.alpha = t;
+                rect.localScale = Vector3.one * Mathf.Lerp(0.94f, 1f, t);
+                yield return null;
+            }
+
+            group.alpha = 1f;
+            rect.localScale = Vector3.one;
+        }
+
+
+private static void PositionPauseMenuButton(Button button, float y)
+        {
+            if (button == null) return;
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            rect.sizeDelta = new Vector2(320f, 74f);
+        }
+
+private static void SetButtonLabel(Button button, string text)
+        {
+            if (button == null) return;
+
+            Text label = button.GetComponentInChildren<Text>(true);
+            if (label == null) return;
+
+            label.text = text;
+            label.color = Color.white;
+            label.fontStyle = FontStyle.Bold;
+            label.alignment = TextAnchor.MiddleCenter;
+        }
+
+}
 }

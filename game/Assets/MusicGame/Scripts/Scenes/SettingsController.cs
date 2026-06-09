@@ -450,8 +450,11 @@ private static Button CreateModeButton(Transform parent, string label, Vector2 p
             button.targetGraphic = image;
 
             Text text = PillButtonStyle.CreateLabel(obj.transform, label, 20);
+            text.color = Color.white;
             SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
+            hover.SetLabel(text);
             hover.SetHoverScale(1.04f);
+            hover.SetColorChangeEnabled(false);
             SetChildTextColor(obj.transform, Color.white);
             obj.AddComponent<ButtonSFX>();
             return button;
