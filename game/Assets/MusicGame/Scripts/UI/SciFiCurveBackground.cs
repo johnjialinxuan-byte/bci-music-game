@@ -17,8 +17,13 @@ namespace MusicGame.UI
         [SerializeField] private bool perspectiveFlow;
 
         private RectTransform layer;
+        private RectTransform sideBlockLayer;
         private Image[,] segmentImages;
         private RectTransform[,] segmentRects;
+        private Image[] sideBlockImages;
+        private RectTransform[] sideBlockRects;
+        private const int SideBlockCountPerSide = 18;
+        
 
         private void Start()
         {
@@ -47,7 +52,7 @@ namespace MusicGame.UI
             }
         }
 
-        private void BuildCurves()
+private void BuildCurves()
         {
             GameObject layerObject = new GameObject("SciFiCurveBackground");
             layerObject.transform.SetParent(transform, false);
@@ -58,8 +63,34 @@ namespace MusicGame.UI
             layer.offsetMin = Vector2.zero;
             layer.offsetMax = Vector2.zero;
 
+            GameObject blockLayerObject = new GameObject("PerspectiveSideBlocks");
+            blockLayerObject.transform.SetParent(transform, false);
+            blockLayerObject.transform.SetAsFirstSibling();
+            sideBlockLayer = blockLayerObject.AddComponent<RectTransform>();
+            sideBlockLayer.anchorMin = Vector2.zero;
+            sideBlockLayer.anchorMax = Vector2.one;
+            sideBlockLayer.offsetMin = Vector2.zero;
+            sideBlockLayer.offsetMax = Vector2.zero;
+            blockLayerObject.SetActive(perspectiveFlow);
+
             segmentImages = new Image[curveCount, segmentsPerCurve];
             segmentRects = new RectTransform[curveCount, segmentsPerCurve];
+            sideBlockImages = new Image[SideBlockCountPerSide * 2];
+            sideBlockRects = new RectTransform[SideBlockCountPerSide * 2];
+
+            for (int index = 0; index < sideBlockImages.Length; index++)
+            {
+                GameObject blockObject = new GameObject($"SideBlock_{index:00}");
+                blockObject.transform.SetParent(sideBlockLayer, false);
+                Image image = blockObject.AddComponent<Image>();
+                image.raycastTarget = false;
+                image.color = Color.clear;
+
+                RectTransform rect = blockObject.GetComponent<RectTransform>();
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                sideBlockImages[index] = image;
+                sideBlockRects[index] = rect;
+            }
 
             for (int curve = 0; curve < curveCount; curve++)
             {
@@ -117,12 +148,16 @@ public void Configure(int curves, int segments, float canvasWidth, float canvasH
             primaryColor = primary;
             secondaryColor = secondary;
             perspectiveFlow = false;
+            if (sideBlockLayer != null)
+                sideBlockLayer.gameObject.SetActive(false);
         }
 
-        public void ConfigurePerspectiveFlow(int curves, int segments, float canvasWidth, float canvasHeight, float waveAmplitude, float strokeWidth, float motionSpeed, Color primary, Color secondary)
+public void ConfigurePerspectiveFlow(int curves, int segments, float canvasWidth, float canvasHeight, float waveAmplitude, float strokeWidth, float motionSpeed, Color primary, Color secondary)
         {
             Configure(curves, segments, canvasWidth, canvasHeight, waveAmplitude, strokeWidth, motionSpeed, primary, secondary);
             perspectiveFlow = true;
+            if (sideBlockLayer != null)
+                sideBlockLayer.gameObject.SetActive(true);
         }
 
 
@@ -148,6 +183,8 @@ private void UpdatePerspectiveFlow(float time)
                     PositionPerspectiveSegment(curve, segment, start, end, startT, endT, time);
                 }
             }
+
+            UpdatePerspectiveSideBlocks(time);
         }
 
 private Vector2 EvaluatePerspectivePoint(int ray, float t, float lane, float time)
@@ -199,6 +236,72 @@ private Color GetPerspectiveColor(int curve, float depth, float time)
             int next = (index + 1) % palette.Length;
             float blend = Mathf.SmoothStep(0f, 1f, band - Mathf.Floor(band));
             return Color.Lerp(palette[index], palette[next], blend);
+        }
+
+
+private void UpdatePerspectiveSideBlocks(float time)
+        {
+            if (sideBlockLayer == null || sideBlockRects == null || sideBlockImages == null) return;
+
+            sideBlockLayer.gameObject.SetActive(true);
+            for (int region = 0; region < 2; region++)
+            {
+                bool leftSide = region == 0;
+                for (int i = 0; i < SideBlockCountPerSide; i++)
+                {
+                    int index = region * SideBlockCountPerSide + i;
+                    if (index >= sideBlockRects.Length) continue;
+
+                    float phase = i / (float)SideBlockCountPerSide;
+                    float depth = Mathf.Repeat(phase - time * 0.42f, 1f);
+                    float nearAmount = 1f - depth;
+                    float crossT = 0.16f + Mathf.Repeat(i * 0.37f, 1f) * 0.68f;
+
+                    Vector2 edgeA = EvaluatePerspectiveStraightPoint(leftSide ? 0 : 1, depth);
+                    Vector2 edgeB = EvaluatePerspectiveStraightPoint(leftSide ? 3 : 2, depth);
+                    Vector2 center = Vector2.Lerp(edgeA, edgeB, crossT);
+                    float inwardPush = Mathf.Lerp(8f, 54f, nearAmount);
+                    center.x += leftSide ? inwardPush : -inwardPush;
+
+                    Vector2 toCenter = -center;
+                    float rotation = Mathf.Atan2(toCenter.y, toCenter.x) * Mathf.Rad2Deg;
+                    float shortSide = Mathf.Lerp(8f, 58f, nearAmount);
+                    float longSide = shortSide * Mathf.Lerp(3.6f, 2.9f, nearAmount);
+
+                    RectTransform rect = sideBlockRects[index];
+                    rect.anchoredPosition = center;
+                    rect.sizeDelta = new Vector2(longSide, shortSide);
+                    rect.localRotation = Quaternion.Euler(0f, 0f, rotation);
+
+                    float alpha = Mathf.Lerp(0.014f, 0.092f, nearAmount);
+                    sideBlockImages[index].color = GetFixedBlockColor(i + region * 2, alpha);
+                }
+            }
+        }
+
+
+private Color GetFixedBlockColor(int index, float alpha)
+        {
+            Color[] palette =
+            {
+                new Color(0.05f, 0.95f, 1f, alpha),
+                new Color(0.04f, 0.36f, 1f, alpha),
+                new Color(0.55f, 0.25f, 1f, alpha),
+                new Color(0.34f, 0.12f, 1f, alpha),
+                new Color(0.08f, 0.78f, 0.92f, alpha),
+                new Color(0.42f, 0.18f, 0.95f, alpha)
+            };
+            return palette[Mathf.Abs(index) % palette.Length];
+        }
+
+
+private Vector2 EvaluatePerspectiveStraightPoint(int ray, float t)
+        {
+            float nearX = ray == 0 || ray == 3 ? -width * 0.5f : width * 0.5f;
+            float nearY = ray == 0 || ray == 1 ? -height * 0.5f : height * 0.5f;
+            Vector2 near = new Vector2(nearX, nearY);
+            Vector2 far = new Vector2(nearX * 0.16f, nearY * 0.16f);
+            return Vector2.Lerp(near, far, t);
         }
 }
 }
