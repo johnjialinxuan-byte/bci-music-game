@@ -330,6 +330,13 @@ if (currentChart == null)
         private IEnumerator GameStartCountdownCoroutine()
         {
             isCountingDown = true;
+
+            // The countdown doubles as a lead-in gap: the chart clock runs from
+            // -3s to 0 and spawning is already active, so notes near the start of
+            // the song approach normally instead of popping in when music begins.
+            AudioManager.Instance.BeginLeadIn(3f);
+            NoteManager.Instance.StartSpawning();
+
             for (int i = 3; i > 0; i--)
             {
                 countdownDisplay = i.ToString();
@@ -345,7 +352,6 @@ if (currentChart == null)
                 yield break;
             }
 
-            NoteManager.Instance.StartSpawning();
             isPlaying = true;
         }
 

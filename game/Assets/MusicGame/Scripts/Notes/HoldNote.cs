@@ -41,6 +41,7 @@ namespace MusicGame.Notes
         private bool headJudged;
         private bool tailJudged;
         private JudgmentType headJudgment;
+        private float headHitTime;
         private float lastSampleTime;
         private float successProgress;
 
@@ -55,6 +56,7 @@ namespace MusicGame.Notes
             headJudged = false;
             tailJudged = false;
             headJudgment = JudgmentType.Miss;
+            headHitTime = 0f;
             lastSampleTime = 0f;
             successProgress = 0f;
 
@@ -116,19 +118,8 @@ namespace MusicGame.Notes
                 : JudgmentType.Good;
             headJudged = true;
             isHolding = true;
+            headHitTime = SongTime;
             lastSampleTime = SongTime;
-        }
-
-        public void OnRelease()
-        {
-            if (!isHolding || holdJudged) return;
-
-            if (SongTime < Data.EndTime - JudgeManager.Instance.GoodWindow)
-                ResolveHoldJudgment(JudgmentType.Miss);
-            else
-                ResolveHoldJudgment();
-
-            TryFinishJudgment();
         }
 
         protected override void CheckMiss()
@@ -145,8 +136,7 @@ private void TryHitTailSlide()
             if (!JudgeManager.Instance.IsInFlickHitWindow(timeDiff)) return;
 
             FlickDirection expectedDirection = GetEffectiveTailFlickDirection(Data.flickDirection);
-            FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
-            if (detectedDir != expectedDirection) return;
+            if (!InputManager.Instance.TryConsumeFlick(expectedDirection)) return;
 
             ResolveTailJudgment(JudgeManager.Instance.JudgeFlick(timeDiff));
             TryFinishJudgment();
@@ -360,7 +350,21 @@ private void TryHitTailSlide()
                 float timeUntilHit = piece.HitTime - SongTime;
                 float progress = Mathf.Clamp01(1f - (timeUntilHit / Data.approachTime));
                 float scaleMultiplier = piece.Shape == "slide" ? tailFlickScaleMultiplier : 1f;
-                if (progress >= 1f && SongTime > piece.HitTime + JudgeManager.Instance.GoodWindow)
+
+                // Keep visuals in sync with judgment: the head stays visible for as
+                // long as it can still be caught (until EndTime), and the tail slide
+                // for its whole flick window — not just GoodWindow past their times.
+                bool isHeadPiece = piece.Shape == "click" && Mathf.Approximately(piece.HitTime, Data.time);
+                bool isTailPiece = piece.Shape == "slide";
+                bool expired;
+                if (isHeadPiece)
+                    expired = headJudged || SongTime > Data.EndTime;
+                else if (isTailPiece)
+                    expired = tailJudged || SongTime > piece.HitTime + JudgeManager.Instance.FlickGreatWindow;
+                else
+                    expired = SongTime > piece.HitTime + JudgeManager.Instance.GoodWindow;
+
+                if (progress >= 1f && expired)
                 {
                     piece.Renderer.gameObject.SetActive(false);
                     continue;
@@ -630,7 +634,13 @@ private void TryHitTailSlide()
 
             holdJudged = true;
             isHolding = false;
-            float requiredProgress = Mathf.Max(samplingInterval, Data.duration * 0.6f);
+            // Require 60% of the span the player could actually hold (head hit →
+            // end), not 60% of the full duration. A head caught late would
+            // otherwise be physically unable to reach the bar and always Miss.
+            float holdableSpan = headJudged
+                ? Mathf.Max(0f, Data.EndTime - Mathf.Max(headHitTime, Data.time))
+                : 0f;
+            float requiredProgress = Mathf.Max(samplingInterval, holdableSpan * 0.6f);
             JudgmentType judgment = forcedJudgment ??
                 (headJudged && successProgress >= requiredProgress ? headJudgment : JudgmentType.Miss);
             ScoreManager.Instance.RegisterJudgment(judgment);

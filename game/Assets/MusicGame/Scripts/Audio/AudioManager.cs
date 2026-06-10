@@ -24,12 +24,18 @@ namespace MusicGame.Audio
         [SerializeField] private string cueSheetName = "";
         [SerializeField] private string cueName = "";
         private readonly HashSet<string> loadedCueSheets = new HashSet<string>();
+        private readonly Dictionary<string, bool> sfxAcbExistsCache = new Dictionary<string, bool>();
         private CriAtomExPlayer player;
         private CriAtomExPlayback playback;
         private bool hasPlayback;
         private bool criAtomReady;
         private long currentCueLengthMs;
         private float currentCueSinglePlaybackDurationSec;
+
+        // Lead-in: a pre-song gap during which the chart clock runs negative
+        // (-duration → 0) so notes near t=0 spawn with their full approach.
+        private bool leadInActive;
+        private float leadInEndRealtime;
 
         public bool IsCurrentCueIndefinite => currentCueLengthMs < 0;
         public bool HasReachedCurrentCueSinglePlaybackEnd => currentCueSinglePlaybackDurationSec <= 0f || GetCurrentTime() >= currentCueSinglePlaybackDurationSec;
@@ -375,6 +381,7 @@ private IEnumerator FadePreviewTo(float targetVolume, float duration, int reques
 
         public void StopSong()
         {
+            CancelLeadIn();
             if (hasPlayback)
             {
                 playback.Stop();
@@ -384,10 +391,31 @@ private IEnumerator FadePreviewTo(float targetVolume, float duration, int reques
             player?.Stop();
         }
 
+        /// <summary>
+        /// Starts a lead-in gap: until the song actually starts, GetCurrentTime
+        /// reports negative chart time counting up from -duration to 0.
+        /// </summary>
+        public void BeginLeadIn(float duration)
+        {
+            leadInActive = true;
+            leadInEndRealtime = Time.realtimeSinceStartup + Mathf.Max(0f, duration);
+        }
+
+        public void CancelLeadIn()
+        {
+            leadInActive = false;
+        }
+
         public float GetCurrentTime()
         {
-            if (!IsPlaying()) return 0f;
+            if (!IsPlaying())
+            {
+                if (leadInActive)
+                    return Mathf.Min(0f, Time.realtimeSinceStartup - leadInEndRealtime);
+                return 0f;
+            }
 
+            leadInActive = false;
             long timeMs = playback.GetTimeSyncedWithAudio();
             if (timeMs < 0)
             {
@@ -435,12 +463,18 @@ private IEnumerator FadePreviewTo(float targetVolume, float duration, int reques
                 return;
             }
 
-            string acbFilePath = Path.Combine(CriWare.Common.streamingAssetsPath, $"{cueSheetFolder}/{cueSheet}.acb");
-            if (!File.Exists(acbFilePath))
+            // PlaySFX fires on every successful judgment; cache the disk check so
+            // it doesn't do synchronous file IO on the main thread each time.
+            if (!sfxAcbExistsCache.TryGetValue(cueSheet, out bool acbExists))
             {
-                Debug.LogWarning($"[AudioManager] PlaySFX: ACB file not found at {acbFilePath}. Skipping.");
-                return;
+                string acbFilePath = Path.Combine(CriWare.Common.streamingAssetsPath, $"{cueSheetFolder}/{cueSheet}.acb");
+                acbExists = File.Exists(acbFilePath);
+                sfxAcbExistsCache[cueSheet] = acbExists;
+                if (!acbExists)
+                    Debug.LogWarning($"[AudioManager] PlaySFX: ACB file not found at {acbFilePath}. Skipping.");
             }
+
+            if (!acbExists) return;
 
             if (!EnsureCueSheetLoaded(cueSheet)) return;
 

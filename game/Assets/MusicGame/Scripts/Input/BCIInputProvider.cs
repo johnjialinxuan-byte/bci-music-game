@@ -64,6 +64,11 @@ namespace MusicGame.Input
             return ipc != null && ipc.IsConnected;
         }
 
+        public float GetFlickThreshold()
+        {
+            return flickThreshold;
+        }
+
         // ---------- IHeadMotionProvider ----------
 
         public Quaternion GetHeadRotation()

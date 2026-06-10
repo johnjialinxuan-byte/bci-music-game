@@ -6,6 +6,9 @@ namespace MusicGame.Input
 {
     public class DemoHeadMotionProvider : MonoBehaviour, IHeadMotionProvider
     {
+        [Tooltip("鼠标模拟甩头的角速度阈值（rad/s）。与 BCI 数据量纲不同，需独立调节")]
+        [SerializeField] private float flickThreshold = 0.25f;
+
         private Quaternion lastRotation;
         private Vector3 angularVelocity;
         private float lastTime;
@@ -40,12 +43,20 @@ public Quaternion GetHeadRotation()
 
         public Vector3 GetAngularVelocity()
         {
-            return angularVelocity;
+            // Game convention: x>0 = head flicking up, y>0 = head flicking right.
+            // The raw axis-angle derivative carries Unity pitch, where negative
+            // means looking up — so x must be negated or mouse-up reads as Down.
+            return new Vector3(-angularVelocity.x, angularVelocity.y, 0f);
         }
 
         public bool IsActive()
         {
             return true;
+        }
+
+        public float GetFlickThreshold()
+        {
+            return flickThreshold;
         }
     }
 }

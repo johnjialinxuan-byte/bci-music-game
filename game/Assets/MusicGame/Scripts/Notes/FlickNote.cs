@@ -48,12 +48,18 @@ public void TryHit()
             if (!JudgeManager.Instance.IsInFlickHitWindow(timeDiff)) return;
 
             FlickDirection expectedDirection = GetEffectiveDirection(Data.flickDirection);
-            FlickDirection detectedDir = InputManager.Instance.DetectFlickDirection();
-            if (detectedDir != expectedDirection)
+            if (!InputManager.Instance.TryConsumeFlick(expectedDirection))
                 return;
 
             JudgmentType judgment = JudgeManager.Instance.JudgeFlick(timeDiff);
-            OnHit(judgment);
+            base.OnHit(judgment);
+        }
+
+        // External judges (e.g. a click-based judge) must not bypass the
+        // direction check; route them through the normal flick evaluation.
+        public override void OnHit(JudgmentType judgment)
+        {
+            TryHit();
         }
 
         private float GetDirectionAngle(FlickDirection dir)
