@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MusicGame.Core;
+using MusicGame.Gameplay;
 using MusicGame.Managers;
 
 namespace MusicGame.Notes
@@ -11,18 +12,21 @@ namespace MusicGame.Notes
         [SerializeField] private SpriteRenderer tailSpriteRenderer;
         [SerializeField] private Transform tailTransform;
         [SerializeField] private LineRenderer connectionLine;
-        [SerializeField] private float samplingInterval = 0.1f;
         [SerializeField] private float ribbonSampleTime = 0.08f;
         [SerializeField] private float ribbonWidth = 0.38f;
         [SerializeField] private float ribbonAlpha = 0.22f;
         [SerializeField] private float sequenceBaseScale = 0.68f;
-        [SerializeField] private float visualFillInterval = 0.025f;
         [SerializeField] private float visualFillScaleMultiplier = 0.92f;
         [SerializeField] private float visualFillAlphaMultiplier = 0.88f;
 
         [SerializeField, Range(0.1f, 1f)] private float tailFlickScaleMultiplier = 0.7f;
         [SerializeField] private int maxGeneratedPieces = 48;
-        [SerializeField] private int maxVisualFillPieces = 192;
+
+        // Once any of the hold's judgments fails the whole trail grays out:
+        // RGB crushed to dark gray plus reduced alpha — far more readable on a
+        // dark background than an alpha-only fade.
+        private const float DimAlpha = 0.55f;
+        private const float DimGray = 0.30f;
 
         private readonly List<HoldPiece> holdPieces = new List<HoldPiece>();
         private readonly List<HoldPiece> visualFillPieces = new List<HoldPiece>();
@@ -41,9 +45,17 @@ namespace MusicGame.Notes
         private bool headJudged;
         private bool tailJudged;
         private JudgmentType headJudgment;
-        private float headHitTime;
-        private float lastSampleTime;
-        private float successProgress;
+
+        // Per-element judgment state: the head and each checkpoint click are
+        // judged at their own moment; rounds inherit the verdict of the click
+        // that precedes them (segmentSuccess).
+        private readonly List<float> checkpointTimes = new List<float>();
+        private bool headResolved;
+        private bool segmentSuccess;
+        private int nextCheckpointIndex;
+        private int nextRoundIndex;
+        private int configuredFillCount;
+        private bool holdDimmed;
 
         public float EndTime => Data.EndTime;
         public bool IsHolding => isHolding;
@@ -56,9 +68,19 @@ namespace MusicGame.Notes
             headJudged = false;
             tailJudged = false;
             headJudgment = JudgmentType.Miss;
-            headHitTime = 0f;
-            lastSampleTime = 0f;
-            successProgress = 0f;
+            headResolved = false;
+            segmentSuccess = false;
+            nextCheckpointIndex = 0;
+            nextRoundIndex = 0;
+            holdDimmed = false;
+
+            checkpointTimes.Clear();
+            if (data.attentionPoints != null)
+            {
+                foreach (NotePathPoint point in data.attentionPoints)
+                    checkpointTimes.Add(Mathf.Clamp(data.time + point.timeOffset, data.time, data.EndTime));
+            }
+            checkpointTimes.Sort();
 
             transform.position = Vector3.zero;
             if (connectionLine != null)
@@ -76,28 +98,97 @@ namespace MusicGame.Notes
         protected override void UpdatePosition()
         {
             UpdateSequenceVisuals();
-
-            if (headJudged && isHolding)
-                EvaluateHold();
-
+            EvaluateTimeline();
             TryHitTailSlide();
             CheckHoldEnd();
         }
 
-        private void EvaluateHold()
+        // Walks head / checkpoint clicks / rounds in time order. Clicks are the
+        // only judgment points; the rounds between click N and click N+1 all
+        // score iff click N succeeded. Any failure dims the rest of the hold.
+        private void EvaluateTimeline()
         {
-            if (!isHolding || InputManager.Instance == null) return;
-            if (SongTime - lastSampleTime < samplingInterval) return;
+            if (holdJudged || JudgeManager.Instance == null || ScoreManager.Instance == null) return;
 
-            lastSampleTime = SongTime;
-            if (InputManager.Instance.CurrentHoldValue >= Data.threshold)
-                successProgress += samplingInterval;
+            if (!headResolved && SongTime > Data.time + JudgeManager.Instance.GoodWindow)
+            {
+                headResolved = true;
+                segmentSuccess = false;
+                holdDimmed = true;
+                ScoreManager.Instance.RegisterJudgment(HeadCategory, JudgmentType.Miss);
+                MissPopup.Show(new Vector3(Data.x, Data.y, judgePlaneZ));
+            }
+
+            while (true)
+            {
+                bool hasCheckpoint = nextCheckpointIndex < checkpointTimes.Count
+                    && SongTime >= checkpointTimes[nextCheckpointIndex];
+                bool hasRound = headResolved
+                    && nextRoundIndex < configuredFillCount
+                    && nextRoundIndex < visualFillPieces.Count
+                    && SongTime >= visualFillPieces[nextRoundIndex].HitTime;
+
+                if (hasRound && (!hasCheckpoint || visualFillPieces[nextRoundIndex].HitTime <= checkpointTimes[nextCheckpointIndex]))
+                {
+                    HoldPiece round = visualFillPieces[nextRoundIndex];
+                    ScoreManager.Instance.RegisterJudgment(NoteCategory.Round,
+                        segmentSuccess ? JudgmentType.Perfect : JudgmentType.Miss);
+                    if (segmentSuccess && round.Renderer != null)
+                        round.Renderer.gameObject.SetActive(false);
+                    nextRoundIndex++;
+                    continue;
+                }
+
+                if (hasCheckpoint)
+                {
+                    float checkpointTime = checkpointTimes[nextCheckpointIndex];
+                    bool success = isHolding
+                        && InputManager.Instance != null
+                        && InputManager.Instance.CurrentHoldValue >= Data.threshold;
+                    ScoreManager.Instance.RegisterJudgment(NoteCategory.Click,
+                        success ? JudgmentType.Perfect : JudgmentType.Miss);
+                    segmentSuccess = success;
+                    if (success)
+                    {
+                        HideClickPieceAt(checkpointTime);
+                    }
+                    else
+                    {
+                        holdDimmed = true;
+                        Vector3 pathPosition = GetPathPosition(checkpointTime);
+                        MissPopup.Show(new Vector3(pathPosition.x, pathPosition.y, judgePlaneZ));
+                    }
+                    nextCheckpointIndex++;
+                    continue;
+                }
+
+                break;
+            }
+        }
+
+        private NoteCategory HeadCategory => Data.isRoundNote ? NoteCategory.Round : NoteCategory.Click;
+
+        private void HideClickPieceAt(float hitTime)
+        {
+            foreach (HoldPiece piece in holdPieces)
+            {
+                if (piece.Renderer == null || piece.Shape != "click") continue;
+                if (Mathf.Abs(piece.HitTime - hitTime) < 0.001f)
+                    piece.Renderer.gameObject.SetActive(false);
+            }
         }
 
         private void CheckHoldEnd()
         {
-            if (!holdJudged && SongTime > Data.EndTime)
-                ResolveHoldJudgment();
+            // Short holds can have time+GoodWindow beyond EndTime; the head must
+            // stay catchable for its full window before the hold finalizes.
+            float finishTime = Mathf.Max(Data.EndTime, Data.time + JudgeManager.Instance.GoodWindow);
+            if (!holdJudged && SongTime > finishTime)
+            {
+                EvaluateTimeline();
+                holdJudged = true;
+                isHolding = false;
+            }
 
             if (Data.HasTailFlick && !tailJudged && SongTime > Data.EndTime + JudgeManager.Instance.MissWindow)
                 ResolveTailJudgment(JudgmentType.Miss);
@@ -110,16 +201,17 @@ namespace MusicGame.Notes
             if (headJudged || holdJudged || IsJudged || InputManager.Instance == null) return;
 
             float timeDiff = SongTime - Data.time;
-            if (timeDiff < -JudgeManager.Instance.GoodWindow || SongTime > Data.EndTime) return;
+            if (Mathf.Abs(timeDiff) > JudgeManager.Instance.GoodWindow) return;
             if (InputManager.Instance.CurrentHoldValue < Data.threshold) return;
 
-            headJudgment = timeDiff <= JudgeManager.Instance.GoodWindow
-                ? JudgeManager.Instance.Judge(timeDiff)
-                : JudgmentType.Good;
+            headJudgment = JudgeManager.Instance.Judge(timeDiff);
             headJudged = true;
+            headResolved = true;
+            segmentSuccess = true;
             isHolding = true;
-            headHitTime = SongTime;
-            lastSampleTime = SongTime;
+            ScoreManager.Instance.RegisterJudgment(HeadCategory, headJudgment);
+            // The hold's success SFX plays the moment the head is caught.
+            ShowJudgmentEffect(headJudgment);
         }
 
         protected override void CheckMiss()
@@ -139,12 +231,6 @@ private void TryHitTailSlide()
             if (!InputManager.Instance.TryConsumeFlick(expectedDirection)) return;
 
             ResolveTailJudgment(JudgeManager.Instance.JudgeFlick(timeDiff));
-            TryFinishJudgment();
-        }
-
-        private void OnCompleted()
-        {
-            ResolveHoldJudgment();
             TryFinishJudgment();
         }
 
@@ -193,17 +279,19 @@ private void TryHitTailSlide()
         private void BuildVisualFillPieces(NoteData data)
         {
             Sprite fillSprite = NoteVisualManager.LoadNoteSprite(NoteVisualManager.GetHoldSpritePath(data, "round"));
-            float interval = Mathf.Max(0.01f, visualFillInterval);
+            // Spacing/cap shared with ScoreManager via HoldScoring so scored
+            // round count always matches the dots actually built here.
+            float interval = HoldScoring.RoundInterval;
             int fillIndex = 0;
 
-            for (int segment = 0; segment < pathNodes.Count - 1 && fillIndex < maxVisualFillPieces; segment++)
+            for (int segment = 0; segment < pathNodes.Count - 1 && fillIndex < HoldScoring.MaxRounds; segment++)
             {
                 HoldPathNode start = pathNodes[segment];
                 HoldPathNode end = pathNodes[segment + 1];
                 float duration = Mathf.Max(0f, end.HitTime - start.HitTime);
                 int count = Mathf.Max(0, Mathf.CeilToInt(duration / interval) - 1);
 
-                for (int i = 1; i <= count && fillIndex < maxVisualFillPieces; i++)
+                for (int i = 1; i <= count && fillIndex < HoldScoring.MaxRounds; i++)
                 {
                     float normalized = i / (count + 1f);
                     HoldPiece piece = GetOrCreateVisualFillPiece(fillIndex);
@@ -219,6 +307,8 @@ private void TryHitTailSlide()
                     fillIndex++;
                 }
             }
+
+            configuredFillCount = fillIndex;
         }
 
         private void EnsureRibbonRenderer()
@@ -351,14 +441,15 @@ private void TryHitTailSlide()
                 float progress = Mathf.Clamp01(1f - (timeUntilHit / Data.approachTime));
                 float scaleMultiplier = piece.Shape == "slide" ? tailFlickScaleMultiplier : 1f;
 
-                // Keep visuals in sync with judgment: the head stays visible for as
-                // long as it can still be caught (until EndTime), and the tail slide
-                // for its whole flick window — not just GoodWindow past their times.
+                // The head icon disappears right after its own hit window (or as
+                // soon as it is caught) — the ribbon/fill keeps showing the hold
+                // body, and late catches stay possible even without the icon.
+                // The tail slide stays for its whole flick window.
                 bool isHeadPiece = piece.Shape == "click" && Mathf.Approximately(piece.HitTime, Data.time);
                 bool isTailPiece = piece.Shape == "slide";
                 bool expired;
                 if (isHeadPiece)
-                    expired = headJudged || SongTime > Data.EndTime;
+                    expired = headJudged || SongTime > piece.HitTime + JudgeManager.Instance.GoodWindow;
                 else if (isTailPiece)
                     expired = tailJudged || SongTime > piece.HitTime + JudgeManager.Instance.FlickGreatWindow;
                 else
@@ -382,7 +473,13 @@ private void TryHitTailSlide()
                 piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
 
                 Color color = piece.Renderer.color;
-                color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange);
+                if (holdDimmed)
+                {
+                    color.r = DimGray;
+                    color.g = DimGray;
+                    color.b = DimGray;
+                }
+                color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange) * (holdDimmed ? DimAlpha : 1f);
                 piece.Renderer.color = color;
             }
 
@@ -416,7 +513,14 @@ private void TryHitTailSlide()
                 piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
 
                 Color color = piece.Renderer.color;
-                color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange) * visualFillAlphaMultiplier;
+                if (holdDimmed)
+                {
+                    color.r = DimGray;
+                    color.g = DimGray;
+                    color.b = DimGray;
+                }
+                color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange) * visualFillAlphaMultiplier
+                    * (holdDimmed ? DimAlpha : 1f);
                 piece.Renderer.color = color;
             }
         }
@@ -449,8 +553,10 @@ private void TryHitTailSlide()
                 ribbonVertices.Add(sample.WorldPosition - offset);
                 ribbonVertices.Add(sample.WorldPosition + offset);
 
-                Color color = directionColor;
-                color.a = sample.Alpha * ribbonAlpha;
+                Color color = holdDimmed
+                    ? new Color(DimGray, DimGray, DimGray, 1f)
+                    : directionColor;
+                color.a = sample.Alpha * ribbonAlpha * (holdDimmed ? DimAlpha : 1f);
                 ribbonColors.Add(color);
                 ribbonColors.Add(color);
             }
@@ -563,22 +669,10 @@ private void TryHitTailSlide()
 
         private void SetPieceRotation(Transform pieceTransform, string shape, FlickDirection direction)
         {
-            if (shape != "slide")
-            {
-                pieceTransform.rotation = Quaternion.identity;
-                return;
-            }
-
-            FlickDirection effectiveDirection = GetEffectiveTailFlickDirection(direction);
-            float angle = effectiveDirection switch
-            {
-                FlickDirection.Left => 180f,
-                FlickDirection.Right => 0f,
-                FlickDirection.Up => 90f,
-                FlickDirection.Down => -90f,
-                _ => 0f
-            };
-            pieceTransform.rotation = Quaternion.Euler(0f, 0f, angle);
+            // Slide SVGs are authored already pointing in their color's direction
+            // (white←, miku→, red↑, blue↓); pieces are never rotated. Resetting
+            // still matters because pooled pieces may carry an old rotation.
+            pieceTransform.rotation = Quaternion.identity;
         }
 
         private sealed class HoldPiece
@@ -628,33 +722,22 @@ private void TryHitTailSlide()
         }
 
 
-        private void ResolveHoldJudgment(JudgmentType? forcedJudgment = null)
-        {
-            if (holdJudged) return;
-
-            holdJudged = true;
-            isHolding = false;
-            // Require 60% of the span the player could actually hold (head hit →
-            // end), not 60% of the full duration. A head caught late would
-            // otherwise be physically unable to reach the bar and always Miss.
-            float holdableSpan = headJudged
-                ? Mathf.Max(0f, Data.EndTime - Mathf.Max(headHitTime, Data.time))
-                : 0f;
-            float requiredProgress = Mathf.Max(samplingInterval, holdableSpan * 0.6f);
-            JudgmentType judgment = forcedJudgment ??
-                (headJudged && successProgress >= requiredProgress ? headJudgment : JudgmentType.Miss);
-            ScoreManager.Instance.RegisterJudgment(judgment);
-            ShowJudgmentEffect(judgment);
-        }
-
         private void ResolveTailJudgment(JudgmentType judgment)
         {
             if (tailJudged) return;
 
             tailJudged = true;
-            ScoreManager.Instance.RegisterJudgment(judgment);
+            ScoreManager.Instance.RegisterJudgment(NoteCategory.Flick, judgment);
             if (judgment != JudgmentType.Miss)
+            {
                 MusicGame.Audio.AudioManager.Instance?.PlaySFX("cuesheet0", "");
+            }
+            else
+            {
+                holdDimmed = true;
+                Vector3 endPosition = Data.EndPosition;
+                MissPopup.Show(new Vector3(endPosition.x, endPosition.y, judgePlaneZ));
+            }
         }
 
         private void TryFinishJudgment()

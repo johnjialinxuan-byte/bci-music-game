@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using MusicGame.Core;
 
@@ -6,6 +8,11 @@ namespace MusicGame.Managers
 {
     public class ChartManager : MonoBehaviour
     {
+        // Player-made charts dropped under Assets/<DiyFolder> override built-in
+        // Resources charts. Files are the scorewriter's native save format and
+        // are matched to a song by the songId stored inside the JSON.
+        private const string DiyFolder = "MusicGame/diy";
+
         public static ChartManager Instance { get; private set; }
 
         private void Awake()
@@ -18,6 +25,19 @@ namespace MusicGame.Managers
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+        }
+
+        /// <summary>
+        /// Loads the chart for a song: a matching DIY chart (scorewriter file in
+        /// Assets/MusicGame/diy) wins over the built-in Resources chart.
+        /// </summary>
+        public ChartData LoadChart(string jsonPath, string songId, Difficulty difficulty)
+        {
+            ChartData diyChart = TryLoadDiyChart(songId, difficulty);
+            if (diyChart != null)
+                return diyChart;
+
+            return LoadChart(jsonPath);
         }
 
         public ChartData LoadChart(string jsonPath)
@@ -120,6 +140,199 @@ namespace MusicGame.Managers
             }
 
             return true;
+        }
+
+        // ---------- DIY (scorewriter native format) support ----------
+
+        private ChartData TryLoadDiyChart(string songId, Difficulty difficulty)
+        {
+            if (string.IsNullOrWhiteSpace(songId))
+                return null;
+
+            string folder = Path.Combine(Application.dataPath, DiyFolder);
+            if (!Directory.Exists(folder))
+                return null;
+
+            List<string> matches = new List<string>();
+            foreach (string file in Directory.GetFiles(folder, "*.json"))
+            {
+                string json;
+                try { json = File.ReadAllText(file); }
+                catch (Exception) { continue; }
+
+                if (!LooksLikeScorewriterChart(json))
+                    continue;
+
+                ScorewriterChartDto dto = ParseScorewriterChart(json, file);
+                if (dto == null || !string.Equals(dto.songId, songId, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                matches.Add(file);
+            }
+
+            if (matches.Count == 0)
+                return null;
+
+            // Several DIY charts for one song: pick by difficulty name in the file
+            // name (the difficulty field inside scorewriter saves is unreliable —
+            // the editor always writes 0). A single match is used for any difficulty.
+            string chosen = matches[0];
+            if (matches.Count > 1)
+            {
+                string difficultyName = difficulty.ToString().ToLowerInvariant();
+                string named = matches.Find(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant().Contains(difficultyName));
+                if (named != null)
+                    chosen = named;
+            }
+
+            ScorewriterChartDto chartDto = ParseScorewriterChart(File.ReadAllText(chosen), chosen);
+            if (chartDto == null)
+                return null;
+
+            ChartData chart = ConvertScorewriterChart(chartDto, Path.GetFileName(chosen), difficulty);
+            if (chart != null)
+                Debug.Log($"[ChartManager] Using DIY chart '{Path.GetFileName(chosen)}' for song '{songId}' ({chart.notes.Count} notes).");
+            return chart;
+        }
+
+        private static bool LooksLikeScorewriterChart(string json)
+        {
+            return !string.IsNullOrEmpty(json)
+                && json.Contains("\"startLane\"")
+                && json.Contains("\"kind\"");
+        }
+
+        private static ScorewriterChartDto ParseScorewriterChart(string json, string sourceFile)
+        {
+            try
+            {
+                return JsonUtility.FromJson<ScorewriterChartDto>(json);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError($"[ChartManager] Failed to parse DIY chart '{sourceFile}': {exception.Message}");
+                return null;
+            }
+        }
+
+        private ChartData ConvertScorewriterChart(ScorewriterChartDto dto, string sourceName, Difficulty difficulty)
+        {
+            if (dto.notes == null || dto.notes.Count == 0)
+            {
+                Debug.LogError($"[ChartManager] DIY chart contains no notes: {sourceName}");
+                return null;
+            }
+
+            ChartData chart = ScriptableObject.CreateInstance<ChartData>();
+            chart.difficulty = difficulty;
+            chart.level = dto.level;
+
+            float offsetSeconds = dto.timingOffsetMs / 1000f;
+            float approachTime = DiyApproachTime(difficulty);
+            foreach (ScorewriterNoteDto note in dto.notes)
+            {
+                if (note == null) continue;
+                chart.notes.Add(ConvertScorewriterNote(note, offsetSeconds, approachTime));
+            }
+
+            if (!ValidateChart(chart, sourceName))
+            {
+                Destroy(chart);
+                return null;
+            }
+
+            chart.notes.Sort((left, right) => left.time.CompareTo(right.time));
+            return chart;
+        }
+
+        // DIY charts approach faster than the built-in 2s default and scale with
+        // the selected difficulty; lower = faster.
+        private static float DiyApproachTime(Difficulty difficulty)
+        {
+            return difficulty switch
+            {
+                Difficulty.Easy => 1.4f,
+                Difficulty.Hard => 0.9f,
+                _ => 1.2f
+            };
+        }
+
+        // kind Hold(0)/Round(2) → Hold, Slide(1) → Flick; lanes → world positions.
+        // Flick direction (and thus the in-game color) comes straight from the
+        // author's noteColor choice — the enums align 1:1: White(0)=Left,
+        // Miku(1)=Right, Red(2)=Up, Blue(3)=Down. Deriving it from lane deltas
+        // (like the scorewriter's exporter does) guesses wrong whenever a note
+        // starts and ends on the same lane.
+        private static NoteData ConvertScorewriterNote(ScorewriterNoteDto note, float offsetSeconds, float approachTime)
+        {
+            Vector3 start = LaneToWorldPosition(note.startLane);
+            Vector3 end = LaneToWorldPosition(note.endLane);
+            bool isSlide = note.kind == 1;
+            bool isRound = note.kind == 2;
+            bool isHold = note.kind == 0;
+
+            float duration = isHold
+                ? Mathf.Max(0.1f, note.duration)
+                : isRound ? 0.1f : 0f;
+
+            return new NoteData
+            {
+                time = Mathf.Max(0f, note.time - offsetSeconds),
+                x = start.x,
+                y = start.y,
+                z = start.z,
+                noteType = isSlide ? NoteType.Flick : NoteType.Hold,
+                isRoundNote = isRound,
+                duration = duration,
+                threshold = Mathf.Max(0, note.threshold),
+                hasTailFlick = isHold && note.hasTailSlide,
+                flickDirection = (FlickDirection)Mathf.Clamp(note.noteColor, 0, 3),
+                approachTime = approachTime,
+                useCustomEndPoint = isHold && note.endLane != note.startLane,
+                endX = end.x,
+                endY = end.y,
+                endZ = end.z
+            };
+        }
+
+        // Lane layout copied from ScorewriterLaneUtility:
+        // 0 TopLeft, 1 TopRight, 2 BottomLeft, 3 BottomRight, 4 Center.
+        private static Vector3 LaneToWorldPosition(int lane)
+        {
+            const float x = 2.6f;
+            const float y = 1.8f;
+            const float z = 10f;
+            return lane switch
+            {
+                0 => new Vector3(-x, y, z),
+                1 => new Vector3(x, y, z),
+                2 => new Vector3(-x, -y, z),
+                3 => new Vector3(x, -y, z),
+                _ => new Vector3(0f, 0f, z)
+            };
+        }
+
+        [Serializable]
+        private class ScorewriterChartDto
+        {
+            public string songId;
+            public float timingOffsetMs;
+            public int difficulty;
+            public int level = 1;
+            public List<ScorewriterNoteDto> notes = new List<ScorewriterNoteDto>();
+        }
+
+        [Serializable]
+        private class ScorewriterNoteDto
+        {
+            public float time;
+            public int kind;
+            public int startLane;
+            public int endLane;
+            public int noteColor;
+            public float duration;
+            public int threshold = 10;
+            public bool hasTailSlide;
         }
     }
 }

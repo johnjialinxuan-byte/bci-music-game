@@ -113,18 +113,20 @@ namespace MusicGame.Notes
             }
         }
 
+        // These base paths are only exercised by flick notes — HoldNote overrides
+        // both OnHit and CheckMiss and registers its own per-element judgments.
         public virtual void OnHit(JudgmentType judgment)
         {
             if (IsJudged || IsMissed) return;
             IsJudged = true;
-            ScoreManager.Instance.RegisterJudgment(judgment);
+            ScoreManager.Instance.RegisterJudgment(NoteCategory.Flick, judgment);
             ShowJudgmentEffect(judgment);
             DestroyNote();
         }
 
         protected virtual void OnMiss()
         {
-            ScoreManager.Instance.RegisterJudgment(JudgmentType.Miss);
+            ScoreManager.Instance.RegisterJudgment(NoteCategory.Flick, JudgmentType.Miss);
             DestroyNote();
         }
 

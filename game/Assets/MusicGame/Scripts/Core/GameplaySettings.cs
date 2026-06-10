@@ -39,8 +39,10 @@ private const string FlickGreatKey = "Gameplay.Flick.GreatMs";
 
         public static int FlickGreatMs
         {
-            get => Read(FlickGreatKey, 120, 120, 200);
-            set => Write(FlickGreatKey, value, 120, 200);
+            // BCI gyro packets arrive at ~10Hz, so detection alone can lag ~100ms;
+            // the GREAT window must absorb that or head flicks can never land.
+            get => Read(FlickGreatKey, 250, 120, 500);
+            set => Write(FlickGreatKey, value, 120, 500);
         }
 
         public static float FlickPerfectWindow => FlickPerfectMs / 1000f;

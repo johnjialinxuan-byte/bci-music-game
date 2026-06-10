@@ -130,7 +130,7 @@ private void BuildTuningPanel()
             CreateSectionFrame(content.transform, new Vector2(0f, -350f), new Vector2(860f, 180f));
             CreateHeader(content.transform, "Flick \u5224\u5b9a\u8303\u56f4", -288f);
             CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -344f);
-            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 200, " ms", value => GameplaySettings.FlickGreatMs = value, -410f);
+            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 500, " ms", value => GameplaySettings.FlickGreatMs = value, -410f);
 
             CreateCommunicationSection(content.transform, -585f);
         }

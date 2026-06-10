@@ -219,7 +219,7 @@ private static void ConfigurePauseMenuButton(Button button)
             }
 
             string chartPath = currentSong.GetChartPath(GameStateManager.Instance.SelectedDifficulty);
-            currentChart = ChartManager.Instance.LoadChart(chartPath);
+            currentChart = ChartManager.Instance.LoadChart(chartPath, currentSong.songId, GameStateManager.Instance.SelectedDifficulty);
             
 
             int attentionThreshold = GameplaySettings.GetAttentionThreshold(GameStateManager.Instance.SelectedDifficulty);
@@ -241,13 +241,7 @@ if (currentChart == null)
                 return;
             }
 
-            int totalJudgments = currentChart.notes.Count;
-            foreach (NoteData note in currentChart.notes)
-            {
-                if (note.HasTailFlick)
-                    totalJudgments++;
-            }
-            ScoreManager.Instance.Initialize(totalJudgments);
+            ScoreManager.Instance.Initialize(currentChart);
             NoteManager.Instance.LoadChart(currentChart);
 
             StartCoroutine(GameStartCountdownCoroutine());

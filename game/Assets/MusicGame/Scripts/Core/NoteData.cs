@@ -28,6 +28,10 @@ namespace MusicGame.Core
         
         // A Hold only creates an end slide when the chart explicitly requests it.
         public bool hasTailFlick;
+
+        // Standalone "round" notes (scorewriter kind=2) are mechanically short
+        // Holds but score with the much cheaper Round weight.
+        public bool isRoundNote;
         public FlickDirection flickDirection;
         public float approachTime = 2f;
         public bool useCustomEndPoint;

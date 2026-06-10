@@ -30,6 +30,16 @@ namespace MusicGame.Core
         Miss
     }
 
+    /// <summary>
+    /// Scoring category of a single judgment. Weights: Click > Flick >> Round.
+    /// </summary>
+    public enum NoteCategory
+    {
+        Click,
+        Flick,
+        Round
+    }
+
     public enum FlickDirection
     {
         Left,
