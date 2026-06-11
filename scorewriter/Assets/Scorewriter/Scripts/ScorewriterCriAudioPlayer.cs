@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using CriWare;
 using UnityEngine;
@@ -6,16 +7,22 @@ namespace Scorewriter
 {
     public sealed class ScorewriterCriAudioPlayer : MonoBehaviour
     {
+        private const uint TimeStretchVoicePoolId = 0x53435752;
+
         private CriAtomExPlayer player;
         private CriAtomExPlayback playback;
+        private CriAtomExStandardVoicePool timeStretchVoicePool;
         private string registeredAcfPath;
         private string loadedCueSheetName;
         private float manualTime;
+        private float playbackRate = 1f;
         private bool isPlaying;
         private bool isPaused;
+        private bool triedCreateTimeStretchVoicePool;
 
         public bool IsPlaying => isPlaying && !isPaused;
         public bool IsPaused => isPaused;
+        public float PlaybackRate => playbackRate;
 
         public float CurrentTime
         {
@@ -45,11 +52,39 @@ namespace Scorewriter
                 player.Dispose();
                 player = null;
             }
+
+            if (timeStretchVoicePool != null)
+            {
+                timeStretchVoicePool.Dispose();
+                timeStretchVoicePool = null;
+            }
         }
 
         public void SetManualTime(float time)
         {
             manualTime = Mathf.Max(0f, time);
+        }
+
+        public void SetPlaybackRate(float rate)
+        {
+            playbackRate = Mathf.Clamp(rate, 0.25f, 1.5f);
+            ApplyPlaybackRate();
+        }
+
+        private void ApplyPlaybackRate()
+        {
+            if (player == null)
+                return;
+
+            float pitch = 1200f * Mathf.Log(playbackRate, 2f);
+            player.SetPlaybackRatio(playbackRate);
+            player.SetPitch(pitch);
+            player.SetDspTimeStretchRatio(1f / playbackRate);
+            if (isPlaying && playback.id != CriAtomExPlayback.invalidId)
+            {
+                player.Update(playback);
+                player.UpdateAll();
+            }
         }
 
         public void Play(ScorewriterSong song, float startTime)
@@ -70,7 +105,9 @@ namespace Scorewriter
 
             player.Stop();
             player.ResetParameters();
+            EnsureTimeStretchVoicePool();
             player.Loop(false);
+            ApplyPlaybackRate();
             player.SetStartTime((long)(Mathf.Max(0f, startTime) * 1000f));
             if (string.IsNullOrWhiteSpace(song.cueName))
                 player.SetCueIndex(acb, 0);
@@ -80,6 +117,7 @@ namespace Scorewriter
             manualTime = Mathf.Max(0f, startTime);
             isPlaying = true;
             isPaused = false;
+            ApplyPlaybackRate();
         }
 
         public void Pause()
@@ -128,6 +166,41 @@ namespace Scorewriter
 
             if (player == null)
                 player = new CriAtomExPlayer(true);
+
+            EnsureTimeStretchVoicePool();
+        }
+
+        private void EnsureTimeStretchVoicePool()
+        {
+            if (player == null)
+                return;
+
+            if (timeStretchVoicePool != null)
+            {
+                player.SetVoicePoolIdentifier(TimeStretchVoicePoolId);
+                return;
+            }
+
+            if (triedCreateTimeStretchVoicePool)
+                return;
+
+            triedCreateTimeStretchVoicePool = true;
+            try
+            {
+                timeStretchVoicePool = new CriAtomExStandardVoicePool(1, 2, 96000, true, TimeStretchVoicePoolId);
+                timeStretchVoicePool.AttachDspTimeStretch();
+                player.SetVoicePoolIdentifier(TimeStretchVoicePoolId);
+            }
+            catch (Exception ex)
+            {
+                if (timeStretchVoicePool != null)
+                {
+                    timeStretchVoicePool.Dispose();
+                    timeStretchVoicePool = null;
+                }
+
+                Debug.LogWarning($"[ScorewriterCriAudioPlayer] Time-stretch voice pool unavailable, falling back to pitch playback rate: {ex.Message}");
+            }
         }
 
         private static void EnsureAtomComponent()

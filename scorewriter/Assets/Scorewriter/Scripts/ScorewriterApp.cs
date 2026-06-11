@@ -31,6 +31,7 @@ namespace Scorewriter
         private readonly List<ScorewriterSong> songs = new List<ScorewriterSong>();
         private readonly Dictionary<string, Sprite> resourceSpriteCache = new Dictionary<string, Sprite>();
         private readonly int[] snapDivisions = { 4, 6, 8, 16, 0 };
+        private readonly float[] playbackRateSteps = { 1f, 0.75f, 0.5f, 0.25f };
         private readonly ScorewriterLane[] laneVisualOrder =
         {
             ScorewriterLane.TopLeft,
@@ -49,6 +50,7 @@ namespace Scorewriter
         private ScorewriterNoteColor placementColor = ScorewriterNoteColor.White;
         private int songIndex;
         private int snapIndex = 3;
+        private int playbackRateIndex;
         private float timelinePanelWidth = 760f;
         private float timelinePixelsPerSecond = DefaultTimelinePixelsPerSecond;
         private float currentTime;
@@ -82,6 +84,7 @@ namespace Scorewriter
         private Text songTitleText;
         private Text timeText;
         private Text statusText;
+        private Text exportPathDialogText;
         private Text typeButtonText;
         private Text startLaneButtonText;
         private Text endLaneButtonText;
@@ -89,10 +92,12 @@ namespace Scorewriter
         private Text playButtonText;
         private Text followButtonText;
         private Text clickAddButtonText;
+        private Text playbackRateButtonText;
         private Text deleteButtonText;
         private Text tailSlideToggleText;
         private Text shortcutHintText;
         private Text selectedText;
+        private RectTransform exportPathDialog;
         private InputField bpmInput;
         private InputField lengthInput;
         private InputField offsetInput;
@@ -144,8 +149,18 @@ namespace Scorewriter
         {
             HandleKeyboardShortcuts();
 
-            if (audioPlayer.IsPlaying || audioPlayer.IsPaused)
-                currentTime = Mathf.Clamp(audioPlayer.CurrentTime + ChartOffsetSeconds, 0f, SongLength);
+            if (audioPlayer.IsPlaying)
+            {
+                float playbackRate = CurrentPlaybackRate();
+                if (Mathf.Approximately(playbackRate, 1f))
+                    currentTime = Mathf.Clamp(audioPlayer.CurrentTime + ChartOffsetSeconds, 0f, SongLength);
+                else
+                    currentTime = Mathf.Clamp(currentTime + Time.unscaledDeltaTime * playbackRate, 0f, SongLength);
+            }
+            else if (audioPlayer.IsPaused)
+            {
+                currentTime = Mathf.Clamp(currentTime, 0f, SongLength);
+            }
 
             if (audioPlayer.IsPlaying && currentTime >= SongLength - 0.02f)
             {
@@ -202,6 +217,8 @@ namespace Scorewriter
                 CycleSnap();
             if (WasDPressed())
                 DeleteSelectedNote();
+            if (WasRPressed())
+                CyclePlaybackRate();
         }
 
         private bool TryHandleTimelineZoom()
@@ -291,6 +308,15 @@ namespace Scorewriter
             return Keyboard.current != null && Keyboard.current.xKey.wasPressedThisFrame;
 #else
             return Input.GetKeyDown(KeyCode.X);
+#endif
+        }
+
+        private static bool WasRPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame;
+#else
+            return Input.GetKeyDown(KeyCode.R);
 #endif
         }
 
@@ -674,6 +700,7 @@ namespace Scorewriter
             BuildHeader(root);
             BuildBody(root);
             BuildTransport(root);
+            BuildExportPathDialog(canvasRect);
         }
 
         private void BuildHeader(RectTransform root)
@@ -728,6 +755,72 @@ namespace Scorewriter
             BuildTimelinePanel(body);
             BuildResizeHandle(body);
             BuildPreviewPanel(body);
+        }
+
+        private void BuildExportPathDialog(RectTransform canvasRect)
+        {
+            exportPathDialog = CreateRect("ExportPathDialog", canvasRect);
+            Stretch(exportPathDialog);
+            AddImage(exportPathDialog.gameObject, new Color(0f, 0f, 0f, 0.62f));
+
+            RectTransform panel = CreateRect("Panel", exportPathDialog);
+            panel.anchorMin = new Vector2(0.5f, 0.5f);
+            panel.anchorMax = new Vector2(0.5f, 0.5f);
+            panel.pivot = new Vector2(0.5f, 0.5f);
+            panel.anchoredPosition = Vector2.zero;
+            panel.sizeDelta = new Vector2(760f, 300f);
+            AddImage(panel.gameObject, new Color(0.09f, 0.105f, 0.125f, 1f));
+
+            VerticalLayoutGroup layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 14f;
+            layout.padding = new RectOffset(22, 22, 20, 18);
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+
+            CreateLabel(panel, "导出完成", 22, TextAnchor.MiddleLeft, -1f, 34f, Color.white);
+            CreateLabel(panel, "导出路径", 14, TextAnchor.MiddleLeft, -1f, 24f, new Color(0.72f, 0.78f, 0.86f, 1f));
+
+            RectTransform pathBox = CreateRect("PathBox", panel);
+            SetLayout(pathBox, -1f, 130f, 1f, 0f);
+            AddImage(pathBox.gameObject, new Color(0.035f, 0.043f, 0.052f, 1f));
+
+            exportPathDialogText = CreateLabel(pathBox, "", 16, TextAnchor.UpperLeft, -1f, -1f, new Color(0.92f, 0.96f, 1f, 1f));
+            Stretch(exportPathDialogText.rectTransform);
+            exportPathDialogText.rectTransform.offsetMin = new Vector2(12f, 10f);
+            exportPathDialogText.rectTransform.offsetMax = new Vector2(-12f, -10f);
+            exportPathDialogText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            exportPathDialogText.verticalOverflow = VerticalWrapMode.Overflow;
+
+            RectTransform buttons = CreateRect("Buttons", panel);
+            SetLayout(buttons, -1f, 42f, 0f, 0f);
+            HorizontalLayoutGroup buttonLayout = buttons.gameObject.AddComponent<HorizontalLayoutGroup>();
+            buttonLayout.spacing = 10f;
+            buttonLayout.childAlignment = TextAnchor.MiddleRight;
+            buttonLayout.childControlWidth = false;
+            buttonLayout.childControlHeight = true;
+            buttonLayout.childForceExpandWidth = true;
+
+            RectTransform spacer = CreateRect("Spacer", buttons);
+            SetLayout(spacer, -1f, 1f, 1f, 0f);
+            CreateButton(buttons, "确定", 96f, 42f, HideExportPathDialog);
+
+            exportPathDialog.gameObject.SetActive(false);
+        }
+
+        private void ShowExportPathDialog(string path)
+        {
+            if (exportPathDialogText != null)
+                exportPathDialogText.text = WrapPathForDialog(path);
+            if (exportPathDialog != null)
+                exportPathDialog.gameObject.SetActive(true);
+        }
+
+        private void HideExportPathDialog()
+        {
+            if (exportPathDialog != null)
+                exportPathDialog.gameObject.SetActive(false);
         }
 
         private void BuildResizeHandle(RectTransform body)
@@ -1001,6 +1094,8 @@ namespace Scorewriter
             playButtonText = playButton.GetComponentInChildren<Text>();
             Button clickAddButton = CreateButton(transport, timelineClickAddEnabled ? "添加开(W)" : "添加关(W)", 104f, 46f, ToggleTimelineClickAdd);
             clickAddButtonText = clickAddButton.GetComponentInChildren<Text>();
+            Button rateButton = CreateButton(transport, PlaybackRateLabel(), 106f, 46f, CyclePlaybackRate);
+            playbackRateButtonText = rateButton.GetComponentInChildren<Text>();
             CreateButton(transport, "停止", 72f, 46f, StopPlayback);
             CreateButton(transport, "-1s", 58f, 46f, () => SeekRelative(-1f));
             CreateButton(transport, "+1s", 58f, 46f, () => SeekRelative(1f));
@@ -1062,6 +1157,7 @@ namespace Scorewriter
                 + "网格1/16：4\n"
                 + "轨道缩放：Alt+滚轮\n"
                 + "拖动吸附：Shift\n"
+                + "歌曲流速：R\n"
                 + "保存谱面：Ctrl+S\n"
                 + "导出JSON：Ctrl+X";
         }
@@ -1462,6 +1558,24 @@ namespace Scorewriter
             SetStatus(timelineClickAddEnabled ? "时间轴点击可添加音符。" : "时间轴点击仅选择已有音符。");
         }
 
+        private void CyclePlaybackRate()
+        {
+            playbackRateIndex = (playbackRateIndex + 1) % playbackRateSteps.Length;
+            audioPlayer.SetPlaybackRate(CurrentPlaybackRate());
+            UpdateTransportUi();
+            SetStatus($"歌曲流速：{CurrentPlaybackRate():0.##}x");
+        }
+
+        private float CurrentPlaybackRate()
+        {
+            return playbackRateSteps[Mathf.Clamp(playbackRateIndex, 0, playbackRateSteps.Length - 1)];
+        }
+
+        private string PlaybackRateLabel()
+        {
+            return $"流速 {CurrentPlaybackRate():0.##}x(R)";
+        }
+
         private void OnDurationEdited(string value)
         {
             float duration = Mathf.Max(0f, ParseFloat(value, MinimumHoldDuration()));
@@ -1714,11 +1828,17 @@ namespace Scorewriter
             SetStatus($"已保存编辑器谱面：{RelativeProjectPath(path)}");
         }
 
-        private void ExportGameJson()
+private void ExportGameJson()
         {
             if (chart == null)
+            {
+                SetStatus("导出失败：当前没有谱面数据。");
+                ShowExportPathDialog("导出失败：当前没有谱面数据。");
                 return;
+            }
 
+            try
+            {
             SortNotes();
             GameChartExport export = new GameChartExport
             {
@@ -1742,7 +1862,16 @@ namespace Scorewriter
                 Directory.CreateDirectory(directory);
             File.WriteAllText(path, JsonUtility.ToJson(export, true));
             RefreshAssetDatabase();
-            SetStatus($"已导出游戏 JSON：{RelativeProjectPath(path)}");
+            SetStatus($"已导出游戏 JSON：{Path.GetFileName(path)}");
+            ShowExportPathDialog(path);
+            }
+            catch (Exception ex)
+            {
+                string message = $"导出失败：{ex.Message}";
+                SetStatus(message);
+                ShowExportPathDialog(message);
+                Debug.LogException(ex);
+            }
         }
 
         private GameNoteExport ToGameNote(ScorewriterNote note)
@@ -1820,6 +1949,8 @@ namespace Scorewriter
                 playButtonText.text = audioPlayer.IsPlaying ? "暂停(空格)" : audioPlayer.IsPaused ? "继续(空格)" : "播放(空格)";
             if (clickAddButtonText != null)
                 clickAddButtonText.text = timelineClickAddEnabled ? "添加开(W)" : "添加关(W)";
+            if (playbackRateButtonText != null)
+                playbackRateButtonText.text = PlaybackRateLabel();
             if (followButtonText != null)
                 followButtonText.text = followPlayback ? "跟随开" : "跟随关";
         }
@@ -2210,7 +2341,11 @@ namespace Scorewriter
 
         private static string ExportsDirectory()
         {
+#if UNITY_EDITOR
             return Path.Combine(Application.dataPath, "Scorewriter/Exports");
+#else
+            return Path.Combine(Application.persistentDataPath, "Scorewriter/Exports");
+#endif
         }
 
         private static string ChooseJsonSavePath(string defaultName)
@@ -2230,6 +2365,43 @@ namespace Scorewriter
             if (absolutePath.StartsWith(projectRoot, StringComparison.Ordinal))
                 return absolutePath.Substring(projectRoot.Length + 1);
             return absolutePath;
+        }
+
+        private static string WrapPathForDialog(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
+
+            const int maxLineLength = 58;
+            List<string> lines = new List<string>();
+            string normalized = path.Replace('/', Path.DirectorySeparatorChar);
+            string[] parts = normalized.Split(Path.DirectorySeparatorChar);
+            string current = string.Empty;
+
+            foreach (string part in parts)
+            {
+                string segment = string.IsNullOrEmpty(current) ? part : $"{Path.DirectorySeparatorChar}{part}";
+                if (current.Length > 0 && current.Length + segment.Length > maxLineLength)
+                {
+                    lines.Add(current);
+                    current = part;
+                }
+                else
+                {
+                    current += segment;
+                }
+
+                while (current.Length > maxLineLength)
+                {
+                    lines.Add(current.Substring(0, maxLineLength));
+                    current = current.Substring(maxLineLength);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(current))
+                lines.Add(current);
+
+            return string.Join("\n", lines);
         }
 
         private static void RefreshAssetDatabase()
