@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
   songId: jumping
   title: Cute Jump
-  artist: "\u66f2\u5e08\uff1axxx \u8c31\u5e08\uff1axyxuanying"
+  artist: "\u66f2\u5e08\uff1a\u4e4c\u9e26Producer \u8c31\u5e08\uff1axyxuanying"
   bpm: 120
   previewStartTime: 8
   coverImage: {fileID: -4312366431063467818, guid: 8a83a1cf6e65c4ae7bbfdd136e35c567, type: 3}

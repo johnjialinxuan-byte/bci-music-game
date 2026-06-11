@@ -116,7 +116,8 @@ namespace MusicGame.Notes
                 segmentSuccess = false;
                 holdDimmed = true;
                 ScoreManager.Instance.RegisterJudgment(HeadCategory, JudgmentType.Miss);
-                MissPopup.Show(new Vector3(Data.x, Data.y, judgePlaneZ));
+                JudgmentFx.Show(JudgmentType.Miss, new Vector3(Data.x, Data.y, judgePlaneZ),
+                    Data.isRoundNote ? 0.55f : 1f);
             }
 
             while (true)
@@ -148,15 +149,16 @@ namespace MusicGame.Notes
                     ScoreManager.Instance.RegisterJudgment(NoteCategory.Click,
                         success ? JudgmentType.Perfect : JudgmentType.Miss);
                     segmentSuccess = success;
+                    Vector3 pathPosition = GetPathPosition(checkpointTime);
                     if (success)
                     {
                         HideClickPieceAt(checkpointTime);
+                        JudgmentFx.Show(JudgmentType.Perfect, new Vector3(pathPosition.x, pathPosition.y, judgePlaneZ), 0.7f);
                     }
                     else
                     {
                         holdDimmed = true;
-                        Vector3 pathPosition = GetPathPosition(checkpointTime);
-                        MissPopup.Show(new Vector3(pathPosition.x, pathPosition.y, judgePlaneZ));
+                        JudgmentFx.Show(JudgmentType.Miss, new Vector3(pathPosition.x, pathPosition.y, judgePlaneZ), 0.7f);
                     }
                     nextCheckpointIndex++;
                     continue;
@@ -212,6 +214,9 @@ namespace MusicGame.Notes
             ScoreManager.Instance.RegisterJudgment(HeadCategory, headJudgment);
             // The hold's success SFX plays the moment the head is caught.
             ShowJudgmentEffect(headJudgment);
+            // Round notes use a smaller popup so dense charts don't flood the view.
+            JudgmentFx.Show(headJudgment, new Vector3(Data.x, Data.y, judgePlaneZ),
+                Data.isRoundNote ? 0.55f : 1f);
         }
 
         protected override void CheckMiss()
@@ -301,6 +306,8 @@ private void TryHitTailSlide()
                     piece.Shape = "round";
                     piece.HitTime = Mathf.Lerp(start.HitTime, end.HitTime, normalized);
                     piece.HitPosition = Vector3.Lerp(start.Position, end.Position, normalized);
+                    // Reset pooled renderer color — see ConfigurePiece.
+                    piece.Renderer.color = Color.white;
                     piece.Renderer.sortingOrder = 2;
                     piece.Renderer.gameObject.name = $"Hold_VisualRound_{fillIndex:000}";
                     piece.Renderer.gameObject.SetActive(true);
@@ -392,6 +399,9 @@ private void TryHitTailSlide()
             piece.Shape = shape;
             piece.HitTime = hitTime;
             piece.HitPosition = hitPosition;
+            // Pieces are pooled with the note: a previous life may have grayed this
+            // renderer out (miss dim), so the color must be reset on every build.
+            piece.Renderer.color = Color.white;
             piece.Renderer.sortingOrder = shape == "click" ? 4 : shape == "slide" ? 3 : 2;
             piece.Renderer.gameObject.name = $"Hold_{shape}_{index:00}";
             piece.Renderer.gameObject.SetActive(true);
@@ -728,6 +738,7 @@ private void TryHitTailSlide()
 
             tailJudged = true;
             ScoreManager.Instance.RegisterJudgment(NoteCategory.Flick, judgment);
+            Vector3 endPosition = Data.EndPosition;
             if (judgment != JudgmentType.Miss)
             {
                 MusicGame.Audio.AudioManager.Instance?.PlaySFX("cuesheet0", "");
@@ -735,9 +746,8 @@ private void TryHitTailSlide()
             else
             {
                 holdDimmed = true;
-                Vector3 endPosition = Data.EndPosition;
-                MissPopup.Show(new Vector3(endPosition.x, endPosition.y, judgePlaneZ));
             }
+            JudgmentFx.Show(judgment, new Vector3(endPosition.x, endPosition.y, judgePlaneZ));
         }
 
         private void TryFinishJudgment()

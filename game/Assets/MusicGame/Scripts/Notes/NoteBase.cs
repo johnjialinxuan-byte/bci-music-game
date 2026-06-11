@@ -121,6 +121,7 @@ namespace MusicGame.Notes
             IsJudged = true;
             ScoreManager.Instance.RegisterJudgment(NoteCategory.Flick, judgment);
             ShowJudgmentEffect(judgment);
+            JudgmentFx.Show(judgment, new Vector3(transform.position.x, transform.position.y, judgePlaneZ));
             DestroyNote();
         }
 

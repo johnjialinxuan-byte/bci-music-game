@@ -77,7 +77,7 @@ protected override void Update()
             ScoreManager.Instance.RegisterJudgment(NoteCategory.Flick, JudgmentType.Miss);
             dimmed = true;
             deactivateTime = Time.time + MissLingerSeconds;
-            MissPopup.Show(new Vector3(Data.x, Data.y, judgePlaneZ));
+            JudgmentFx.Show(JudgmentType.Miss, new Vector3(Data.x, Data.y, judgePlaneZ));
         }
 
 

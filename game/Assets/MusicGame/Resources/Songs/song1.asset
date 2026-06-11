@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
   songId: song1
   title: A Forever Friend
-  artist: "\u66f2\u5e08\uff1a\u672a\u77e5 \u8c31\u5e08\uff1axyxuanying"
+  artist: "\u66f2\u5e08\uff1a\u4e4c\u9e26Producer \u8c31\u5e08\uff1axyxuanying"
   bpm: 120
   previewStartTime: 8
-  coverImage: {fileID: -4192270184812131355, guid: 20220909781514aae9dea3b6c1846168, type: 3}
+  coverImage: {fileID: -991908934680191878, guid: e6dc11c1919ea4efd9222a7b34967e07, type: 3}
   cueSheetName: song1
   cueName: A Forever Friend
   easyChartPath: Charts/test_easy

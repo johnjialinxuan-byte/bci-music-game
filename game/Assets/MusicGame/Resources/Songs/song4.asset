@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.Core.SongData
   songId: song4
   title: Lost in the Phantom Night
-  artist: "\u66f2\u5e08\uff1a\u672a\u77e5 \u8c31\u5e08\uff1axyxuanying"
+  artist: "\u66f2\u5e08\uff1a\u4e4c\u9e26Producer \u8c31\u5e08\uff1axyxuanying"
   bpm: 120
   previewStartTime: 8
-  coverImage: {fileID: -4192270184812131355, guid: 20220909781514aae9dea3b6c1846168, type: 3}
+  coverImage: {fileID: -2239405923545448307, guid: 6fabed230cc40401c869b3af7d0a00f3, type: 3}
   cueSheetName: song4
   cueName: Lost in the Phantom Night(1)
   easyChartPath: Charts/test_easy
