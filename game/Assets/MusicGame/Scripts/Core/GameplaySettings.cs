@@ -9,9 +9,10 @@ namespace MusicGame.Core
         private const string NormalAttentionKey = "Gameplay.Attention.Normal";
         private const string HardAttentionKey = "Gameplay.Attention.Hard";
         private const string FlickPerfectKey = "Gameplay.Flick.PerfectMs";
-        
+        private const string FlickGreatKey = "Gameplay.Flick.GreatMs";
         private const string AttentionDefaultsVersionKey = "Gameplay.Attention.DefaultsVersion";
-private const string FlickGreatKey = "Gameplay.Flick.GreatMs";
+        private const string ChartDelayKey = "Gameplay.Chart.DelayMs";
+        private const string ChartSpeedTenthsKey = "Gameplay.Chart.SpeedTenths";
 
         public static int EasyAttention
         {
@@ -48,6 +49,27 @@ private const string FlickGreatKey = "Gameplay.Flick.GreatMs";
         public static float FlickPerfectWindow => FlickPerfectMs / 1000f;
         public static float FlickGreatWindow => FlickGreatMs / 1000f;
 
+        public static int ChartDelayMs
+        {
+            get => Mathf.Clamp(PlayerPrefs.GetInt(ChartDelayKey, 0), -400, 400);
+            set
+            {
+                PlayerPrefs.SetInt(ChartDelayKey, Mathf.Clamp(value, -400, 400));
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static float ChartSpeed
+        {
+            get => Mathf.Clamp(PlayerPrefs.GetInt(ChartSpeedTenthsKey, 20) / 10f, 1f, 5f);
+            set
+            {
+                int tenths = Mathf.Clamp(Mathf.RoundToInt(value * 10f), 10, 50);
+                PlayerPrefs.SetInt(ChartSpeedTenthsKey, tenths);
+                PlayerPrefs.Save();
+            }
+        }
+
         public static int GetAttentionThreshold(Difficulty difficulty)
         {
             return difficulty switch
@@ -73,9 +95,8 @@ private const string FlickGreatKey = "Gameplay.Flick.GreatMs";
         {
             return Mathf.Clamp(Mathf.RoundToInt(value / (float)Step) * Step, min, max);
         }
-    
 
-public static void InitializeAttentionDefaults()
+        public static void InitializeAttentionDefaults()
         {
             if (PlayerPrefs.GetInt(AttentionDefaultsVersionKey, 0) >= 1) return;
 
@@ -96,5 +117,5 @@ public static void InitializeAttentionDefaults()
             PlayerPrefs.SetInt(AttentionDefaultsVersionKey, 1);
             PlayerPrefs.Save();
         }
-}
+    }
 }

@@ -103,7 +103,7 @@ private void BuildTuningPanel()
             contentRect.anchorMax = new Vector2(0.5f, 1f);
             contentRect.pivot = new Vector2(0.5f, 1f);
             contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = new Vector2(890f, 760f);
+            contentRect.sizeDelta = new Vector2(890f, 1060f);
 
             ScrollRect scrollRect = panel.GetComponent<ScrollRect>();
             scrollRect.viewport = viewportRect;
@@ -120,19 +120,23 @@ private void BuildTuningPanel()
             contentRect.anchoredPosition = Vector2.zero;
             StartCoroutine(ResetScrollPositionNextFrame(scrollRect));
 
+            CreateSectionFrame(content.transform, new Vector2(0f, -112f), new Vector2(860f, 220f));
+            CreateHeader(content.transform, "谱面设置", -34f);
+            CreateStepperRow(content.transform, "谱面延迟", GameplaySettings.ChartDelayMs, -400, 400, " ms", value => GameplaySettings.ChartDelayMs = value, -92f, 1);
+            CreateFloatStepperRow(content.transform, "谱面流速", GameplaySettings.ChartSpeed, 1f, 5f, 0.1f, string.Empty, value => GameplaySettings.ChartSpeed = value, -158f);
 
-            CreateSectionFrame(content.transform, new Vector2(0f, -126f), new Vector2(860f, 250f));
-            CreateHeader(content.transform, "\u6ce8\u610f\u529b\u9608\u503c", -30f);
-            CreateStepperRow(content.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, -88f);
-            CreateStepperRow(content.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, -154f);
-            CreateStepperRow(content.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, -220f);
+            CreateSectionFrame(content.transform, new Vector2(0f, -376f), new Vector2(860f, 250f));
+            CreateHeader(content.transform, "注意力阈值", -280f);
+            CreateStepperRow(content.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, -338f);
+            CreateStepperRow(content.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, -404f);
+            CreateStepperRow(content.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, -470f);
 
-            CreateSectionFrame(content.transform, new Vector2(0f, -350f), new Vector2(860f, 180f));
-            CreateHeader(content.transform, "Flick \u5224\u5b9a\u8303\u56f4", -288f);
-            CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -344f);
-            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 500, " ms", value => GameplaySettings.FlickGreatMs = value, -410f);
+            CreateSectionFrame(content.transform, new Vector2(0f, -600f), new Vector2(860f, 180f));
+            CreateHeader(content.transform, "Flick 判定范围", -538f);
+            CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -594f);
+            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 500, " ms", value => GameplaySettings.FlickGreatMs = value, -660f);
 
-            CreateCommunicationSection(content.transform, -585f);
+            CreateCommunicationSection(content.transform, -835f);
         }
 
         private static void CreateHeader(Transform parent, string value, float y)
@@ -146,7 +150,7 @@ private void BuildTuningPanel()
             text.color = Color.white;
         }
 
-        private void CreateStepperRow(Transform parent, string label, int initial, int min, int max, string suffix, Action<int> onChanged, float y)
+private void CreateStepperRow(Transform parent, string label, int initial, int min, int max, string suffix, Action<int> onChanged, float y, int step = (int)Step)
         {
             GameObject row = new GameObject(label + "Row", typeof(RectTransform), typeof(Image));
             row.transform.SetParent(parent, false);
@@ -176,14 +180,14 @@ private void BuildTuningPanel()
             valueText.color = Color.white;
 
             Slider slider = CreateSlider(row.transform, new Vector2(30f, 0f), new Vector2(300f, 38f));
-            slider.minValue = min / Step;
-            slider.maxValue = max / Step;
+            slider.minValue = min / (float)step;
+            slider.maxValue = max / (float)step;
             slider.wholeNumbers = true;
-            slider.SetValueWithoutNotify(initial / Step);
+            slider.SetValueWithoutNotify(initial / (float)step);
 
             Action update = () =>
             {
-                int snapped = Mathf.RoundToInt(slider.value * Step);
+                int snapped = Mathf.RoundToInt(slider.value * step);
                 valueText.text = snapped + suffix;
                 onChanged(snapped);
             };
@@ -194,7 +198,57 @@ private void BuildTuningPanel()
             update();
         }
 
-        private static Button CreateSmallButton(Transform parent, string label, Vector2 position)
+private void CreateFloatStepperRow(Transform parent, string label, float initial, float min, float max, float step, string suffix, Action<float> onChanged, float y)
+        {
+            GameObject row = new GameObject(label + "Row", typeof(RectTransform), typeof(Image));
+            row.transform.SetParent(parent, false);
+
+            RectTransform rowRect = row.GetComponent<RectTransform>();
+            SetTopAnchor(rowRect);
+            rowRect.anchoredPosition = new Vector2(0f, y);
+            rowRect.sizeDelta = new Vector2(820f, 64f);
+
+            Image rowImage = row.GetComponent<Image>();
+            rowImage.sprite = PillButtonStyle.GetSprite();
+            rowImage.type = Image.Type.Sliced;
+            rowImage.color = new Color(0.02f, 0.08f, 0.12f, 0.78f);
+
+            Text name = CreateText(row.transform, label, 20, TextAnchor.MiddleLeft);
+            SetRect(name.rectTransform, new Vector2(-320f, 0f), new Vector2(132f, 60f));
+
+            SongItemHoverEffect effect = row.AddComponent<SongItemHoverEffect>();
+            effect.SetLabel(name);
+            effect.SetHoverScale(1.06f);
+
+            Button minus = CreateSmallButton(row.transform, "-", new Vector2(-178f, 0f));
+            Button plus = CreateSmallButton(row.transform, "+", new Vector2(318f, 0f));
+
+            Text valueText = CreateText(row.transform, string.Empty, 19, TextAnchor.MiddleCenter);
+            SetRect(valueText.rectTransform, new Vector2(224f, 0f), new Vector2(112f, 60f));
+            valueText.color = Color.white;
+
+            Slider slider = CreateSlider(row.transform, new Vector2(30f, 0f), new Vector2(300f, 38f));
+            slider.minValue = min / step;
+            slider.maxValue = max / step;
+            slider.wholeNumbers = true;
+            slider.SetValueWithoutNotify(initial / step);
+
+            Action update = () =>
+            {
+                float snapped = Mathf.Round(slider.value) * step;
+                snapped = Mathf.Clamp(snapped, min, max);
+                valueText.text = snapped.ToString("0.0") + suffix;
+                onChanged(snapped);
+            };
+
+            slider.onValueChanged.AddListener(_ => update());
+            minus.onClick.AddListener(() => slider.value -= 1f);
+            plus.onClick.AddListener(() => slider.value += 1f);
+            update();
+        }
+
+
+private static Button CreateSmallButton(Transform parent, string label, Vector2 position)
         {
             GameObject obj = new GameObject(label == "+" ? "Plus" : "Minus", typeof(RectTransform), typeof(Image), typeof(Button));
             obj.transform.SetParent(parent, false);
@@ -202,11 +256,14 @@ private void BuildTuningPanel()
 
             Button button = obj.GetComponent<Button>();
             PosterUIStyle.ApplyPosterButton(button, label == "+" ? PosterUIStyle.Blue : PosterUIStyle.Ink, false);
+            button.transition = Selectable.Transition.None;
 
             Text text = PillButtonStyle.CreateLabel(obj.transform, label, 26);
+            text.color = Color.white;
             SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
             hover.SetLabel(text);
             hover.SetHoverScale(1.06f);
+            hover.SetColorChangeEnabled(false);
 
             obj.AddComponent<ButtonSFX>();
             return button;

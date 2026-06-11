@@ -93,6 +93,7 @@ namespace MusicGame.Managers
                     return null;
                 }
 
+                ApplyGameplaySettings(chart);
                 chart.notes.Sort((left, right) => left.time.CompareTo(right.time));
                 Debug.Log($"[ChartManager] Loaded JSON chart '{sourceName}' with {chart.notes.Count} notes.");
                 return chart;
@@ -101,6 +102,21 @@ namespace MusicGame.Managers
             {
                 Debug.LogError($"[ChartManager] Failed to parse chart JSON '{sourceName}': {exception.Message}");
                 return null;
+            }
+        }
+
+        private static void ApplyGameplaySettings(ChartData chart)
+        {
+            if (chart == null || chart.notes == null) return;
+
+            float delaySeconds = GameplaySettings.ChartDelayMs / 1000f;
+            float speedScale = 2f / Mathf.Max(0.1f, GameplaySettings.ChartSpeed);
+            foreach (NoteData note in chart.notes)
+            {
+                if (note == null) continue;
+
+                note.time = Mathf.Max(0f, note.time + delaySeconds);
+                note.approachTime = Mathf.Max(0.05f, note.approachTime * speedScale);
             }
         }
 
@@ -241,6 +257,7 @@ namespace MusicGame.Managers
                 return null;
             }
 
+            ApplyGameplaySettings(chart);
             chart.notes.Sort((left, right) => left.time.CompareTo(right.time));
             return chart;
         }
