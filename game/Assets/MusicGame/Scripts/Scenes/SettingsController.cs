@@ -40,27 +40,32 @@ private void InitializeSettings()
         }
 
 
-        private void ConfigureTitle()
+private void ConfigureTitle()
         {
             Text title = GameObject.Find("Title")?.GetComponent<Text>();
             if (title == null) return;
 
+            title.enabled = true;
             title.text = "\u8bbe\u7f6e";
             title.fontSize = 42;
             title.fontStyle = FontStyle.Bold;
             title.alignment = TextAnchor.MiddleLeft;
             title.color = Color.white;
+            title.horizontalOverflow = HorizontalWrapMode.Overflow;
+            title.verticalOverflow = VerticalWrapMode.Overflow;
             title.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             title.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             title.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            title.rectTransform.sizeDelta = new Vector2(460f, 64f);
-            title.rectTransform.anchoredPosition = new Vector2(-230f, 394f);
+            title.rectTransform.sizeDelta = new Vector2(420f, 70f);
+            title.rectTransform.anchoredPosition = new Vector2(-360f, 394f);
 
             Outline outline = title.GetComponent<Outline>();
             if (outline != null)
                 outline.enabled = false;
 
-            MusicGame.UI.TextArt.ReplaceWithSprite(title, "Images/Titles/title_settings");
+            Transform art = title.transform.parent != null ? title.transform.parent.Find("TitleArt_" + title.name) : null;
+            if (art != null)
+                Destroy(art.gameObject);
         }
 
         private void EnsureSongSelectBackground()
@@ -461,7 +466,7 @@ private static InputField CreateIpInput(Transform parent, Vector2 position, Vect
             SetStretch(text.rectTransform, new Vector2(16f, 4f), new Vector2(-16f, -4f));
             text.color = Color.white;
 
-            Text placeholder = CreateText(obj.transform, CommunicationSettings.DefaultRemoteIp, 20, TextAnchor.MiddleLeft);
+            Text placeholder = CreateText(obj.transform, CommunicationSettings.DeviceIpv4Default, 20, TextAnchor.MiddleLeft);
             SetStretch(placeholder.rectTransform, new Vector2(16f, 4f), new Vector2(-16f, -4f));
             placeholder.color = new Color(1f, 1f, 1f, 0.42f);
 
@@ -565,7 +570,13 @@ private void CreateCommunicationSection(Transform parent, float centerY)
             remoteButton.onClick.AddListener(() =>
             {
                 CommunicationSettings.Mode = CommunicationMode.Remote;
-                CommunicationSettings.RemoteIp = ipInput.text;
+                string currentText = ipInput.text != null ? ipInput.text.Trim() : string.Empty;
+                if (string.IsNullOrWhiteSpace(currentText) || currentText == CommunicationSettings.DefaultRemoteIp)
+                {
+                    currentText = CommunicationSettings.DeviceIpv4Default;
+                    ipInput.SetTextWithoutNotify(currentText);
+                }
+                CommunicationSettings.RemoteIp = currentText;
                 refresh();
             });
             refresh();

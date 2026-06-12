@@ -324,14 +324,16 @@ private void SelectSong(SongData song)
             UpdateCoverFrameColor(difficulty);
         }
 
-        private void OnConfirmClicked()
+private void OnConfirmClicked()
         {
             if (selectedSong == null || isStartingGameplay || GameStateManager.Instance == null) return;
 
             isStartingGameplay = true;
             Audio.AudioManager.Instance?.StopPreviewImmediate();
-            // Right-to-left expand-to-fullscreen wipe, then it loads Gameplay itself.
-            UI.ScreenWipe.Play(GameScene.Gameplay, new Color(0.224f, 0.773f, 0.733f, 1f));
+
+            Color wipeColor = new Color(confirmButtonColor.r * 0.5f, confirmButtonColor.g * 0.5f, confirmButtonColor.b * 0.5f, 1f);
+            RectTransform sourceRect = confirmButton != null ? confirmButton.GetComponent<RectTransform>() : null;
+            UI.ScreenWipe.PlayFrom(GameScene.Gameplay, wipeColor, sourceRect);
         }
 
         private void EnsureConfirmButton()
@@ -374,9 +376,38 @@ private void ConfigureDifficultyButtons()
             ConfigurePillButton(normalButton, normalButtonColor, new Vector2(centerX + DifficultyButtonWidth * 0.5f, rowY), new Vector2(DifficultyButtonWidth, DifficultyButtonHeight));
             ConfigurePillButton(hardButton, hardButtonColor, new Vector2(centerX + step + DifficultyButtonWidth * 0.5f, rowY), new Vector2(DifficultyButtonWidth, DifficultyButtonHeight));
             ConfigurePillButton(confirmButton, confirmButtonColor, new Vector2(770f, rowY), new Vector2(ConfirmButtonSize, ConfirmButtonSize));
+
+            LockButtonBackgroundAlpha(easyButton, 0.68f);
+            LockButtonBackgroundAlpha(normalButton, 0.68f);
+            LockButtonBackgroundAlpha(hardButton, 0.68f);
+            EnsureButtonWashOverlay(easyButton, new Vector2(9f, 9f), 0.50f);
+            EnsureButtonWashOverlay(normalButton, new Vector2(9f, 9f), 0.50f);
+            EnsureButtonWashOverlay(hardButton, new Vector2(9f, 9f), 0.50f);
+
         }
 
-private void ConfigurePillButton(Button button, Color color, Vector2 rightAnchoredPosition, Vector2 size)
+private static void LockButtonBackgroundAlpha(Button button, float alpha)
+        {
+            if (button == null) return;
+
+            Image image = button.GetComponent<Image>();
+            if (image == null) return;
+
+            Color color = image.color;
+            color.a = alpha;
+            image.color = color;
+
+            ColorBlock colors = button.colors;
+            colors.normalColor = color;
+            colors.highlightedColor = color;
+            colors.pressedColor = color;
+            colors.selectedColor = color;
+            colors.disabledColor = new Color(color.r, color.g, color.b, alpha * 0.45f);
+            button.colors = colors;
+            button.transition = Selectable.Transition.None;
+        }
+
+        private void ConfigurePillButton(Button button, Color color, Vector2 rightAnchoredPosition, Vector2 size)
         {
             ConfigureRectButton(button, color, true);
 
@@ -403,6 +434,7 @@ private void ConfigureRectButton(Button button, Color color, bool filled)
 
             image.sprite = GetRectButtonSprite();
             image.type = Image.Type.Sliced;
+            image.preserveAspect = false;
             image.color = filled ? color : new Color(0.02f, 0.08f, 0.12f, 0.74f);
             button.targetGraphic = image;
 
@@ -419,9 +451,19 @@ private void ConfigureRectButton(Button button, Color color, bool filled)
             Text label = button.GetComponentInChildren<Text>(true);
             if (label != null)
             {
+                label.enabled = true;
                 label.fontStyle = FontStyle.Bold;
                 label.color = Color.white;
                 label.alignment = TextAnchor.MiddleCenter;
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
+
+                RectTransform labelRect = label.rectTransform;
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.pivot = new Vector2(0.5f, 0.5f);
+                labelRect.offsetMin = Vector2.zero;
+                labelRect.offsetMax = Vector2.zero;
             }
 
             SongItemHoverEffect hoverEffect = button.GetComponent<SongItemHoverEffect>();
@@ -496,7 +538,7 @@ private Sprite GetRectButtonSprite()
                 for (int x = 0; x < width; x++)
                 {
                     bool edge = x < border || x >= width - border || y < border || y >= height - border;
-                    pixels[y * width + x] = edge ? Color.white : new Color(1f, 1f, 1f, 0.30f);
+                    pixels[y * width + x] = Color.white;
                 }
             }
 
@@ -515,28 +557,23 @@ private Sprite GetRectButtonSprite()
         }
 
 
-        private void StyleButtons()
+private void StyleButtons()
         {
-            ApplyButtonArt(easyButton, "Images/Buttons/btn_easy", false);
-            ApplyButtonArt(normalButton, "Images/Buttons/btn_normal", false);
-            ApplyButtonArt(hardButton, "Images/Buttons/btn_hard", false);
-            // Confirm is a vertical bar pinned to the right edge (see method).
+            ConfigureDifficultyButtons();
             ConfigureConfirmBar();
+            RegisterConfirmButtonParallax();
         }
 
         // The confirm "button" becomes a translucent vertical bar on the right
         // edge — below the top band, above the bottom, inset on both ends — with
         // a stacked "确定" label and a play arrow. Clicking it runs the screen wipe.
-        private void ConfigureConfirmBar()
+private void ConfigureConfirmBar()
         {
-            // Self-sufficient: create the button if it was never wired/created,
-            // so the bar always appears regardless of EnsureConfirmButton timing.
             if (confirmButton == null)
                 EnsureConfirmButton();
             if (confirmButton == null)
                 return;
 
-            // The confirm button must be hooked to the wipe even if it was just made.
             confirmButton.onClick.RemoveListener(OnConfirmClicked);
             confirmButton.onClick.AddListener(OnConfirmClicked);
             if (confirmButton.GetComponent<ButtonSFX>() == null)
@@ -546,32 +583,33 @@ private Sprite GetRectButtonSprite()
             rect.anchorMin = new Vector2(1f, 0f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(1f, 0.5f);
-            // width 112 (kept same as before); inset from right, below band, above floor.
             rect.offsetMin = new Vector2(-136f, 40f);
             rect.offsetMax = new Vector2(-24f, -150f);
 
             Image image = confirmButton.GetComponent<Image>();
             if (image == null)
                 image = confirmButton.gameObject.AddComponent<Image>();
-            image.sprite = null;
-            image.color = new Color(0.224f, 0.773f, 0.733f, 0.55f); // translucent teal
+            image.sprite = GetRectButtonSprite();
+            image.type = Image.Type.Sliced;
+            image.preserveAspect = false;
+            image.color = new Color(confirmButtonColor.r, confirmButtonColor.g, confirmButtonColor.b, 0.68f);
             confirmButton.targetGraphic = image;
 
             ColorBlock colors = confirmButton.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
-            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
-            colors.selectedColor = Color.white;
-            colors.disabledColor = new Color(1f, 1f, 1f, 0.4f);
+            colors.normalColor = image.color;
+            colors.highlightedColor = image.color;
+            colors.pressedColor = image.color;
+            colors.selectedColor = image.color;
+            colors.disabledColor = new Color(image.color.r, image.color.g, image.color.b, 0.32f);
+            colors.fadeDuration = 0.08f;
             confirmButton.colors = colors;
-            confirmButton.transition = Selectable.Transition.ColorTint;
+            confirmButton.transition = Selectable.Transition.None;
 
-            // Vertical "确定" + arrow, rendered by Unity (CJK-safe).
             Text label = confirmButton.GetComponentInChildren<Text>(true);
             if (label != null)
             {
                 label.enabled = true;
-                label.text = "确\n定\n\n▶";
+                label.text = "\u786e\n\u5b9a\n\n\u25b6";
                 label.color = Color.white;
                 label.fontStyle = FontStyle.Bold;
                 label.fontSize = 40;
@@ -579,20 +617,25 @@ private Sprite GetRectButtonSprite()
                 label.alignment = TextAnchor.MiddleCenter;
                 label.horizontalOverflow = HorizontalWrapMode.Overflow;
                 label.verticalOverflow = VerticalWrapMode.Overflow;
-                RectTransform lr = label.rectTransform;
-                lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
-                lr.offsetMin = Vector2.zero; lr.offsetMax = Vector2.zero;
+
+                RectTransform labelRect = label.rectTransform;
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.pivot = new Vector2(0.5f, 0.5f);
+                labelRect.offsetMin = Vector2.zero;
+                labelRect.offsetMax = Vector2.zero;
             }
 
+            EnsureButtonWashOverlay(confirmButton, new Vector2(9f, 9f), 0.50f);
+
             SongItemHoverEffect hover = confirmButton.GetComponent<SongItemHoverEffect>();
-            if (hover != null)
-            {
-                hover.SetGraphic(null);
-                hover.SetBackgroundGraphic(image);
-                hover.SetScaleTargets(false, true);
-                hover.SetColorChangeEnabled(false);
-                hover.SetHoverScale(1.05f);
-            }
+            if (hover == null)
+                hover = confirmButton.gameObject.AddComponent<SongItemHoverEffect>();
+            hover.SetGraphic(null);
+            hover.SetBackgroundGraphic(image);
+            hover.SetScaleTargets(false, true);
+            hover.SetColorChangeEnabled(false);
+            hover.SetHoverScale(1.05f);
         }
 
         // Swaps a button's procedural sliced fill for a flat pre-rendered art tile.
@@ -832,6 +875,22 @@ private void ConfigureParallax()
             parallax.ResetBaseTransforms();
         }
 
+private void RegisterConfirmButtonParallax()
+        {
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null && confirmButton != null)
+                canvas = confirmButton.GetComponentInParent<Canvas>();
+            if (canvas == null || confirmButton == null) return;
+
+            SongSelectParallax parallax = canvas.GetComponent<SongSelectParallax>();
+            if (parallax == null)
+                parallax = canvas.gameObject.AddComponent<SongSelectParallax>();
+
+            RegisterParallaxTarget(parallax, confirmButton.transform, new Vector2(5f, 3f));
+            parallax.ResetBaseTransforms();
+        }
+
+
         private static void RegisterParallaxTarget(SongSelectParallax parallax, Transform target, Vector2 motion, bool tilt = false, float tiltDegrees = 0f)
         {
             if (parallax == null || target == null) return;
@@ -910,6 +969,34 @@ private RectTransform EnsureCoverViewport(float size)
             rect.anchoredPosition = Vector2.zero;
             rect.sizeDelta = new Vector2(size, size);
             return rect;
+        }
+
+
+private void EnsureButtonWashOverlay(Button button, Vector2 inset, float alpha)
+        {
+            if (button == null) return;
+
+            Transform existing = button.transform.Find("WashOverlay");
+            GameObject overlayObject = existing != null ? existing.gameObject : new GameObject("WashOverlay", typeof(RectTransform), typeof(Image));
+            overlayObject.transform.SetParent(button.transform, false);
+
+            RectTransform rect = overlayObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = inset;
+            rect.offsetMax = -inset;
+
+            Image image = overlayObject.GetComponent<Image>();
+            image.sprite = GetRectButtonSprite();
+            image.type = Image.Type.Sliced;
+            image.preserveAspect = false;
+            image.color = new Color(0f, 0f, 0f, alpha);
+            image.raycastTarget = false;
+
+            Text label = button.GetComponentInChildren<Text>(true);
+            if (label != null)
+                label.transform.SetAsLastSibling();
         }
 }
 }

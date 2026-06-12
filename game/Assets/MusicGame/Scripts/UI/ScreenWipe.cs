@@ -13,84 +13,162 @@ namespace MusicGame.UI
     /// </summary>
     public sealed class ScreenWipe : MonoBehaviour
     {
-        public static void Play(GameScene target, Color color)
+public static void Play(GameScene target, Color color)
+        {
+            PlayFrom(target, color, null);
+        }
+
+public static void PlayFrom(GameScene target, Color color, RectTransform source)
         {
             GameObject go = new GameObject("ScreenWipe");
             DontDestroyOnLoad(go);
             ScreenWipe wipe = go.AddComponent<ScreenWipe>();
-            wipe.Begin(target, color);
+            wipe.Begin(target, color, source);
         }
+
 
         private const float ExpandDuration = 0.38f;
         private const float HoldDuration = 0.10f;
-        private const float FadeDuration = 0.30f;
+        private const float RevealDuration = 0.58f;
 
         private RectTransform panel;
         private Image image;
 
-        private void Begin(GameScene target, Color color)
+private void Begin(GameScene target, Color color, RectTransform source)
         {
             var canvasObject = new GameObject("WipeCanvas", typeof(Canvas));
             canvasObject.transform.SetParent(transform, false);
             var canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 32767; // above everything
+            canvas.sortingOrder = 32767;
 
             var panelObject = new GameObject("WipePanel", typeof(Image));
             panelObject.transform.SetParent(canvasObject.transform, false);
             image = panelObject.GetComponent<Image>();
             image.color = color;
-            image.raycastTarget = true; // block input during the transition
+            image.raycastTarget = true;
 
             panel = image.rectTransform;
-            // Anchored to the right edge, full height; width grows toward the left.
-            panel.anchorMin = new Vector2(1f, 0f);
-            panel.anchorMax = new Vector2(1f, 1f);
-            panel.pivot = new Vector2(1f, 0.5f);
-            panel.offsetMin = new Vector2(0f, 0f);
-            panel.offsetMax = new Vector2(0f, 0f);
-            panel.sizeDelta = new Vector2(0f, 0f);
+            panel.anchorMin = Vector2.zero;
+            panel.anchorMax = Vector2.zero;
+            panel.pivot = Vector2.zero;
 
-            StartCoroutine(Run(target));
+            Rect startRect = GetStartRect(source);
+            SetPanelRect(startRect.xMin, startRect.xMax, startRect.yMin, startRect.yMax);
+
+            StartCoroutine(Run(target, startRect));
         }
 
-        private IEnumerator Run(GameScene target)
+private IEnumerator Run(GameScene target, Rect startRect)
         {
-            float screenWidth = Screen.width;
+            float screenWidth = Mathf.Max(1f, Screen.width);
+            float screenHeight = Mathf.Max(1f, Screen.height);
 
-            // 1. Expand right -> left to full cover.
+            float firstLeft = Mathf.Clamp(startRect.xMin, 0f, screenWidth);
+            float firstStartRight = Mathf.Clamp(startRect.xMax, firstLeft, screenWidth);
+            float firstStartBottom = Mathf.Clamp(startRect.yMin, 0f, screenHeight);
+            float firstStartTop = Mathf.Clamp(startRect.yMax, firstStartBottom, screenHeight);
+
             float t = 0f;
             while (t < ExpandDuration)
             {
                 t += Time.unscaledDeltaTime;
                 float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / ExpandDuration));
-                panel.sizeDelta = new Vector2(screenWidth * k, 0f);
+                SetPanelRect(
+                    firstLeft,
+                    Mathf.Lerp(firstStartRight, screenWidth, k),
+                    Mathf.Lerp(firstStartBottom, 0f, k),
+                    Mathf.Lerp(firstStartTop, screenHeight, k));
                 yield return null;
             }
-            panel.sizeDelta = new Vector2(screenWidth, 0f);
+            SetPanelRect(firstLeft, screenWidth, 0f, screenHeight);
 
-            // 2. Fully covered -> load the next scene behind the panel.
+            t = 0f;
+            while (t < ExpandDuration)
+            {
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / ExpandDuration));
+                SetPanelRect(Mathf.Lerp(firstLeft, 0f, k), screenWidth, 0f, screenHeight);
+                yield return null;
+            }
+            SetPanelRect(0f, screenWidth, 0f, screenHeight);
+
             yield return new WaitForSecondsRealtime(HoldDuration);
             if (GameStateManager.Instance != null)
                 GameStateManager.Instance.ChangeScene(target);
 
-            // Let the new scene build a frame before revealing it.
-            yield return null;
-            yield return null;
+            yield return WaitForSceneVisualsReady(target);
 
-            // 3. Fade the cover out over the new scene, then clean up.
-            float f = 0f;
-            Color start = image.color;
-            while (f < FadeDuration)
+            t = 0f;
+            while (t < RevealDuration)
             {
-                f += Time.unscaledDeltaTime;
-                Color c = start;
-                c.a = Mathf.Lerp(start.a, 0f, Mathf.Clamp01(f / FadeDuration));
-                image.color = c;
+                t += Time.unscaledDeltaTime;
+                float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / RevealDuration));
+                SetPanelRect(Mathf.Lerp(0f, -screenWidth, k), Mathf.Lerp(screenWidth, 0f, k), 0f, screenHeight);
                 yield return null;
             }
 
             Destroy(gameObject);
         }
-    }
+
+private static Rect GetStartRect(RectTransform source)
+        {
+            if (source == null)
+                return new Rect(Screen.width, 0f, 0f, Screen.height);
+
+            Vector3[] corners = new Vector3[4];
+            source.GetWorldCorners(corners);
+            float minX = float.MaxValue;
+            float minY = float.MaxValue;
+            float maxX = float.MinValue;
+            float maxY = float.MinValue;
+
+            Camera camera = null;
+            Canvas canvas = source.GetComponentInParent<Canvas>();
+            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                camera = canvas.worldCamera;
+
+            for (int i = 0; i < corners.Length; i++)
+            {
+                Vector2 screen = RectTransformUtility.WorldToScreenPoint(camera, corners[i]);
+                minX = Mathf.Min(minX, screen.x);
+                minY = Mathf.Min(minY, screen.y);
+                maxX = Mathf.Max(maxX, screen.x);
+                maxY = Mathf.Max(maxY, screen.y);
+            }
+
+            minX = Mathf.Clamp(minX, 0f, Screen.width);
+            maxX = Mathf.Clamp(maxX, minX, Screen.width);
+            minY = Mathf.Clamp(minY, 0f, Screen.height);
+            maxY = Mathf.Clamp(maxY, minY, Screen.height);
+            return Rect.MinMaxRect(minX, minY, maxX, maxY);
+        }
+
+        private void SetPanelRect(float left, float right, float bottom, float top)
+        {
+            panel.anchoredPosition = new Vector2(left, bottom);
+            panel.sizeDelta = new Vector2(Mathf.Max(0f, right - left), Mathf.Max(0f, top - bottom));
+        }
+
+    
+
+private static IEnumerator WaitForSceneVisualsReady(GameScene target)
+        {
+            if (target != GameScene.Gameplay)
+            {
+                yield return null;
+                yield break;
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                Canvas.ForceUpdateCanvases();
+                SciFiCurveBackground background = Object.FindAnyObjectByType<SciFiCurveBackground>();
+                if (background != null && background.IsBuilt)
+                    yield break;
+
+                yield return null;
+            }
+        }
+}
 }

@@ -16,7 +16,9 @@ namespace MusicGame.UI
         [SerializeField] private Color secondaryColor = new Color(0.55f, 0.25f, 1f, 0.18f);
         [SerializeField] private bool perspectiveFlow;
 
-        private RectTransform layer;
+        private bool built;
+        
+private RectTransform layer;
         private RectTransform sideBlockLayer;
         private Image[,] segmentImages;
         private RectTransform[,] segmentRects;
@@ -25,9 +27,9 @@ namespace MusicGame.UI
         private const int SideBlockCountPerSide = 18;
         
 
-        private void Start()
+private void Start()
         {
-            BuildCurves();
+            EnsureBuilt();
         }
 
         private void Update()
@@ -54,6 +56,14 @@ namespace MusicGame.UI
 
 private void BuildCurves()
         {
+            Transform oldLayer = transform.Find("SciFiCurveBackground");
+            if (oldLayer != null)
+                Destroy(oldLayer.gameObject);
+
+            Transform oldBlockLayer = transform.Find("PerspectiveSideBlocks");
+            if (oldBlockLayer != null)
+                Destroy(oldBlockLayer.gameObject);
+
             GameObject layerObject = new GameObject("SciFiCurveBackground");
             layerObject.transform.SetParent(transform, false);
             layerObject.transform.SetAsFirstSibling();
@@ -150,6 +160,9 @@ public void Configure(int curves, int segments, float canvasWidth, float canvasH
             perspectiveFlow = false;
             if (sideBlockLayer != null)
                 sideBlockLayer.gameObject.SetActive(false);
+            built = false;
+            EnsureBuilt();
+
         }
 
 public void ConfigurePerspectiveFlow(int curves, int segments, float canvasWidth, float canvasHeight, float waveAmplitude, float strokeWidth, float motionSpeed, Color primary, Color secondary)
@@ -158,6 +171,9 @@ public void ConfigurePerspectiveFlow(int curves, int segments, float canvasWidth
             perspectiveFlow = true;
             if (sideBlockLayer != null)
                 sideBlockLayer.gameObject.SetActive(true);
+            built = false;
+            EnsureBuilt();
+
         }
 
 
@@ -302,6 +318,18 @@ private Vector2 EvaluatePerspectiveStraightPoint(int ray, float t)
             Vector2 near = new Vector2(nearX, nearY);
             Vector2 far = new Vector2(nearX * 0.16f, nearY * 0.16f);
             return Vector2.Lerp(near, far, t);
+        }
+
+
+public bool IsBuilt => built && layer != null && segmentRects != null;
+
+        public void EnsureBuilt()
+        {
+            if (built && layer != null && segmentRects != null)
+                return;
+
+            BuildCurves();
+            built = true;
         }
 }
 }

@@ -21,12 +21,6 @@ namespace MusicGame.Scenes
             SetButtonLabel(aboutButton, "\u5173\u4e8e");
             SetButtonLabel(quitButton, "\u9000\u51fa");
 
-            // Swap the four labels for the pixel-glitch title art (text kept as fallback).
-            ReplaceLabelArt(startButton, "Images/Titles/title_start");
-            ReplaceLabelArt(settingsButton, "Images/Titles/title_settings");
-            ReplaceLabelArt(aboutButton, "Images/Titles/title_about");
-            ReplaceLabelArt(quitButton, "Images/Titles/title_quit");
-
             if (startButton != null)
                 startButton.onClick.AddListener(OnStartClicked);
             if (settingsButton != null)
@@ -97,8 +91,9 @@ private static void StyleMenuButton(Button button, Vector2 position)
             Text label = button.GetComponentInChildren<Text>(true);
             if (label == null) return;
 
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             label.fontSize = 40;
-            label.fontStyle = FontStyle.Bold;
+            label.fontStyle = FontStyle.Normal;
             label.color = Color.white;
             RectTransform labelRect = label.rectTransform;
             labelRect.anchorMin = Vector2.zero;
@@ -107,10 +102,8 @@ private static void StyleMenuButton(Button button, Vector2 position)
             labelRect.offsetMax = Vector2.zero;
 
             Outline outline = label.GetComponent<Outline>();
-            if (outline == null)
-                outline = label.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.05f, 0.78f, 1f, 0.68f);
-            outline.effectDistance = new Vector2(2f, -2f);
+            if (outline != null)
+                outline.enabled = false;
 
             SongItemHoverEffect hoverEffect = button.GetComponent<SongItemHoverEffect>();
             if (hoverEffect == null)
