@@ -206,7 +206,10 @@ namespace MusicGame.Notes
             if (Mathf.Abs(timeDiff) > JudgeManager.Instance.GoodWindow) return;
             if (InputManager.Instance.CurrentHoldValue < Data.threshold) return;
 
-            headJudgment = JudgeManager.Instance.Judge(timeDiff);
+            // Hold elements are binary: reaching here means the head was caught
+            // inside the window with attention over threshold, so it is a Perfect.
+            // (No Good tier for holds — see also checkpoint/tail judgments.)
+            headJudgment = JudgmentType.Perfect;
             headJudged = true;
             headResolved = true;
             segmentSuccess = true;
@@ -235,7 +238,9 @@ private void TryHitTailSlide()
             FlickDirection expectedDirection = GetEffectiveTailFlickDirection(Data.flickDirection);
             if (!InputManager.Instance.TryConsumeFlick(expectedDirection)) return;
 
-            ResolveTailJudgment(JudgeManager.Instance.JudgeFlick(timeDiff));
+            // Binary like the rest of the hold: a correctly-aimed in-window flick
+            // is a Perfect, otherwise it never reaches here (miss handled on timeout).
+            ResolveTailJudgment(JudgmentType.Perfect);
             TryFinishJudgment();
         }
 

@@ -59,6 +59,8 @@ private void InitializeSettings()
             Outline outline = title.GetComponent<Outline>();
             if (outline != null)
                 outline.enabled = false;
+
+            MusicGame.UI.TextArt.ReplaceWithSprite(title, "Images/Titles/title_settings");
         }
 
         private void EnsureSongSelectBackground()

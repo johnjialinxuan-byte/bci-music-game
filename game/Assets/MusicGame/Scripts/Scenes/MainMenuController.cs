@@ -21,6 +21,12 @@ namespace MusicGame.Scenes
             SetButtonLabel(aboutButton, "\u5173\u4e8e");
             SetButtonLabel(quitButton, "\u9000\u51fa");
 
+            // Swap the four labels for the pixel-glitch title art (text kept as fallback).
+            ReplaceLabelArt(startButton, "Images/Titles/title_start");
+            ReplaceLabelArt(settingsButton, "Images/Titles/title_settings");
+            ReplaceLabelArt(aboutButton, "Images/Titles/title_about");
+            ReplaceLabelArt(quitButton, "Images/Titles/title_quit");
+
             if (startButton != null)
                 startButton.onClick.AddListener(OnStartClicked);
             if (settingsButton != null)
@@ -114,6 +120,13 @@ private static void StyleMenuButton(Button button, Vector2 position)
             ButtonSFX sfx = button.GetComponent<ButtonSFX>();
             if (sfx == null)
                 button.gameObject.AddComponent<ButtonSFX>();
+        }
+
+        private static void ReplaceLabelArt(Button button, string resourcePath)
+        {
+            if (button == null) return;
+            Text label = button.GetComponentInChildren<Text>(true);
+            UI.TextArt.ReplaceWithSprite(label, resourcePath);
         }
 
         private static void SetButtonLabel(Button button, string label)

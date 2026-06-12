@@ -97,6 +97,10 @@ namespace MusicGame.Scenes
             if (GameStateManager.Instance != null)
                 UpdateCoverFrameColor(GameStateManager.Instance.SelectedDifficulty);
             LoadSongs();
+
+            // Apply the flat button art + right-edge confirm bar last, so nothing
+            // earlier in Start overwrites them.
+            StyleButtons();
         }
 
         private void LoadSongs()
@@ -254,7 +258,7 @@ private void ConfigureHeaderEffects()
                 if (text.name == "SongSelectTitle")
                 {
                     text.text = "\u9009\u62e9\u97f3\u4e50";
-                    AddGlow(text, 42, new Color(0.05f, 0.95f, 1f, 0.85f));
+                    UI.TextArt.ReplaceWithSprite(text, "Images/Titles/title_songselect");
                 }
                 else if (text.name == "SongListHeader")
                 {
@@ -326,7 +330,8 @@ private void SelectSong(SongData song)
 
             isStartingGameplay = true;
             Audio.AudioManager.Instance?.StopPreviewImmediate();
-            GameStateManager.Instance.ChangeScene(GameScene.Gameplay);
+            // Right-to-left expand-to-fullscreen wipe, then it loads Gameplay itself.
+            UI.ScreenWipe.Play(GameScene.Gameplay, new Color(0.224f, 0.773f, 0.733f, 1f));
         }
 
         private void EnsureConfirmButton()
@@ -510,6 +515,143 @@ private Sprite GetRectButtonSprite()
         }
 
 
+        private void StyleButtons()
+        {
+            ApplyButtonArt(easyButton, "Images/Buttons/btn_easy", false);
+            ApplyButtonArt(normalButton, "Images/Buttons/btn_normal", false);
+            ApplyButtonArt(hardButton, "Images/Buttons/btn_hard", false);
+            // Confirm is a vertical bar pinned to the right edge (see method).
+            ConfigureConfirmBar();
+        }
+
+        // The confirm "button" becomes a translucent vertical bar on the right
+        // edge — below the top band, above the bottom, inset on both ends — with
+        // a stacked "确定" label and a play arrow. Clicking it runs the screen wipe.
+        private void ConfigureConfirmBar()
+        {
+            // Self-sufficient: create the button if it was never wired/created,
+            // so the bar always appears regardless of EnsureConfirmButton timing.
+            if (confirmButton == null)
+                EnsureConfirmButton();
+            if (confirmButton == null)
+                return;
+
+            // The confirm button must be hooked to the wipe even if it was just made.
+            confirmButton.onClick.RemoveListener(OnConfirmClicked);
+            confirmButton.onClick.AddListener(OnConfirmClicked);
+            if (confirmButton.GetComponent<ButtonSFX>() == null)
+                confirmButton.gameObject.AddComponent<ButtonSFX>();
+
+            RectTransform rect = confirmButton.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            // width 112 (kept same as before); inset from right, below band, above floor.
+            rect.offsetMin = new Vector2(-136f, 40f);
+            rect.offsetMax = new Vector2(-24f, -150f);
+
+            Image image = confirmButton.GetComponent<Image>();
+            if (image == null)
+                image = confirmButton.gameObject.AddComponent<Image>();
+            image.sprite = null;
+            image.color = new Color(0.224f, 0.773f, 0.733f, 0.55f); // translucent teal
+            confirmButton.targetGraphic = image;
+
+            ColorBlock colors = confirmButton.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            colors.selectedColor = Color.white;
+            colors.disabledColor = new Color(1f, 1f, 1f, 0.4f);
+            confirmButton.colors = colors;
+            confirmButton.transition = Selectable.Transition.ColorTint;
+
+            // Vertical "确定" + arrow, rendered by Unity (CJK-safe).
+            Text label = confirmButton.GetComponentInChildren<Text>(true);
+            if (label != null)
+            {
+                label.enabled = true;
+                label.text = "确\n定\n\n▶";
+                label.color = Color.white;
+                label.fontStyle = FontStyle.Bold;
+                label.fontSize = 40;
+                label.lineSpacing = 1.1f;
+                label.alignment = TextAnchor.MiddleCenter;
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
+                RectTransform lr = label.rectTransform;
+                lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+                lr.offsetMin = Vector2.zero; lr.offsetMax = Vector2.zero;
+            }
+
+            SongItemHoverEffect hover = confirmButton.GetComponent<SongItemHoverEffect>();
+            if (hover != null)
+            {
+                hover.SetGraphic(null);
+                hover.SetBackgroundGraphic(image);
+                hover.SetScaleTargets(false, true);
+                hover.SetColorChangeEnabled(false);
+                hover.SetHoverScale(1.05f);
+            }
+        }
+
+        // Swaps a button's procedural sliced fill for a flat pre-rendered art tile.
+        // keepLabel=false: latin label is baked into the art, hide the runtime Text.
+        // keepLabel=true: art is text-less, keep the runtime Text (white, centered).
+        private void ApplyButtonArt(Button button, string spriteResourcePath, bool keepLabel)
+        {
+            if (button == null) return;
+
+            Sprite sprite = Resources.Load<Sprite>(spriteResourcePath);
+            if (sprite == null) return;
+
+            Image image = button.GetComponent<Image>();
+            if (image == null)
+                image = button.gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = true;
+            image.color = Color.white;
+            button.targetGraphic = image;
+
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1f, 1f, 1f, 1f);
+            colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+            colors.selectedColor = Color.white;
+            colors.disabledColor = new Color(1f, 1f, 1f, 0.4f);
+            button.colors = colors;
+            button.transition = Selectable.Transition.ColorTint;
+
+            Text label = button.GetComponentInChildren<Text>(true);
+            if (label != null)
+            {
+                if (keepLabel)
+                {
+                    label.enabled = true;
+                    label.color = Color.white;
+                    label.fontStyle = FontStyle.Bold;
+                    label.fontSize = 44;
+                    label.alignment = TextAnchor.MiddleCenter;
+                }
+                else
+                {
+                    label.enabled = false;
+                }
+            }
+
+            // Hover scales the art; only recolor the label when we keep one.
+            SongItemHoverEffect hover = button.GetComponent<SongItemHoverEffect>();
+            if (hover != null)
+            {
+                hover.SetGraphic(keepLabel ? label : null);
+                hover.SetBackgroundGraphic(image);
+                hover.SetScaleTargets(false, true);
+                hover.SetColorChangeEnabled(false);
+                hover.SetHoverScale(1.1f);
+            }
+        }
+
         private void UpdateCoverFrameColor(Difficulty difficulty)
         {
             if (coverFrame == null) return;
@@ -684,7 +826,9 @@ private void ConfigureParallax()
             RegisterParallaxTarget(parallax, easyButton != null ? easyButton.transform : null, new Vector2(5f, 3f));
             RegisterParallaxTarget(parallax, normalButton != null ? normalButton.transform : null, new Vector2(5f, 3f));
             RegisterParallaxTarget(parallax, hardButton != null ? hardButton.transform : null, new Vector2(5f, 3f));
-            RegisterParallaxTarget(parallax, confirmButton != null ? confirmButton.transform : null, new Vector2(5f, 3f));
+            // The confirm bar is edge-anchored and restyled AFTER this runs; the
+            // parallax would keep snapping it back to a stale base position that
+            // is off-screen under the new anchors. Keep it out of the parallax.
             parallax.ResetBaseTransforms();
         }
 

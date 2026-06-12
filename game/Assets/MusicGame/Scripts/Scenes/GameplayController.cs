@@ -331,12 +331,10 @@ if (currentChart == null)
             AudioManager.Instance.BeginLeadIn(3f);
             NoteManager.Instance.StartSpawning();
 
-            for (int i = 3; i > 0; i--)
-            {
-                countdownDisplay = i.ToString();
-                yield return new WaitForSecondsRealtime(1f);
-            }
+            // No 3-2-1 numbers on entry (the screen wipe already covered the swap),
+            // but keep the silent lead-in gap so the opening notes slide in.
             countdownDisplay = "";
+            yield return new WaitForSecondsRealtime(3f);
             isCountingDown = false;
 
             AudioManager.Instance.PlaySong(currentSong);
