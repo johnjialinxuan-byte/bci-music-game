@@ -51,6 +51,7 @@ namespace MusicGame.UI
             text.alignment = TextAnchor.MiddleCenter;
             text.color = Ink;
             text.rectTransform.anchoredPosition = position;
+            UIThemeFont.Apply(text);
 
             Outline outline = text.GetComponent<Outline>() ?? text.gameObject.AddComponent<Outline>();
             outline.effectColor = accent;
@@ -68,6 +69,7 @@ namespace MusicGame.UI
             text.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
             text.alignment = alignment;
             text.color = color;
+            UIThemeFont.Apply(text);
         }
 
         public static void ApplyPosterButton(Button button, Color accent, bool filled = false)
@@ -95,6 +97,7 @@ namespace MusicGame.UI
             {
                 label.color = filled ? Color.white : Ink;
                 label.fontStyle = FontStyle.Bold;
+                UIThemeFont.Apply(label);
             }
         }
 

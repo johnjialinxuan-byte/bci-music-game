@@ -42,6 +42,12 @@ namespace MusicGame.Scenes
         {
             ConfigureHudDisplay();
             ConfigureGameplayBackground();
+            EnsureGameplaySpaceGuide();
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+                canvas = FindAnyObjectByType<Canvas>();
+            if (canvas != null)
+                UIThemeFont.ApplyAll(canvas.transform);
 
 
             if (pauseButton != null)
@@ -162,6 +168,7 @@ namespace MusicGame.Scenes
             text.fontStyle = FontStyle.Bold;
             text.alignment = alignment;
             text.color = Color.white;
+            UIThemeFont.Apply(text);
         }
 
 private static void ConfigurePauseMenuButton(Button button)
@@ -188,6 +195,7 @@ private static void ConfigurePauseMenuButton(Button button)
                 label.fontStyle = FontStyle.Bold;
                 label.alignment = TextAnchor.MiddleCenter;
                 label.color = Color.white;
+                UIThemeFont.Apply(label);
             }
 
             SongItemHoverEffect hover = button.GetComponent<SongItemHoverEffect>();
@@ -395,9 +403,7 @@ private void OnQuitToMenu()
 
 private void ConfigureGameplayBackground()
         {
-            Canvas gameplayCanvas = GetComponentInParent<Canvas>();
-            if (gameplayCanvas == null)
-                gameplayCanvas = FindAnyObjectByType<Canvas>();
+            Canvas gameplayCanvas = FindGameplayCanvas();
             if (gameplayCanvas == null) return;
 
             SciFiCurveBackground background = gameplayCanvas.GetComponent<SciFiCurveBackground>();
@@ -414,6 +420,51 @@ private void ConfigureGameplayBackground()
                 0.68f,
                 new Color(0.05f, 0.95f, 1f, 0.095f),
                 new Color(0.55f, 0.25f, 1f, 0.075f));
+        }
+
+        private Canvas FindGameplayCanvas()
+        {
+            Canvas parentCanvas = GetComponentInParent<Canvas>();
+            if (parentCanvas != null && parentCanvas.gameObject.scene == gameObject.scene)
+                return parentCanvas;
+
+            Canvas fallback = null;
+            Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            foreach (Canvas canvas in canvases)
+            {
+                if (canvas == null || canvas.gameObject.scene != gameObject.scene)
+                    continue;
+
+                if (canvas.name == "GameplayCanvas")
+                    return canvas;
+
+                fallback ??= canvas;
+            }
+
+            return fallback;
+        }
+
+        private void EnsureGameplaySpaceGuide()
+        {
+            SpaceGuide guide = FindAnyObjectByType<SpaceGuide>();
+            if (guide != null)
+            {
+                guide.gameObject.SetActive(true);
+                guide.enabled = true;
+                guide.EnsureGuides();
+                return;
+            }
+
+            JudgePlane judgePlane = FindAnyObjectByType<JudgePlane>();
+            GameObject guideObject = judgePlane != null ? judgePlane.gameObject : new GameObject("JudgePlane_Z0");
+            guideObject.SetActive(true);
+            guideObject.transform.position = Vector3.zero;
+
+            if (judgePlane == null)
+                guideObject.AddComponent<JudgePlane>();
+
+            SpaceGuide newGuide = guideObject.AddComponent<SpaceGuide>();
+            newGuide.EnsureGuides();
         }
 
 
@@ -456,6 +507,7 @@ private void ConfigurePauseMenuPanel()
             Text[] labels = pauseMenuPanel.GetComponentsInChildren<Text>(true);
             foreach (Text label in labels)
             {
+                UIThemeFont.Apply(label);
                 label.color = Color.white;
                 label.fontStyle = FontStyle.Bold;
             }

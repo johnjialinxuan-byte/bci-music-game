@@ -37,6 +37,7 @@ private void InitializeSettings()
             SetupBackButton();
             BuildTuningPanel();
             ConfigureParallax();
+            UIThemeFont.ApplyAll(canvas.transform);
         }
 
 
@@ -319,7 +320,7 @@ private static Button CreateSmallButton(Transform parent, string label, Vector2 
 
             Text text = obj.GetComponent<Text>();
             text.text = value;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = UIThemeFont.Font;
             text.fontSize = size;
             text.color = Color.white;
             text.alignment = alignment;

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using MusicGame.Core;
+using MusicGame.UI;
 
 namespace MusicGame.Scenes
 {
@@ -26,6 +27,11 @@ namespace MusicGame.Scenes
                 backButton.onClick.AddListener(OnBackClicked);
 
             UpdateSongInfo();
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+                canvas = FindAnyObjectByType<Canvas>();
+            if (canvas != null)
+                UIThemeFont.ApplyAll(canvas.transform);
         }
 
         private void UpdateSongInfo()

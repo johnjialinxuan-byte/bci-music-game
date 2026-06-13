@@ -21,14 +21,21 @@ namespace MusicGame.Gameplay
         private Material lineMaterial;
         private readonly List<AnimatedDash> perspectiveDashes = new List<AnimatedDash>();
         private float dashPhase;
+        private bool built;
+
+        private void OnEnable()
+        {
+            EnsureGuides();
+        }
 
         private void Start()
         {
-            BuildGuides();
+            EnsureGuides();
         }
 
         private void Update()
         {
+            EnsureGuides();
             if (!animatePerspectiveDashes || perspectiveDashes.Count == 0) return;
 
             dashPhase = Mathf.Repeat(dashPhase + Time.deltaTime * forwardSpeed, 1f);
@@ -41,6 +48,7 @@ namespace MusicGame.Gameplay
 
         private void BuildGuides()
         {
+            built = false;
             ClearGuides();
             lineMaterial = CreateLineMaterial();
 
@@ -60,12 +68,15 @@ namespace MusicGame.Gameplay
                 new Vector3(-width * 0.16f, height * 0.16f, depth)
             };
 
-            // Perspective motion is now carried by the colored gameplay background lines.
-            // Keep the center guide only so the playfield stays readable.
+            for (int i = 0; i < nearCorners.Length; i++)
+            {
+                CreateDashedLine($"PerspectiveDash_{i:00}", nearCorners[i], farCorners[i], true);
+            }
 
             CreateSolidLine("CenterVerticalLine", Vector3.down * height * 0.5f, Vector3.up * height * 0.5f);
             CreateSolidLine("CenterHorizontalLine", Vector3.left * width * 0.5f, Vector3.right * width * 0.5f);
             UpdatePerspectiveDashes();
+            built = true;
         }
 
         private void CreateDashedLine(string lineName, Vector3 start, Vector3 end, bool animated)
@@ -137,8 +148,37 @@ namespace MusicGame.Gameplay
             perspectiveDashes.Clear();
             for (int i = transform.childCount - 1; i >= 0; i--)
             {
-                Destroy(transform.GetChild(i).gameObject);
+                GameObject child = transform.GetChild(i).gameObject;
+                if (Application.isPlaying)
+                    Destroy(child);
+                else
+                    DestroyImmediate(child);
             }
+        }
+
+        public void EnsureGuides()
+        {
+            if (HasValidGuides())
+                return;
+
+            BuildGuides();
+        }
+
+        private bool HasValidGuides()
+        {
+            if (!built || lineMaterial == null || transform.childCount == 0)
+                return false;
+
+            if (animatePerspectiveDashes && perspectiveDashes.Count == 0)
+                return false;
+
+            for (int i = 0; i < perspectiveDashes.Count; i++)
+            {
+                if (perspectiveDashes[i].Renderer == null)
+                    return false;
+            }
+
+            return true;
         }
 
         private readonly struct AnimatedDash

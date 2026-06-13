@@ -619,7 +619,7 @@ namespace MusicGame.Editor
             rect.sizeDelta = dimensions;
             Text label = obj.AddComponent<Text>();
             label.text = text;
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = UIThemeFont.Font;
             label.fontSize = size;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = Color.white;

@@ -15,6 +15,7 @@ namespace MusicGame.Scenes
         {
             if (aboutText != null)
             {
+                UIThemeFont.Apply(aboutText);
                 aboutText.text = "BCI music game\n\n" +
                     "A Unity 2D Rhythm Game with pseudo-3D spatial presentation\n\n" +
                     "Powered by CRIWARE Audio Middleware\n\n" +
@@ -23,6 +24,9 @@ namespace MusicGame.Scenes
                     "v0.1.2";
             }
             SetupBackButton();
+            Canvas canvas = FindAnyObjectByType<Canvas>();
+            if (canvas != null)
+                UIThemeFont.ApplyAll(canvas.transform);
         }
 
 private void SetupBackButton()

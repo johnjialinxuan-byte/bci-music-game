@@ -525,7 +525,7 @@ namespace MusicGame.Editor
             txt.fontSize = fontSize;
             txt.alignment = alignment;
             txt.color = Color.white;
-            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.font = UIThemeFont.Font;
             RectTransform rect = txtObj.GetComponent<RectTransform>();
             rect.anchoredPosition = Vector2.zero;
             rect.sizeDelta = new Vector2(400, 50);

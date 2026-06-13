@@ -189,16 +189,20 @@ namespace MusicGame.Managers
             if (matches.Count == 0)
                 return null;
 
-            // Several DIY charts for one song: pick by difficulty name in the file
-            // name (the difficulty field inside scorewriter saves is unreliable —
-            // the editor always writes 0). A single match is used for any difficulty.
-            string chosen = matches[0];
-            if (matches.Count > 1)
+            // DIY charts are matched to a difficulty by a difficulty word in the
+            // file name (the difficulty field inside scorewriter saves is unreliable
+            // — the editor always writes 0).
+            string difficultyName = difficulty.ToString().ToLowerInvariant();
+            string chosen = matches.Find(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant().Contains(difficultyName));
+            if (chosen == null)
             {
-                string difficultyName = difficulty.ToString().ToLowerInvariant();
-                string named = matches.Find(f => Path.GetFileNameWithoutExtension(f).ToLowerInvariant().Contains(difficultyName));
-                if (named != null)
-                    chosen = named;
+                // If this song has any difficulty-tagged DIY chart but none for the
+                // requested difficulty, fall back to the built-in chart rather than
+                // serving the wrong difficulty (e.g. Easy must not load the Hard DIY).
+                if (matches.Exists(HasDifficultyTag))
+                    return null;
+                // Legacy: a single untagged DIY file still serves every difficulty.
+                chosen = matches[0];
             }
 
             ScorewriterChartDto chartDto = ParseScorewriterChart(File.ReadAllText(chosen), chosen);
@@ -209,6 +213,12 @@ namespace MusicGame.Managers
             if (chart != null)
                 Debug.Log($"[ChartManager] Using DIY chart '{Path.GetFileName(chosen)}' for song '{songId}' ({chart.notes.Count} notes).");
             return chart;
+        }
+
+        private static bool HasDifficultyTag(string filePath)
+        {
+            string name = Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
+            return name.Contains("easy") || name.Contains("normal") || name.Contains("hard");
         }
 
         private static bool LooksLikeScorewriterChart(string json)

@@ -31,7 +31,7 @@ public static Sprite GetSprite()
 
             Text label = labelObject.GetComponent<Text>();
             label.text = text;
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = UIThemeFont.Font;
             label.fontSize = fontSize;
             label.alignment = TextAnchor.MiddleCenter;
             label.color = PosterUIStyle.Ink;

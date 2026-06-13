@@ -153,6 +153,7 @@ private void ConfigureResultVisuals()
 
             if (panel != null)
                 panel.SetSiblingIndex(Mathf.Min(1, panel.parent.childCount - 1));
+            UIThemeFont.ApplyAll(canvas.transform);
         }
 
 private RectTransform EnsureResultPanel(Transform parent)
@@ -193,6 +194,7 @@ private RectTransform EnsureResultPanel(Transform parent)
             text.fontStyle = FontStyle.Bold;
             text.alignment = alignment;
             text.color = color;
+            UIThemeFont.Apply(text);
         }
 
 private static void StyleResultButton(Button button, Vector2 position, string labelText)
@@ -224,6 +226,7 @@ private static void StyleResultButton(Button button, Vector2 position, string la
                 label.fontStyle = FontStyle.Bold;
                 label.alignment = TextAnchor.MiddleCenter;
                 label.color = Color.white;
+                UIThemeFont.Apply(label);
             }
 
             SongItemHoverEffect hover = button.GetComponent<SongItemHoverEffect>();

@@ -70,10 +70,17 @@ private void ConfigurePresentation()
             background.raycastTarget = false;
             background.transform.SetAsFirstSibling();
 
+            StartMenuMotionBackground motionBackground = canvas.GetComponent<StartMenuMotionBackground>();
+            if (motionBackground == null)
+                motionBackground = canvas.gameObject.AddComponent<StartMenuMotionBackground>();
+            motionBackground.SetLayerSiblingIndex(background.transform.GetSiblingIndex() + 1);
+            motionBackground.EnsureBuilt();
+
             StyleMenuButton(startButton, new Vector2(-400f, -20f));
             StyleMenuButton(settingsButton, new Vector2(-400f, -100f));
             StyleMenuButton(aboutButton, new Vector2(-400f, -180f));
             StyleMenuButton(quitButton, new Vector2(-400f, -260f));
+            UIThemeFont.ApplyAll(canvas.transform);
         }
 
 private static void StyleMenuButton(Button button, Vector2 position)
@@ -91,7 +98,7 @@ private static void StyleMenuButton(Button button, Vector2 position)
             Text label = button.GetComponentInChildren<Text>(true);
             if (label == null) return;
 
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = UIThemeFont.Font;
             label.fontSize = 40;
             label.fontStyle = FontStyle.Normal;
             label.color = Color.white;

@@ -101,6 +101,11 @@ namespace MusicGame.Scenes
             // Apply the flat button art + right-edge confirm bar last, so nothing
             // earlier in Start overwrites them.
             StyleButtons();
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+                canvas = FindAnyObjectByType<Canvas>();
+            if (canvas != null)
+                UIThemeFont.ApplyAll(canvas.transform);
         }
 
         private void LoadSongs()
@@ -206,6 +211,7 @@ namespace MusicGame.Scenes
             
 if (txt != null)
             {
+                UIThemeFont.Apply(txt);
                 txt.text = song.title;
                 txt.enabled = true;
                 txt.color = Color.white;
@@ -359,7 +365,7 @@ private void OnConfirmClicked()
 
             Text label = labelObject.GetComponent<Text>();
             label.text = "\u786e\u5b9a";
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.font = UIThemeFont.Font;
             label.fontSize = 20;
             label.fontStyle = FontStyle.Bold;
             label.alignment = TextAnchor.MiddleCenter;

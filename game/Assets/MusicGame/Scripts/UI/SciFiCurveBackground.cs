@@ -34,7 +34,8 @@ private void Start()
 
         private void Update()
         {
-            if (segmentRects == null) return;
+            EnsureBuilt();
+            if (!IsBuilt) return;
 
             float time = Time.unscaledTime * speed;
             if (perspectiveFlow)
@@ -56,13 +57,16 @@ private void Start()
 
 private void BuildCurves()
         {
+            curveCount = Mathf.Max(1, curveCount);
+            segmentsPerCurve = Mathf.Max(1, segmentsPerCurve);
+
             Transform oldLayer = transform.Find("SciFiCurveBackground");
             if (oldLayer != null)
-                Destroy(oldLayer.gameObject);
+                DestroyLayer(oldLayer.gameObject);
 
             Transform oldBlockLayer = transform.Find("PerspectiveSideBlocks");
             if (oldBlockLayer != null)
-                Destroy(oldBlockLayer.gameObject);
+                DestroyLayer(oldBlockLayer.gameObject);
 
             GameObject layerObject = new GameObject("SciFiCurveBackground");
             layerObject.transform.SetParent(transform, false);
@@ -167,10 +171,16 @@ public void Configure(int curves, int segments, float canvasWidth, float canvasH
 
 public void ConfigurePerspectiveFlow(int curves, int segments, float canvasWidth, float canvasHeight, float waveAmplitude, float strokeWidth, float motionSpeed, Color primary, Color secondary)
         {
-            Configure(curves, segments, canvasWidth, canvasHeight, waveAmplitude, strokeWidth, motionSpeed, primary, secondary);
+            curveCount = curves;
+            segmentsPerCurve = segments;
+            width = canvasWidth;
+            height = canvasHeight;
+            amplitude = waveAmplitude;
+            lineWidth = strokeWidth;
+            speed = motionSpeed;
+            primaryColor = primary;
+            secondaryColor = secondary;
             perspectiveFlow = true;
-            if (sideBlockLayer != null)
-                sideBlockLayer.gameObject.SetActive(true);
             built = false;
             EnsureBuilt();
 
@@ -321,15 +331,53 @@ private Vector2 EvaluatePerspectiveStraightPoint(int ray, float t)
         }
 
 
-public bool IsBuilt => built && layer != null && segmentRects != null;
+        public bool IsBuilt
+        {
+            get { return HasValidCurves(); }
+        }
 
         public void EnsureBuilt()
         {
-            if (built && layer != null && segmentRects != null)
+            if (HasValidCurves())
                 return;
 
             BuildCurves();
             built = true;
+        }
+
+        private bool HasValidCurves()
+        {
+            if (!built || layer == null || segmentRects == null || segmentImages == null)
+                return false;
+
+            if (segmentRects.GetLength(0) != curveCount || segmentRects.GetLength(1) != segmentsPerCurve)
+                return false;
+
+            if (segmentRects.Length == 0)
+                return false;
+
+            if (segmentRects[0, 0] == null || segmentImages[0, 0] == null)
+                return false;
+
+            int lastCurve = curveCount - 1;
+            int lastSegment = segmentsPerCurve - 1;
+            if (segmentRects[lastCurve, lastSegment] == null || segmentImages[lastCurve, lastSegment] == null)
+                return false;
+
+            if (!perspectiveFlow)
+                return true;
+
+            return sideBlockLayer != null && sideBlockRects != null && sideBlockImages != null;
+        }
+
+        private static void DestroyLayer(GameObject target)
+        {
+            if (target == null) return;
+
+            if (Application.isPlaying)
+                Destroy(target);
+            else
+                DestroyImmediate(target);
         }
 }
 }
