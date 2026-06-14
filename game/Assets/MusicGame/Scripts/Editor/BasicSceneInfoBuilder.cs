@@ -170,8 +170,8 @@ namespace MusicGame.Editor
             Button hard = CreateButton("HardButton", canvas.transform, "HARD", new Vector2(452, -226), new Vector2(148, 62), new Color(0.84f, 0.14f, 0.22f, 1f));
             Button confirm = CreateButton("ConfirmButton", canvas.transform, "\u786e\u5b9a", new Vector2(286, -302), new Vector2(232, 62), new Color32(0x39, 0xC5, 0xBB, 0xFF));
 
-            Text listHeader = CreateText("SongListHeader", canvas.transform, "TRACK LIST", 30, new Vector2(-420, 276), new Vector2(400, 44));
-            StyleGlowText(listHeader, new Color(0.05f, 0.95f, 1f, 0.85f));
+            Text listHeader = CreateText("SongListHeader", canvas.transform, string.Empty, 30, new Vector2(-420, 276), new Vector2(400, 44));
+            listHeader.enabled = false;
             GameObject list = CreatePanel("SongList", canvas.transform, new Color(0.06f, 0.075f, 0.095f, 0.95f), new Vector2(-420, -18), new Vector2(590, 536));
             GameObject content = new GameObject("Content");
             content.transform.SetParent(list.transform, false);

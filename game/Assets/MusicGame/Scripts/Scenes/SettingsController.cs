@@ -111,7 +111,7 @@ private void BuildTuningPanel()
             contentRect.anchorMax = new Vector2(0.5f, 1f);
             contentRect.pivot = new Vector2(0.5f, 1f);
             contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = new Vector2(890f, 1060f);
+            contentRect.sizeDelta = new Vector2(890f, 1220f);
 
             ScrollRect scrollRect = panel.GetComponent<ScrollRect>();
             scrollRect.viewport = viewportRect;
@@ -128,32 +128,33 @@ private void BuildTuningPanel()
             contentRect.anchoredPosition = Vector2.zero;
             StartCoroutine(ResetScrollPositionNextFrame(scrollRect));
 
-            CreateSectionFrame(content.transform, new Vector2(0f, -112f), new Vector2(860f, 220f));
-            CreateHeader(content.transform, "谱面设置", -34f);
-            CreateStepperRow(content.transform, "谱面延迟", GameplaySettings.ChartDelayMs, -400, 400, " ms", value => GameplaySettings.ChartDelayMs = value, -92f, 1);
-            CreateFloatStepperRow(content.transform, "谱面流速", GameplaySettings.ChartSpeed, 1f, 5f, 0.1f, string.Empty, value => GameplaySettings.ChartSpeed = value, -158f);
+            CreateSectionFrame(content.transform, new Vector2(0f, -119f), new Vector2(860f, 214f));
+            CreateHeader(content.transform, "\u8c31\u9762\u8bbe\u7f6e", -44f);
+            CreateStepperRow(content.transform, "\u8c31\u9762\u5ef6\u8fdf", GameplaySettings.ChartDelayMs, -400, 400, " ms", value => GameplaySettings.ChartDelayMs = value, -98f, 1);
+            CreateFloatStepperRow(content.transform, "\u8c31\u9762\u6d41\u901f", GameplaySettings.ChartSpeed, 1f, 5f, 0.1f, string.Empty, value => GameplaySettings.ChartSpeed = value, -164f);
 
-            CreateSectionFrame(content.transform, new Vector2(0f, -376f), new Vector2(860f, 250f));
-            CreateHeader(content.transform, "注意力阈值", -280f);
-            CreateStepperRow(content.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, -338f);
-            CreateStepperRow(content.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, -404f);
-            CreateStepperRow(content.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, -470f);
+            CreateSectionFrame(content.transform, new Vector2(0f, -398f), new Vector2(860f, 280f));
+            CreateHeader(content.transform, "\u6ce8\u610f\u529b\u9608\u503c", -290f);
+            CreateStepperRow(content.transform, "EASY", GameplaySettings.EasyAttention, 0, 100, string.Empty, value => GameplaySettings.EasyAttention = value, -344f);
+            CreateStepperRow(content.transform, "NORMAL", GameplaySettings.NormalAttention, 0, 100, string.Empty, value => GameplaySettings.NormalAttention = value, -410f);
+            CreateStepperRow(content.transform, "HARD", GameplaySettings.HardAttention, 0, 100, string.Empty, value => GameplaySettings.HardAttention = value, -476f);
 
-            CreateSectionFrame(content.transform, new Vector2(0f, -600f), new Vector2(860f, 180f));
-            CreateHeader(content.transform, "Flick 判定范围", -538f);
-            CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -594f);
-            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 500, " ms", value => GameplaySettings.FlickGreatMs = value, -660f);
+            CreateSectionFrame(content.transform, new Vector2(0f, -677f), new Vector2(860f, 214f));
+            CreateHeader(content.transform, "Flick \u5224\u5b9a\u8303\u56f4", -602f);
+            CreateStepperRow(content.transform, "PERFECT", GameplaySettings.FlickPerfectMs, 40, 120, " ms", value => GameplaySettings.FlickPerfectMs = value, -656f);
+            CreateStepperRow(content.transform, "GREAT", GameplaySettings.FlickGreatMs, 120, 500, " ms", value => GameplaySettings.FlickGreatMs = value, -722f);
 
-            CreateCommunicationSection(content.transform, -835f);
+            CreateCommunicationSection(content.transform, -923f);
+            CreateTutorialRestartButton(content.transform, -1114f);
         }
 
-        private static void CreateHeader(Transform parent, string value, float y)
+private static void CreateHeader(Transform parent, string value, float y)
         {
             Text text = CreateText(parent, value, 21, TextAnchor.MiddleLeft);
             RectTransform rect = text.rectTransform;
             SetTopAnchor(rect);
             rect.anchoredPosition = new Vector2(-205f, y);
-            rect.sizeDelta = new Vector2(350f, 34f);
+            rect.sizeDelta = new Vector2(360f, 34f);
             text.fontStyle = FontStyle.Bold;
             text.color = Color.white;
         }
@@ -528,21 +529,31 @@ private static Button CreateModeButton(Transform parent, string label, Vector2 p
 
 private void CreateCommunicationSection(Transform parent, float centerY)
         {
-            CreateSectionFrame(parent, new Vector2(0f, centerY), new Vector2(860f, 250f));
-            CreateHeader(parent, "\u901a\u4fe1\u8bbe\u7f6e", centerY + 86f);
+            CreateSectionFrame(parent, new Vector2(0f, centerY), new Vector2(860f, 214f));
+            CreateHeader(parent, "\u901a\u4fe1\u8bbe\u7f6e", centerY + 75f);
+
+            GameObject modeRow = new GameObject("CommunicationModeRow", typeof(RectTransform), typeof(Image));
+            modeRow.transform.SetParent(parent, false);
+            RectTransform modeRowRect = modeRow.GetComponent<RectTransform>();
+            SetTopAnchor(modeRowRect);
+            SetRect(modeRowRect, new Vector2(0f, centerY + 21f), new Vector2(820f, 64f));
+            Image modeRowImage = modeRow.GetComponent<Image>();
+            modeRowImage.sprite = PillButtonStyle.GetSprite();
+            modeRowImage.type = Image.Type.Sliced;
+            modeRowImage.color = new Color(0.02f, 0.08f, 0.12f, 0.78f);
 
             Text modeLabel = CreateText(parent, "MODE", 20, TextAnchor.MiddleLeft);
             SetTopAnchor(modeLabel.rectTransform);
-            SetRect(modeLabel.rectTransform, new Vector2(-320f, centerY + 24f), new Vector2(132f, 52f));
+            SetRect(modeLabel.rectTransform, new Vector2(-320f, centerY + 21f), new Vector2(132f, 52f));
 
-            Button localButton = CreateModeButton(parent, "\u672c\u5730", new Vector2(-72f, centerY + 24f));
-            Button remoteButton = CreateModeButton(parent, "\u8de8\u8bbe\u5907", new Vector2(156f, centerY + 24f));
+            Button localButton = CreateModeButton(parent, "\u672c\u5730", new Vector2(-72f, centerY + 21f));
+            Button remoteButton = CreateModeButton(parent, "\u8de8\u8bbe\u5907", new Vector2(156f, centerY + 21f));
 
             GameObject ipRow = new GameObject("IpRow", typeof(RectTransform), typeof(Image));
             ipRow.transform.SetParent(parent, false);
             RectTransform ipRowRect = ipRow.GetComponent<RectTransform>();
             SetTopAnchor(ipRowRect);
-            SetRect(ipRowRect, new Vector2(0f, centerY - 56f), new Vector2(820f, 64f));
+            SetRect(ipRowRect, new Vector2(0f, centerY - 45f), new Vector2(820f, 64f));
             Image rowImage = ipRow.GetComponent<Image>();
             rowImage.sprite = PillButtonStyle.GetSprite();
             rowImage.type = Image.Type.Sliced;
@@ -561,6 +572,8 @@ private void CreateCommunicationSection(Transform parent, float centerY)
                 ipRow.SetActive(remote);
                 ApplyModeButtonState(localButton, !remote);
                 ApplyModeButtonState(remoteButton, remote);
+                SetChildTextColor(localButton.transform, Color.white);
+                SetChildTextColor(remoteButton.transform, Color.white);
             };
 
             localButton.onClick.AddListener(() =>
@@ -655,6 +668,53 @@ private IEnumerator ResetScrollPositionNextFrame(ScrollRect scrollRect)
             scrollRect.content.anchoredPosition = new Vector2(scrollRect.content.anchoredPosition.x, 0f);
             if (scrollRect.verticalScrollbar != null)
                 scrollRect.verticalScrollbar.SetValueWithoutNotify(1f);
+        }
+
+
+private void CreateTutorialRestartButton(Transform parent, float centerY)
+        {
+            CreateSectionFrame(parent, new Vector2(0f, centerY), new Vector2(860f, 104f));
+
+            GameObject obj = new GameObject("TutorialRestartButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            obj.transform.SetParent(parent, false);
+            RectTransform rect = obj.GetComponent<RectTransform>();
+            SetTopAnchor(rect);
+            SetRect(rect, new Vector2(0f, centerY), new Vector2(820f, 64f));
+
+            Image image = obj.GetComponent<Image>();
+            image.sprite = PillButtonStyle.GetSprite();
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.02f, 0.08f, 0.12f, 0.82f);
+
+            Button button = obj.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(OnTutorialRestartClicked);
+
+            Text label = PillButtonStyle.CreateLabel(obj.transform, "\u8fdb\u5165\u65b0\u624b\u6559\u7a0b", 24);
+            label.color = Color.white;
+            SetChildTextColor(obj.transform, Color.white);
+
+            SongItemHoverEffect hover = obj.AddComponent<SongItemHoverEffect>();
+            hover.SetLabel(label);
+            hover.SetHoverScale(1.035f);
+            obj.AddComponent<ButtonSFX>();
+        }
+
+        private void OnTutorialRestartClicked()
+        {
+            PlayerPrefs.SetInt("TutorialCompleted", 0);
+            PlayerPrefs.Save();
+
+            SongData[] songs = Resources.LoadAll<SongData>("Songs");
+            Array.Sort(songs, (a, b) => string.CompareOrdinal(a != null ? a.songId : string.Empty, b != null ? b.songId : string.Empty));
+            SongData tutorialSong = songs.Length > 0 ? songs[0] : null;
+            if (tutorialSong == null)
+            {
+                Debug.LogError("Cannot start tutorial: no song data found in Resources/Songs.");
+                return;
+            }
+
+            GameStateManager.Instance?.BeginTutorial(tutorialSong);
         }
 }
 }

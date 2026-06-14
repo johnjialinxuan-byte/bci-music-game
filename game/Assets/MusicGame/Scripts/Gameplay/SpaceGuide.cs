@@ -72,9 +72,6 @@ namespace MusicGame.Gameplay
             {
                 CreateDashedLine($"PerspectiveDash_{i:00}", nearCorners[i], farCorners[i], true);
             }
-
-            CreateSolidLine("CenterVerticalLine", Vector3.down * height * 0.5f, Vector3.up * height * 0.5f);
-            CreateSolidLine("CenterHorizontalLine", Vector3.left * width * 0.5f, Vector3.right * width * 0.5f);
             UpdatePerspectiveDashes();
             built = true;
         }
@@ -216,6 +213,34 @@ private void CreateSolidLine(string lineName, Vector3 start, Vector3 end)
             solidColor.a = Mathf.Min(0.09f, guideColor.a * 0.26f);
             renderer.startColor = solidColor;
             renderer.endColor = solidColor;
+            renderer.SetPosition(0, start);
+            renderer.SetPosition(1, end);
+        }
+
+
+private void CreateRectangle(string frameName, Vector3[] corners, float strokeWidth, Color color)
+        {
+            if (corners == null || corners.Length < 4) return;
+
+            for (int i = 0; i < 4; i++)
+            {
+                CreateFrameLine($"{frameName}_{i:00}", corners[i], corners[(i + 1) % 4], strokeWidth, color);
+            }
+        }
+
+        private void CreateFrameLine(string lineName, Vector3 start, Vector3 end, float strokeWidth, Color color)
+        {
+            GameObject line = new GameObject(lineName);
+            line.transform.SetParent(transform, false);
+
+            LineRenderer renderer = line.AddComponent<LineRenderer>();
+            renderer.sharedMaterial = lineMaterial;
+            renderer.useWorldSpace = false;
+            renderer.positionCount = 2;
+            renderer.startWidth = strokeWidth;
+            renderer.endWidth = strokeWidth;
+            renderer.startColor = color;
+            renderer.endColor = color;
             renderer.SetPosition(0, start);
             renderer.SetPosition(1, end);
         }

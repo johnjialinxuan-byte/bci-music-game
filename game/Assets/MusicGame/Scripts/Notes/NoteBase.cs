@@ -41,17 +41,20 @@ namespace MusicGame.Notes
             CheckMiss();
         }
 
-        public virtual void Initialize(NoteData data)
+public virtual void Initialize(NoteData data)
         {
             Data = data;
             IsJudged = false;
             IsMissed = false;
-            transform.position = data.SpawnPosition;
-            
-            // Load SVG sprite based on note type and direction
+            spawnZ = Mathf.Max(spawnZ, 14f);
+            minScale = Mathf.Min(minScale, 0.14f);
+
+            Vector3 initialPosition = data.SpawnPosition;
+            initialPosition.z = spawnZ;
+            transform.position = initialPosition;
+
             LoadNoteSprite(data);
-            
-            gameObject.SetActive(true);
+            ApplyInitialDepthVisual();
         }
         
         private void LoadNoteSprite(NoteData data)
@@ -73,20 +76,37 @@ namespace MusicGame.Notes
             }
         }
 
-        protected virtual void UpdatePosition()
+protected void ApplyInitialDepthVisual()
+        {
+            float scaleFactor = minScale;
+            if (visualTransform != null)
+                visualTransform.localScale = Vector3.one * scaleFactor;
+
+            if (spriteRenderer != null)
+            {
+                Color c = spriteRenderer.color;
+                c.a = minAlpha;
+                spriteRenderer.color = c;
+            }
+        }
+
+
+protected virtual void UpdatePosition()
         {
             float timeUntilHit = Data.time - SongTime;
             float progress = 1f - (timeUntilHit / Data.approachTime);
             progress = Mathf.Clamp01(progress);
 
+            Vector3 spawnPos = Data.SpawnPosition;
+            spawnPos.z = spawnZ;
             Vector3 judgePos = Data.SpawnPosition;
             judgePos.z = judgePlaneZ;
 
-            Vector3 currentPos = Vector3.Lerp(Data.SpawnPosition, judgePos, progress);
+            Vector3 currentPos = Vector3.Lerp(spawnPos, judgePos, progress);
             transform.position = currentPos;
 
             float zDistance = Mathf.Abs(currentPos.z - judgePlaneZ);
-            float zRange = Mathf.Abs(spawnZ - judgePlaneZ);
+            float zRange = Mathf.Max(0.001f, Mathf.Abs(spawnZ - judgePlaneZ));
             float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange);
 
             if (visualTransform != null)

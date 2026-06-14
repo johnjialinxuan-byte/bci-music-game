@@ -261,18 +261,21 @@ private void ConfigureHeaderEffects()
             Text[] texts = GetComponentsInChildren<Text>(true);
             foreach (Text text in texts)
             {
+                string normalized = text.text != null ? text.text.Replace(" ", string.Empty).Replace("_", string.Empty).ToUpperInvariant() : string.Empty;
                 if (text.name == "SongSelectTitle")
                 {
                     text.text = "\u9009\u62e9\u97f3\u4e50";
                     UI.TextArt.ReplaceWithSprite(text, "Images/Titles/title_songselect");
                 }
-                else if (text.name == "SongListHeader")
+                else if (text.name == "SongListHeader" || normalized == "TRACKLIST" || normalized == "SONGLIST")
                 {
-                    AddGlow(text, 30, new Color(0.05f, 0.95f, 1f, 0.85f));
+                    text.text = string.Empty;
+                    text.enabled = false;
+                    text.gameObject.SetActive(false);
                 }
                 else if (text.name == "CollectionLabel")
                 {
-                    text.text = "";
+                    text.text = string.Empty;
                     text.enabled = false;
                 }
             }

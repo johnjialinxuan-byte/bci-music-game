@@ -387,7 +387,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\u9009\u62e9\u97f3\u4e50"
+  m_Text: "\u9009\u62E9\u97F3\u4E50"
 --- !u!222 &210010789
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -532,9 +532,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicGame.UI.SongItemHoverEffect
   targetGraphic: {fileID: 1203545258}
+  backgroundGraphic: {fileID: 0}
   hoverScale: 1.16
   animationSpeed: 12
   hoverColor: {r: 0.18, g: 0.95, b: 1, a: 1}
+  scaleTargetGraphic: 1
+  scaleBackgroundGraphic: 1
+  changeTargetColor: 1
 --- !u!1 &488378276
 GameObject:
   m_ObjectHideFlags: 0
@@ -552,7 +556,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &488378277
 RectTransform:
   m_ObjectHideFlags: 0
@@ -579,7 +583,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 488378276}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
   m_Name: 
@@ -605,7 +609,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: TRACK LIST
+  m_Text: 
 --- !u!222 &488378279
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1194,6 +1198,7 @@ MonoBehaviour:
   speed: 0.45
   primaryColor: {r: 0.05, g: 0.95, b: 1, a: 0.28}
   secondaryColor: {r: 0.55, g: 0.25, b: 1, a: 0.18}
+  perspectiveFlow: 0
 --- !u!1 &1013898192
 GameObject:
   m_ObjectHideFlags: 0
@@ -1311,10 +1316,15 @@ MonoBehaviour:
   artistText: {fileID: 542308418}
   easyButton: {fileID: 19265786}
   normalButton: {fileID: 1569285088}
+  hardButton: {fileID: 1596625162}
+  confirmButton: {fileID: 0}
   easyFrameColor: {r: 0.2, g: 0.92, b: 0.55, a: 1}
   normalFrameColor: {r: 0.2, g: 0.86, b: 1, a: 1}
   hardFrameColor: {r: 1, g: 0.24, b: 0.4, a: 1}
-  hardButton: {fileID: 1596625162}
+  easyButtonColor: {r: 0.18, g: 0.72, b: 0.36, a: 1}
+  normalButtonColor: {r: 0.12, g: 0.39, b: 0.94, a: 1}
+  hardButtonColor: {r: 0.84, g: 0.14, b: 0.22, a: 1}
+  confirmButtonColor: {r: 0.22352941, g: 0.77254903, b: 0.73333335, a: 1}
   availableSongs:
   - {fileID: 11400000, guid: 496a939e68fa94dd7835d44e4bd9e89a, type: 2}
   - {fileID: 11400000, guid: 08a09956561c34536982cd8cd6704788, type: 2}
@@ -1712,7 +1722,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: ""
+  m_Text: 
 --- !u!222 &1329686748
 CanvasRenderer:
   m_ObjectHideFlags: 0

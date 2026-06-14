@@ -102,14 +102,15 @@ namespace MusicGame.Gameplay
             }
         }
 
-        private void SpawnNote(NoteData data)
+private void SpawnNote(NoteData data)
         {
             NoteBase note = GetPooledNote(data.noteType);
             if (note == null) return;
 
+            note.gameObject.SetActive(false);
             note.Initialize(data);
+            note.gameObject.SetActive(true);
             activeNotes.Add(note);
-
         }
 
         private NoteBase GetPooledNote(NoteType type)

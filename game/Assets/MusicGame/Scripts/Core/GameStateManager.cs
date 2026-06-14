@@ -10,6 +10,8 @@ namespace MusicGame.Core
         public GameScene CurrentScene { get; private set; } = GameScene.MainMenu;
         public SongData SelectedSong { get; set; }
         public Difficulty SelectedDifficulty { get; set; } = Difficulty.Normal;
+        public bool IsTutorialMode { get; private set; }
+
 
         private void Awake()
         {
@@ -61,14 +63,33 @@ namespace MusicGame.Core
             SceneManager.LoadScene(sceneName);
         }
 
-        public void SetSelectedSong(SongData song)
+public void SetSelectedSong(SongData song)
         {
+            IsTutorialMode = false;
             SelectedSong = song;
         }
 
-        public void SetSelectedDifficulty(Difficulty difficulty)
+public void SetSelectedDifficulty(Difficulty difficulty)
         {
+            IsTutorialMode = false;
             SelectedDifficulty = difficulty;
         }
+
+public void BeginTutorial(SongData tutorialSong)
+        {
+            SelectedSong = tutorialSong;
+            SelectedDifficulty = Difficulty.Easy;
+            IsTutorialMode = true;
+            ChangeScene(GameScene.Gameplay);
+        }
+
+        public void CompleteTutorial()
+        {
+            if (!IsTutorialMode) return;
+            IsTutorialMode = false;
+            PlayerPrefs.SetInt("TutorialCompleted", 1);
+            PlayerPrefs.Save();
+        }
+
     }
 }

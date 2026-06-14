@@ -31,6 +31,9 @@ namespace MusicGame.Scenes
         private float comboPulseTimer;
         private const float ComboPulseDuration = 0.2f;
         private const float ComboPulseScale = 0.28f;
+        private const float AttentionSampleInterval = 0.2f;
+        private float nextAttentionSampleTime;
+
 
         private void Start()
         {
@@ -249,15 +252,24 @@ if (currentChart == null)
                 return;
             }
 
-            ScoreManager.Instance.Initialize(currentChart);
+            AttentionRunRecorder.Begin();
+            nextAttentionSampleTime = 0f;
+            
+ScoreManager.Instance.Initialize(currentChart);
             NoteManager.Instance.LoadChart(currentChart);
+            StartTutorialOverlayIfNeeded();
+
 
             StartCoroutine(GameStartCountdownCoroutine());
         }
 
-        private void Update()
+private void Update()
         {
+            if (!isPaused)
+                SampleAttentionCurve();
+
             if (!isPlaying || isPaused) return;
+
             UpdateUI();
             AnimateCombo();
             CheckGameEnd();
@@ -301,7 +313,11 @@ if (currentChart == null)
             if (NoteManager.Instance.HasUnspawnedNotes || NoteManager.Instance.HasActiveNotes) return;
             if (audioStillPlaying && !AudioManager.Instance.HasReachedCurrentCueSinglePlaybackEnd) return;
 
-            if (audioStillPlaying)
+            if (GameStateManager.Instance != null && GameStateManager.Instance.IsTutorialMode && MusicTime.Current < 154.5f)
+                return;
+
+            
+if (audioStillPlaying)
                 AudioManager.Instance.StopSong();
 
             Invoke(nameof(ShowResult), 1f);
@@ -429,7 +445,7 @@ private void ConfigureGameplayBackground()
                 return parentCanvas;
 
             Canvas fallback = null;
-            Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude);
             foreach (Canvas canvas in canvases)
             {
                 if (canvas == null || canvas.gameObject.scene != gameObject.scene)
@@ -565,5 +581,30 @@ private static void SetButtonLabel(Button button, string text)
             label.alignment = TextAnchor.MiddleCenter;
         }
 
+
+
+private void SampleAttentionCurve()
+        {
+            if (Time.unscaledTime < nextAttentionSampleTime)
+                return;
+
+            nextAttentionSampleTime = Time.unscaledTime + AttentionSampleInterval;
+            int attention = InputManager.Instance != null ? InputManager.Instance.CurrentHoldValue : 0;
+            AttentionRunRecorder.Record(attention);
+        }
+
+
+private void StartTutorialOverlayIfNeeded()
+        {
+            if (GameStateManager.Instance == null || !GameStateManager.Instance.IsTutorialMode || currentChart == null)
+                return;
+
+            GameplayTutorialOverlay overlay = GetComponent<GameplayTutorialOverlay>();
+            if (overlay == null)
+                overlay = gameObject.AddComponent<GameplayTutorialOverlay>();
+
+            float firstNoteTime = currentChart.notes != null && currentChart.notes.Count > 0 ? currentChart.notes[0].time : 30f;
+            overlay.Begin(firstNoteTime);
+        }
 }
 }

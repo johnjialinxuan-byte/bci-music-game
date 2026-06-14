@@ -1,4 +1,4 @@
-{
+﻿{
     "songId": "0_oyasumi",
     "title": "Oyasumi, Mother Goose",
     "bpm": 160.0,
@@ -8,8 +8,8 @@
     "showSixthGrid": true,
     "showEighthGrid": true,
     "showSixteenthGrid": true,
-    "difficulty": 0,
-    "level": 1,
+    "difficulty": 1,
+    "level": 5,
     "notes": [
         {
             "id": "2b9a4a62761644dd96327ddf59c4d1e8",

@@ -138,8 +138,22 @@ private static void StyleMenuButton(Button button, Vector2 position)
                 text.text = label;
         }
 
-        private void OnStartClicked()
+private void OnStartClicked()
         {
+            if (PlayerPrefs.GetInt("TutorialStartedOnce", 0) == 0 && PlayerPrefs.GetInt("TutorialCompleted", 0) == 0)
+            {
+                SongData[] songs = Resources.LoadAll<SongData>("Songs");
+                System.Array.Sort(songs, (a, b) => string.Compare(a != null ? a.songId : string.Empty, b != null ? b.songId : string.Empty, System.StringComparison.OrdinalIgnoreCase));
+                SongData tutorialSong = songs.Length > 0 ? songs[0] : null;
+                if (tutorialSong != null)
+                {
+                    PlayerPrefs.SetInt("TutorialStartedOnce", 1);
+                    PlayerPrefs.Save();
+                    GameStateManager.Instance.BeginTutorial(tutorialSong);
+                    return;
+                }
+            }
+
             GameStateManager.Instance.ChangeScene(GameScene.SongSelect);
         }
 

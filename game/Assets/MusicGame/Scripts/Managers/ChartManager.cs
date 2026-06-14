@@ -116,7 +116,7 @@ namespace MusicGame.Managers
                 if (note == null) continue;
 
                 note.time = Mathf.Max(0f, note.time + delaySeconds);
-                note.approachTime = Mathf.Max(0.05f, note.approachTime * speedScale);
+                note.approachTime = Mathf.Max(0.05f, note.approachTime * speedScale * 1.25f);
             }
         }
 
