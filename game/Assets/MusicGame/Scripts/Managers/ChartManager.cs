@@ -8,10 +8,13 @@ namespace MusicGame.Managers
 {
     public class ChartManager : MonoBehaviour
     {
-        // Player-made charts dropped under Assets/<DiyFolder> override built-in
+        // Player-made charts dropped under StreamingAssets/<DiyFolder> override built-in
         // Resources charts. Files are the scorewriter's native save format and
         // are matched to a song by the songId stored inside the JSON.
-        private const string DiyFolder = "MusicGame/diy";
+        // Lives in StreamingAssets so it ships with the build and stays readable
+        // as plain files at runtime. (Application.dataPath/Assets folders are NOT
+        // packaged, which silently dropped DIY charts in standalone builds.)
+        private const string DiyFolder = "diy";
 
         public static ChartManager Instance { get; private set; }
 
@@ -165,7 +168,7 @@ namespace MusicGame.Managers
             if (string.IsNullOrWhiteSpace(songId))
                 return null;
 
-            string folder = Path.Combine(Application.dataPath, DiyFolder);
+            string folder = Path.Combine(Application.streamingAssetsPath, DiyFolder);
             if (!Directory.Exists(folder))
                 return null;
 
