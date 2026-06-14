@@ -1,0 +1,14 @@
+{
+    "songId": "song1",
+    "title": "A Forever Friend",
+    "bpm": 120.0,
+    "songLength": 147.406005859375,
+    "timingOffsetMs": 0.0,
+    "showQuarterGrid": true,
+    "showSixthGrid": true,
+    "showEighthGrid": true,
+    "showSixteenthGrid": true,
+    "difficulty": 0,
+    "level": 1,
+    "notes": []
+}

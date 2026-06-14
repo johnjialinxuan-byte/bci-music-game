@@ -170,6 +170,28 @@ namespace Scorewriter
             EnsureTimeStretchVoicePool();
         }
 
+        public bool TryGetSongLength(ScorewriterSong song, out float lengthSeconds)
+        {
+            lengthSeconds = 0f;
+            if (song == null)
+                return false;
+
+            EnsureInitialized(song);
+            CriAtomExAcb acb = CriAtom.GetAcb(song.cueSheetName);
+            if (acb == null)
+                return false;
+
+            CriAtomEx.CueInfo info;
+            bool hasInfo = string.IsNullOrWhiteSpace(song.cueName)
+                ? acb.GetCueInfoByIndex(0, out info)
+                : acb.GetCueInfo(song.cueName, out info);
+            if (!hasInfo || info.length <= 0)
+                return false;
+
+            lengthSeconds = info.length / 1000f;
+            return lengthSeconds > 0f;
+        }
+
         private void EnsureTimeStretchVoicePool()
         {
             if (player == null)
