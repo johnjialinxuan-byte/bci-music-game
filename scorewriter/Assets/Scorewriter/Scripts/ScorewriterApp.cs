@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -32,6 +32,9 @@ namespace Scorewriter
         private readonly Dictionary<string, Sprite> resourceSpriteCache = new Dictionary<string, Sprite>();
         private readonly int[] snapDivisions = { 4, 6, 8, 16, 0 };
         private readonly float[] playbackRateSteps = { 1f, 0.75f, 0.5f, 0.25f };
+        private readonly string[] difficultySuffixes = { "easy", "normal", "hard" };
+        private readonly string[] difficultyLabels = { "Easy", "Normal", "Hard" };
+        private readonly int[] difficultyLevels = { 1, 5, 8 };
         private readonly ScorewriterLane[] laneVisualOrder =
         {
             ScorewriterLane.TopLeft,
@@ -51,6 +54,7 @@ namespace Scorewriter
         private int songIndex;
         private int snapIndex = 3;
         private int playbackRateIndex;
+        private int difficultyIndex;
         private float timelinePanelWidth = 760f;
         private float timelinePixelsPerSecond = DefaultTimelinePixelsPerSecond;
         private float currentTime;
@@ -93,6 +97,7 @@ namespace Scorewriter
         private Text followButtonText;
         private Text clickAddButtonText;
         private Text playbackRateButtonText;
+        private Text difficultyButtonText;
         private Text deleteButtonText;
         private Text tailSlideToggleText;
         private Text shortcutHintText;
@@ -736,6 +741,8 @@ namespace Scorewriter
             lengthInput = CreateInput(header, "150", 82f, 42f, OnLengthEdited);
             CreateLabel(header, "偏移(ms)", 14, TextAnchor.MiddleRight, 82f, 42f, new Color(0.72f, 0.77f, 0.84f, 1f));
             offsetInput = CreateInput(header, "0", 86f, 42f, OnOffsetEdited);
+            Button difficultyButton = CreateButton(header, "", 116f, 42f, CycleDifficulty);
+            difficultyButtonText = difficultyButton.GetComponentInChildren<Text>();
             CreateButton(header, "加载", 70f, 42f, () => LoadChartForCurrentSong(true));
             CreateButton(header, "保存", 70f, 42f, SaveEditorChart);
             CreateButton(header, "导出JSON", 112f, 42f, ExportGameJson);
@@ -876,7 +883,7 @@ namespace Scorewriter
 
             CreateLabel(fields, "时长", 13, TextAnchor.MiddleRight, 48f, 36f, new Color(0.75f, 0.80f, 0.86f, 1f));
             durationInput = CreateInput(fields, "1.0", 76f, 36f, OnDurationEdited);
-            CreateLabel(fields, "阈值", 13, TextAnchor.MiddleRight, 48f, 36f, new Color(0.75f, 0.80f, 0.86f, 1f));
+            CreateLabel(fields, "阈值", 13, TextAnchor.MiddleRight, 64f, 36f, new Color(0.75f, 0.80f, 0.86f, 1f));
             thresholdInput = CreateInput(fields, "10", 64f, 36f, OnThresholdEdited);
             tailSlideToggle = CreateToggle(fields, "尾部滑动", false, OnTailSlideChanged, 118f, 36f);
             CreateLabel(fields, "颜色", 13, TextAnchor.MiddleRight, 42f, 36f, new Color(0.75f, 0.80f, 0.86f, 1f));
@@ -977,7 +984,7 @@ namespace Scorewriter
 
             // Centered, aspect-locked play field. Keeps the preview fully
             // on-screen no matter how wide/short the Game view (CanvasScaler) makes
-            // the surrounding panel — previously an extreme aspect pushed the notes
+            // the surrounding panel 鈥?previously an extreme aspect pushed the notes
             // off the right edge so the preview looked empty/missing.
             previewField = CreateRect("PreviewField", previewSurface);
             previewField.anchorMin = new Vector2(0.5f, 0.5f);
@@ -1005,7 +1012,7 @@ namespace Scorewriter
             layout.childControlHeight = true;
             // Must control width AND not force-expand: with childControlWidth=false the
             // group reports the children's *current* widths as its min width, and
-            // childForceExpandWidth then stretches them to fill — a feedback loop that
+            // childForceExpandWidth then stretches them to fill 鈥?a feedback loop that
             // ballooned this strip to ~1675px and pushed the preview panel off-screen.
             layout.childControlWidth = true;
             layout.childForceExpandWidth = false;
@@ -1566,14 +1573,51 @@ namespace Scorewriter
             SetStatus($"歌曲流速：{CurrentPlaybackRate():0.##}x");
         }
 
+        private void CycleDifficulty()
+        {
+            TrySaveEditorChartForSwitch();
+            audioPlayer.Stop();
+            currentTime = 0f;
+            difficultyIndex = (difficultyIndex + 1) % difficultySuffixes.Length;
+            LoadChartForCurrentSong(true);
+            ApplySongToControls();
+            RebuildTimeline();
+            SetStatus($"难度：{CurrentDifficultyLabel()}");
+        }
+
         private float CurrentPlaybackRate()
         {
             return playbackRateSteps[Mathf.Clamp(playbackRateIndex, 0, playbackRateSteps.Length - 1)];
         }
 
+        private int CurrentDifficulty()
+        {
+            return Mathf.Clamp(difficultyIndex, 0, difficultySuffixes.Length - 1);
+        }
+
+        private int CurrentDifficultyLevel()
+        {
+            return difficultyLevels[CurrentDifficulty()];
+        }
+
+        private string CurrentDifficultySuffix()
+        {
+            return difficultySuffixes[CurrentDifficulty()];
+        }
+
+        private string CurrentDifficultyLabel()
+        {
+            return difficultyLabels[CurrentDifficulty()];
+        }
+
         private string PlaybackRateLabel()
         {
             return $"流速 {CurrentPlaybackRate():0.##}x(R)";
+        }
+
+        private string DifficultyButtonLabel()
+        {
+            return $"难度 {CurrentDifficultyLabel()}";
         }
 
         private void OnDurationEdited(string value)
@@ -1632,7 +1676,7 @@ namespace Scorewriter
             chart.timingOffsetMs = Mathf.Clamp(ParseFloat(value, chart.timingOffsetMs), -10000f, 10000f);
             offsetInput.SetTextWithoutNotify(FormatFloat(chart.timingOffsetMs));
             audioPlayer.Seek(CurrentSong, ChartTimeToAudioTime(currentTime));
-            SetStatus($"Offset 已设为 {FormatFloat(chart.timingOffsetMs)} ms。");
+            SetStatus($"Offset set to {FormatFloat(chart.timingOffsetMs)} ms.");
         }
 
         private void AdjustOffset(float deltaMs)
@@ -1641,7 +1685,7 @@ namespace Scorewriter
             if (offsetInput != null)
                 offsetInput.SetTextWithoutNotify(FormatFloat(chart.timingOffsetMs));
             audioPlayer.Seek(CurrentSong, ChartTimeToAudioTime(currentTime));
-            SetStatus($"Offset：{FormatFloat(chart.timingOffsetMs)} ms。");
+            SetStatus($"Offset: {FormatFloat(chart.timingOffsetMs)} ms.");
         }
 
         private void SetGridVisibility(int division, bool visible)
@@ -1779,12 +1823,14 @@ namespace Scorewriter
 
         private void LoadChartForCurrentSong(bool reportMissing)
         {
-            string path = EditorChartPath(CurrentSong);
+            string path = ResolveEditorChartPath(CurrentSong);
             if (File.Exists(path))
             {
                 chart = JsonUtility.FromJson<ScorewriterChart>(File.ReadAllText(path));
                 if (chart.notes == null)
                     chart.notes = new List<ScorewriterNote>();
+                chart.difficulty = CurrentDifficulty();
+                chart.level = CurrentDifficultyLevel();
                 CurrentSong.bpm = chart.bpm;
                 CurrentSong.songLength = chart.songLength;
                 SortNotes();
@@ -1799,17 +1845,33 @@ namespace Scorewriter
                     title = CurrentSong.title,
                     bpm = CurrentSong.bpm,
                     songLength = CurrentSong.songLength,
-                    difficulty = 0,
-                    level = 1
+                    difficulty = CurrentDifficulty(),
+                    level = CurrentDifficultyLevel()
                 };
                 selectedNote = null;
                 if (reportMissing)
-                    SetStatus("还没有保存过谱面，已创建空谱面。");
+                    SetStatus("还没有保存过当前难度谱面，已创建空谱面。");
             }
 
+            SyncSongLengthFromAudio();
             ApplySongToControls();
             RefreshNotes();
             UpdateSelectedLabel();
+        }
+
+        private void SyncSongLengthFromAudio()
+        {
+            if (audioPlayer == null || CurrentSong == null)
+                return;
+
+            if (!audioPlayer.TryGetSongLength(CurrentSong, out float audioLength))
+                return;
+
+            float length = Mathf.Clamp(audioLength, 8f, 600f);
+            CurrentSong.songLength = length;
+            if (chart != null)
+                chart.songLength = length;
+            currentTime = Mathf.Clamp(currentTime, 0f, SongLength);
         }
 
         private void SaveEditorChart()
@@ -1817,10 +1879,13 @@ namespace Scorewriter
             if (chart == null)
                 return;
 
+            SyncSongLengthFromAudio();
             chart.songId = CurrentSong.songId;
             chart.title = CurrentSong.title;
             chart.bpm = CurrentSong.bpm;
             chart.songLength = CurrentSong.songLength;
+            chart.difficulty = CurrentDifficulty();
+            chart.level = CurrentDifficultyLevel();
             Directory.CreateDirectory(ChartsDirectory());
             string path = EditorChartPath(CurrentSong);
             File.WriteAllText(path, JsonUtility.ToJson(chart, true));
@@ -1842,14 +1907,14 @@ private void ExportGameJson()
             SortNotes();
             GameChartExport export = new GameChartExport
             {
-                difficulty = chart.difficulty,
-                level = chart.level
+                difficulty = CurrentDifficulty(),
+                level = CurrentDifficultyLevel()
             };
 
             foreach (ScorewriterNote note in chart.notes)
                 export.notes.Add(ToGameNote(note));
 
-            string defaultName = $"{CurrentSong.songId}_game_chart.json";
+            string defaultName = $"{CurrentSong.songId}_{CurrentDifficultySuffix()}_game_chart.json";
             string path = ChooseJsonSavePath(defaultName);
             if (string.IsNullOrEmpty(path))
             {
@@ -1951,6 +2016,8 @@ private void ExportGameJson()
                 clickAddButtonText.text = timelineClickAddEnabled ? "添加开(W)" : "添加关(W)";
             if (playbackRateButtonText != null)
                 playbackRateButtonText.text = PlaybackRateLabel();
+            if (difficultyButtonText != null)
+                difficultyButtonText.text = DifficultyButtonLabel();
             if (followButtonText != null)
                 followButtonText.text = followPlayback ? "跟随开" : "跟随关";
         }
@@ -2171,13 +2238,13 @@ private void ExportGameJson()
             switch (color)
             {
                 case ScorewriterNoteColor.Miku:
-                    return "青";
+                    return "Miku";
                 case ScorewriterNoteColor.Red:
-                    return "红";
+                    return "Red";
                 case ScorewriterNoteColor.Blue:
-                    return "蓝";
+                    return "Blue";
                 default:
-                    return "白";
+                    return "White";
             }
         }
 
@@ -2330,6 +2397,24 @@ private void ExportGameJson()
         }
 
         private string EditorChartPath(ScorewriterSong song)
+        {
+            return Path.Combine(ChartsDirectory(), $"{song.songId}_{CurrentDifficultySuffix()}_scorewriter.json");
+        }
+
+        private string ResolveEditorChartPath(ScorewriterSong song)
+        {
+            string path = EditorChartPath(song);
+            if (File.Exists(path))
+                return path;
+
+            string legacyPath = LegacyEditorChartPath(song);
+            if (CurrentDifficulty() == 0 && File.Exists(legacyPath))
+                return legacyPath;
+
+            return path;
+        }
+
+        private string LegacyEditorChartPath(ScorewriterSong song)
         {
             return Path.Combine(ChartsDirectory(), $"{song.songId}_scorewriter.json");
         }
@@ -2789,3 +2874,7 @@ private void ExportGameJson()
         }
     }
 }
+
+
+
+
