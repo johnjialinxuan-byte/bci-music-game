@@ -222,8 +222,8 @@ private Vector2 EvaluatePerspectivePoint(int ray, float t, float lane, float tim
 
             Vector2 near = new Vector2(nearX, nearY);
             Vector2 far = new Vector2(farX, farY);
-            Vector2 perpendicular = new Vector2(-near.y, near.x).normalized * lane * Mathf.Lerp(0.06f, 1f, 1f - t) * Mathf.Min(width, height);
-            float shimmer = Mathf.Sin((t * 3.5f + time * 0.35f + ray) * Mathf.PI * 2f) * amplitude * 0.08f;
+            Vector2 perpendicular = new Vector2(-near.y, near.x).normalized * lane * Mathf.Lerp(0.05f, 1f, 1f - t) * Mathf.Min(width, height);
+            float shimmer = Mathf.Sin((t * 2.2f + time * 0.18f + ray) * Mathf.PI * 2f) * amplitude * 0.045f;
             Vector2 direction = (near - far).normalized;
             Vector2 normal = new Vector2(-direction.y, direction.x);
             return Vector2.Lerp(near, far, t) + perpendicular + normal * shimmer;
@@ -234,7 +234,7 @@ private void PositionPerspectiveSegment(int curve, int segment, Vector2 start, V
             Vector2 delta = end - start;
             RectTransform rect = segmentRects[curve, segment];
             rect.anchoredPosition = (start + end) * 0.5f;
-            rect.sizeDelta = new Vector2(delta.magnitude + 2f, Mathf.Lerp(lineWidth * 1.35f, lineWidth * 0.45f, (startT + endT) * 0.5f));
+            rect.sizeDelta = new Vector2(delta.magnitude + 2f, Mathf.Lerp(lineWidth * 2.35f, lineWidth * 0.38f, (startT + endT) * 0.5f));
             rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
 
             float depth = Mathf.Clamp01((startT + endT) * 0.5f);
@@ -279,27 +279,31 @@ private void UpdatePerspectiveSideBlocks(float time)
                     if (index >= sideBlockRects.Length) continue;
 
                     float phase = i / (float)SideBlockCountPerSide;
-                    float depth = Mathf.Repeat(phase - time * 0.42f, 1f);
-                    float nearAmount = 1f - depth;
+                    float cycle = Mathf.Repeat(phase + time * 0.34f, 1f);
+                    float depth = Mathf.Lerp(1.12f, -0.18f, cycle);
+                    float clampedDepth = Mathf.Clamp01(depth);
+                    float nearAmount = 1f - clampedDepth;
                     float crossT = 0.16f + Mathf.Repeat(i * 0.37f, 1f) * 0.68f;
 
                     Vector2 edgeA = EvaluatePerspectiveStraightPoint(leftSide ? 0 : 1, depth);
                     Vector2 edgeB = EvaluatePerspectiveStraightPoint(leftSide ? 3 : 2, depth);
                     Vector2 center = Vector2.Lerp(edgeA, edgeB, crossT);
-                    float inwardPush = Mathf.Lerp(8f, 54f, nearAmount);
+                    float inwardPush = Mathf.Lerp(6f, 118f, nearAmount);
                     center.x += leftSide ? inwardPush : -inwardPush;
 
                     Vector2 toCenter = -center;
                     float rotation = Mathf.Atan2(toCenter.y, toCenter.x) * Mathf.Rad2Deg;
-                    float shortSide = Mathf.Lerp(8f, 58f, nearAmount);
-                    float longSide = shortSide * Mathf.Lerp(3.6f, 2.9f, nearAmount);
+                    float shortSide = Mathf.Lerp(7f, 70f, nearAmount);
+                    float longSide = shortSide * Mathf.Lerp(4.4f, 3.2f, nearAmount);
 
                     RectTransform rect = sideBlockRects[index];
                     rect.anchoredPosition = center;
                     rect.sizeDelta = new Vector2(longSide, shortSide);
                     rect.localRotation = Quaternion.Euler(0f, 0f, rotation);
 
-                    float alpha = Mathf.Lerp(0.014f, 0.092f, nearAmount);
+                    float farFade = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1.12f, 0.86f, depth));
+                    float exitFade = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-0.18f, 0.04f, depth));
+                    float alpha = Mathf.Lerp(0.012f, 0.105f, nearAmount) * farFade * exitFade;
                     sideBlockImages[index].color = GetFixedBlockColor(i + region * 2, alpha);
                 }
             }

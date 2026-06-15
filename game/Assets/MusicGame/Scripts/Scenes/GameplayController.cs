@@ -145,14 +145,26 @@ namespace MusicGame.Scenes
                 rect.anchorMin = new Vector2(0f, 1f);
                 rect.anchorMax = new Vector2(0f, 1f);
                 rect.pivot = new Vector2(0f, 1f);
-                rect.anchoredPosition = new Vector2(28f, -18f);
+                rect.anchoredPosition = SafeAreaUtility.TopLeft(new Vector2(28f, -18f), 8f, 4f);
                 rect.sizeDelta = new Vector2(120f, 94f);
+
+                Image image = pauseButton.GetComponent<Image>();
+                if (image != null)
+                {
+                    image.sprite = null;
+                    image.color = Color.clear;
+                    image.raycastTarget = true;
+                }
+                pauseButton.targetGraphic = image;
+                pauseButton.transition = Selectable.Transition.None;
 
                 Text pauseLabel = pauseButton.GetComponentInChildren<Text>(true);
                 if (pauseLabel != null)
                 {
+                    pauseLabel.text = "Ⅱ";
                     pauseLabel.fontSize = 56;
                     pauseLabel.fontStyle = FontStyle.Bold;
+                    pauseLabel.color = Color.white;
                 }
             }
         }
@@ -231,19 +243,18 @@ private static void ConfigurePauseMenuButton(Button button)
 
             string chartPath = currentSong.GetChartPath(GameStateManager.Instance.SelectedDifficulty);
             currentChart = ChartManager.Instance.LoadChart(chartPath, currentSong.songId, GameStateManager.Instance.SelectedDifficulty);
-            
+            if (currentChart == null)
+            {
+                Debug.LogError("[GameplayController] No valid JSON chart found.");
+                GameStateManager.Instance.ChangeScene(GameScene.SongSelect);
+                return;
+            }
 
             int attentionThreshold = GameplaySettings.GetAttentionThreshold(GameStateManager.Instance.SelectedDifficulty);
             foreach (NoteData note in currentChart.notes)
             {
                 if (note.noteType == NoteType.Hold)
                     note.threshold = attentionThreshold;
-            }
-if (currentChart == null)
-            {
-                Debug.LogError("[GameplayController] No valid JSON chart found.");
-                GameStateManager.Instance.ChangeScene(GameScene.SongSelect);
-                return;
             }
 
             if (AudioManager.Instance == null)
@@ -428,14 +439,14 @@ private void ConfigureGameplayBackground()
 
             background.ConfigurePerspectiveFlow(
                 12,
-                36,
-                1700f,
-                900f,
-                58f,
-                1.8f,
-                0.68f,
-                new Color(0.05f, 0.95f, 1f, 0.095f),
-                new Color(0.55f, 0.25f, 1f, 0.075f));
+                64,
+                1850f,
+                980f,
+                34f,
+                2.1f,
+                0.56f,
+                new Color(0.05f, 0.95f, 1f, 0.12f),
+                new Color(0.55f, 0.25f, 1f, 0.10f));
         }
 
         private Canvas FindGameplayCanvas()
@@ -462,25 +473,21 @@ private void ConfigureGameplayBackground()
 
         private void EnsureGameplaySpaceGuide()
         {
-            SpaceGuide guide = FindAnyObjectByType<SpaceGuide>();
-            if (guide != null)
+            SpaceGuide[] guides = FindObjectsByType<SpaceGuide>(FindObjectsInactive.Include);
+            foreach (SpaceGuide guide in guides)
             {
-                guide.gameObject.SetActive(true);
-                guide.enabled = true;
-                guide.EnsureGuides();
-                return;
+                if (guide == null)
+                    continue;
+
+                for (int i = guide.transform.childCount - 1; i >= 0; i--)
+                {
+                    Transform child = guide.transform.GetChild(i);
+                    if (child != null)
+                        Destroy(child.gameObject);
+                }
+
+                guide.enabled = false;
             }
-
-            JudgePlane judgePlane = FindAnyObjectByType<JudgePlane>();
-            GameObject guideObject = judgePlane != null ? judgePlane.gameObject : new GameObject("JudgePlane_Z0");
-            guideObject.SetActive(true);
-            guideObject.transform.position = Vector3.zero;
-
-            if (judgePlane == null)
-                guideObject.AddComponent<JudgePlane>();
-
-            SpaceGuide newGuide = guideObject.AddComponent<SpaceGuide>();
-            newGuide.EnsureGuides();
         }
 
 

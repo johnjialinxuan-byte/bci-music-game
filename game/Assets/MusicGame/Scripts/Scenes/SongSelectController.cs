@@ -17,6 +17,9 @@ namespace MusicGame.Scenes
         private const float DifficultyButtonWidth = 150f;
         private const float DifficultyButtonHeight = 60f;
         private const float ConfirmButtonSize = 112f;
+        private const float HeaderCenterY = -56f;
+        private const float HeaderBackX = 96f;
+        private const float HeaderTitleX = 360f;
 
         [Header("UI References")]
         [SerializeField] private Transform songListContent;
@@ -265,6 +268,12 @@ private void ConfigureHeaderEffects()
                 if (text.name == "SongSelectTitle")
                 {
                     text.text = "\u9009\u62e9\u97f3\u4e50";
+                    RectTransform titleRect = text.rectTransform;
+                    titleRect.anchorMin = new Vector2(0f, 1f);
+                    titleRect.anchorMax = new Vector2(0f, 1f);
+                    titleRect.pivot = new Vector2(0.5f, 0.5f);
+                    titleRect.anchoredPosition = SafeAreaUtility.TopLeft(new Vector2(HeaderTitleX, HeaderCenterY), 0f, 0f);
+                    titleRect.sizeDelta = new Vector2(420f, 70f);
                     UI.TextArt.ReplaceWithSprite(text, "Images/Titles/title_songselect");
                 }
                 else if (text.name == "SongListHeader" || normalized == "TRACKLIST" || normalized == "SONGLIST")
@@ -487,6 +496,16 @@ private void ConfigureRectButton(Button button, Color color, bool filled)
 private void ConfigureBackButton(Button button)
         {
             if (button == null) return;
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(0f, 1f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = SafeAreaUtility.TopLeft(new Vector2(HeaderBackX, HeaderCenterY), 0f, 0f);
+                rect.sizeDelta = new Vector2(150f, 72f);
+            }
 
             Image image = button.GetComponent<Image>();
             if (image == null)

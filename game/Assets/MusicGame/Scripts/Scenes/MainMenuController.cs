@@ -66,8 +66,14 @@ private void ConfigurePresentation()
                         100f);
                 }
             }
-            background.preserveAspect = false;
+            background.preserveAspect = true;
             background.raycastTarget = false;
+            AspectRatioFitter fitter = background.GetComponent<AspectRatioFitter>();
+            if (fitter == null)
+                fitter = background.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            if (background.sprite != null && background.sprite.rect.height > 0f)
+                fitter.aspectRatio = background.sprite.rect.width / background.sprite.rect.height;
             background.transform.SetAsFirstSibling();
 
             StartMenuMotionBackground motionBackground = canvas.GetComponent<StartMenuMotionBackground>();

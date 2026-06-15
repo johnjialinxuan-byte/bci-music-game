@@ -11,6 +11,9 @@ namespace MusicGame.Scenes
     public class SettingsController : MonoBehaviour
     {
         private const float Step = 5f;
+        private const float HeaderCenterY = -56f;
+        private const float HeaderBackX = 96f;
+        private const float HeaderTitleX = 360f;
 
         [SerializeField] private Sprite backArrowSprite;
 
@@ -54,11 +57,11 @@ private void ConfigureTitle()
             title.color = Color.white;
             title.horizontalOverflow = HorizontalWrapMode.Overflow;
             title.verticalOverflow = VerticalWrapMode.Overflow;
-            title.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            title.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            title.rectTransform.anchorMin = new Vector2(0f, 1f);
+            title.rectTransform.anchorMax = new Vector2(0f, 1f);
             title.rectTransform.pivot = new Vector2(0.5f, 0.5f);
             title.rectTransform.sizeDelta = new Vector2(420f, 70f);
-            title.rectTransform.anchoredPosition = new Vector2(-360f, 394f);
+            title.rectTransform.anchoredPosition = SafeAreaUtility.TopLeft(new Vector2(HeaderTitleX, HeaderCenterY), 0f, 0f);
 
             Outline outline = title.GetComponent<Outline>();
             if (outline != null)
@@ -358,7 +361,11 @@ private static Button CreateSmallButton(Transform parent, string label, Vector2 
 
             GameObject backObj = new GameObject("BackButton", typeof(RectTransform), typeof(Image), typeof(Button));
             backObj.transform.SetParent(canvas.transform, false);
-            SetRect(backObj.GetComponent<RectTransform>(), new Vector2(-690f, 394f), new Vector2(135f, 52f));
+            RectTransform backRect = backObj.GetComponent<RectTransform>();
+            backRect.anchorMin = new Vector2(0f, 1f);
+            backRect.anchorMax = new Vector2(0f, 1f);
+            backRect.pivot = new Vector2(0.5f, 0.5f);
+            SetRect(backRect, SafeAreaUtility.TopLeft(new Vector2(HeaderBackX, HeaderCenterY), 0f, 0f), new Vector2(150f, 72f));
 
             Image hitImage = backObj.GetComponent<Image>();
             hitImage.color = Color.clear;

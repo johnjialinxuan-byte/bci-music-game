@@ -10,7 +10,7 @@ namespace MusicGame.Notes
     {
         [Header("Flick Visuals")]
         [SerializeField] private Transform arrowTransform;
-        [SerializeField, Range(0.1f, 1f)] private float visualScaleMultiplier = 0.7f;
+        [SerializeField, Range(0.1f, 1.5f)] private float visualScaleMultiplier = 1.08f;
 
         // A failed flick grays out and lingers briefly instead of vanishing —
         // darkened RGB reads much stronger than transparency on a dark scene.
@@ -24,6 +24,13 @@ namespace MusicGame.Notes
         {
             base.Initialize(data);
             dimmed = false;
+            minAlpha = Mathf.Max(minAlpha, 0.58f);
+            maxAlpha = Mathf.Max(maxAlpha, 1f);
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.enabled = true;
+                spriteRenderer.sortingOrder = Mathf.Max(spriteRenderer.sortingOrder, 8);
+            }
 
             // Slide SVGs are authored already pointing in their color's direction
             // (white←, miku→, red↑, blue↓), so the sprite is never rotated — only

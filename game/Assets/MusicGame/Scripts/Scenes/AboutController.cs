@@ -41,8 +41,11 @@ private void SetupBackButton()
             GameObject backObj = new GameObject("BackButton", typeof(RectTransform), typeof(Image), typeof(Button));
             backObj.transform.SetParent(canvas.transform, false);
             RectTransform rect = backObj.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(-690f, 394f);
-            rect.sizeDelta = new Vector2(135f, 52f);
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = SafeAreaUtility.TopLeft(new Vector2(96f, -56f), 0f, 0f);
+            rect.sizeDelta = new Vector2(150f, 72f);
             Image hitImage = backObj.GetComponent<Image>();
             hitImage.color = new Color(0.12f, 0.16f, 0.21f, 0f);
 

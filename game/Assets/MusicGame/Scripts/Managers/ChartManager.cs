@@ -8,12 +8,9 @@ namespace MusicGame.Managers
 {
     public class ChartManager : MonoBehaviour
     {
-        // Player-made charts dropped under StreamingAssets/<DiyFolder> override built-in
-        // Resources charts. Files are the scorewriter's native save format and
-        // are matched to a song by the songId stored inside the JSON.
-        // Lives in StreamingAssets so it ships with the build and stays readable
-        // as plain files at runtime. (Application.dataPath/Assets folders are NOT
-        // packaged, which silently dropped DIY charts in standalone builds.)
+        // Built-in Resources charts are the packaged source of truth. Old
+        // StreamingAssets/diy exports are intentionally ignored so stale drafts
+        // cannot override the current chart data in Android builds.
         private const string DiyFolder = "diy";
 
         public static ChartManager Instance { get; private set; }
@@ -31,19 +28,19 @@ namespace MusicGame.Managers
         }
 
         /// <summary>
-        /// Loads the chart for a song: a matching DIY chart (scorewriter file in
-        /// Assets/MusicGame/diy) wins over the built-in Resources chart.
+        /// Loads the chart for a song from the built-in Resources chart path.
         /// </summary>
         public ChartData LoadChart(string jsonPath, string songId, Difficulty difficulty)
         {
-            ChartData diyChart = TryLoadDiyChart(songId, difficulty);
-            if (diyChart != null)
-                return diyChart;
-
-            return LoadChart(jsonPath);
+            return LoadChart(jsonPath, difficulty);
         }
 
         public ChartData LoadChart(string jsonPath)
+        {
+            return LoadChart(jsonPath, Difficulty.Normal);
+        }
+
+        private ChartData LoadChart(string jsonPath, Difficulty difficulty)
         {
             if (string.IsNullOrWhiteSpace(jsonPath))
             {
@@ -58,7 +55,7 @@ namespace MusicGame.Managers
                 return null;
             }
 
-            return LoadChartFromJson(textAsset.text, jsonPath);
+            return LoadChartFromJson(textAsset.text, jsonPath, difficulty);
         }
 
         public ChartData LoadChart(TextAsset textAsset)
@@ -69,10 +66,15 @@ namespace MusicGame.Managers
                 return null;
             }
 
-            return LoadChartFromJson(textAsset.text, textAsset.name);
+            return LoadChartFromJson(textAsset.text, textAsset.name, Difficulty.Normal);
         }
 
         public ChartData LoadChartFromJson(string json, string sourceName = "runtime")
+        {
+            return LoadChartFromJson(json, sourceName, Difficulty.Normal);
+        }
+
+        private ChartData LoadChartFromJson(string json, string sourceName, Difficulty fallbackDifficulty)
         {
             if (string.IsNullOrWhiteSpace(json))
             {
@@ -82,6 +84,16 @@ namespace MusicGame.Managers
 
             try
             {
+                if (LooksLikeScorewriterChart(json))
+                {
+                    ScorewriterChartDto dto = ParseScorewriterChart(json, sourceName);
+                    if (dto == null)
+                        return null;
+
+                    Difficulty difficulty = ToDifficulty(dto.difficulty, fallbackDifficulty);
+                    return ConvertScorewriterChart(dto, sourceName, difficulty);
+                }
+
                 ChartData chart = ScriptableObject.CreateInstance<ChartData>();
                 JsonUtility.FromJsonOverwrite(json, chart);
 
@@ -222,6 +234,17 @@ namespace MusicGame.Managers
         {
             string name = Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
             return name.Contains("easy") || name.Contains("normal") || name.Contains("hard");
+        }
+
+        private static Difficulty ToDifficulty(int value, Difficulty fallback)
+        {
+            return value switch
+            {
+                0 => Difficulty.Easy,
+                1 => Difficulty.Normal,
+                2 => Difficulty.Hard,
+                _ => fallback
+            };
         }
 
         private static bool LooksLikeScorewriterChart(string json)

@@ -21,13 +21,15 @@ namespace MusicGame.UI
         [SerializeField] private bool enableDesktopMouse = true;
         [SerializeField] private bool enableMobileTilt = true;
         [SerializeField] private float inputSmoothing = 8f;
-        [SerializeField] private float mobileTiltSensitivity = 2.2f;
-        [SerializeField] private float mobileDeadZone = 0.025f;
+        [SerializeField] private float mobileTiltSensitivity = 3.5f;
+        [SerializeField] private float mobileGyroSensitivity = 0.08f;
+        [SerializeField] private float mobileDeadZone = 0.01f;
         [SerializeField] private Vector2 maximumOffset = new Vector2(24f, 14f);
 
         private readonly List<LayerTarget> targets = new List<LayerTarget>();
         private Vector2 smoothedInput;
         private Vector3 mobileNeutralAcceleration;
+        private Vector3 lastMobileAcceleration;
         private bool mobileCalibrated;
 
         private void OnEnable()
@@ -35,6 +37,12 @@ namespace MusicGame.UI
 #if ENABLE_INPUT_SYSTEM
             if (Accelerometer.current != null)
                 InputSystem.EnableDevice(Accelerometer.current);
+            if (UnityEngine.InputSystem.Gyroscope.current != null)
+                InputSystem.EnableDevice(UnityEngine.InputSystem.Gyroscope.current);
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (SystemInfo.supportsGyroscope)
+                global::UnityEngine.Input.gyro.enabled = true;
 #endif
             CalibrateMobileTilt();
             ResetBaseTransforms();
@@ -111,6 +119,7 @@ public void ClearTargets()
         public void CalibrateMobileTilt()
         {
             mobileNeutralAcceleration = ReadAcceleration();
+            lastMobileAcceleration = mobileNeutralAcceleration;
             mobileCalibrated = true;
         }
 
@@ -132,9 +141,15 @@ public void ClearTargets()
             if (!mobileCalibrated)
                 CalibrateMobileTilt();
 
-            Vector3 delta = ReadAcceleration() - mobileNeutralAcceleration;
-            float x = ApplyDeadZone(delta.x * mobileTiltSensitivity);
-            float y = ApplyDeadZone(delta.y * mobileTiltSensitivity);
+            Vector3 acceleration = ReadAcceleration();
+            Vector3 delta = acceleration - mobileNeutralAcceleration;
+            Vector3 accelerationRate = acceleration - lastMobileAcceleration;
+            lastMobileAcceleration = acceleration;
+            float x = ApplyDeadZone(delta.y * mobileTiltSensitivity);
+            float y = ApplyDeadZone(-delta.x * mobileTiltSensitivity);
+            Vector3 gyro = ReadGyroRotationRate();
+            x += Mathf.Clamp((gyro.y + accelerationRate.y * 2.2f) * mobileGyroSensitivity, -0.45f, 0.45f);
+            y += Mathf.Clamp((-gyro.x - accelerationRate.x * 2.2f) * mobileGyroSensitivity, -0.45f, 0.45f);
             return new Vector2(Mathf.Clamp(x, -1f, 1f), Mathf.Clamp(y, -1f, 1f));
         }
 
@@ -164,6 +179,19 @@ public void ClearTargets()
 #endif
         }
 
+        private Vector3 ReadGyroRotationRate()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (UnityEngine.InputSystem.Gyroscope.current != null)
+                return UnityEngine.InputSystem.Gyroscope.current.angularVelocity.ReadValue();
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (SystemInfo.supportsGyroscope)
+                return global::UnityEngine.Input.gyro.rotationRateUnbiased;
+#endif
+            return Vector3.zero;
+        }
+
         private float ApplyDeadZone(float value)
         {
             return Mathf.Abs(value) < mobileDeadZone ? 0f : value;
@@ -171,5 +199,35 @@ public void ClearTargets()
 
 
     }
-}
 
+    public static class SafeAreaUtility
+    {
+        private const float ReferenceWidth = 1920f;
+        private const float ReferenceHeight = 1080f;
+
+        public static Vector2 TopLeft(Vector2 basePosition, float extraX = 0f, float extraY = 0f)
+        {
+            Vector4 margins = GetReferenceMargins();
+            return new Vector2(basePosition.x + margins.x + extraX, basePosition.y - margins.z - extraY);
+        }
+
+        public static Vector2 TopRight(Vector2 basePosition, float extraX = 0f, float extraY = 0f)
+        {
+            Vector4 margins = GetReferenceMargins();
+            return new Vector2(basePosition.x - margins.y - extraX, basePosition.y - margins.z - extraY);
+        }
+
+        public static Vector4 GetReferenceMargins()
+        {
+            if (Screen.width <= 0 || Screen.height <= 0)
+                return Vector4.zero;
+
+            Rect safe = Screen.safeArea;
+            float left = safe.xMin / Screen.width * ReferenceWidth;
+            float right = (Screen.width - safe.xMax) / Screen.width * ReferenceWidth;
+            float top = (Screen.height - safe.yMax) / Screen.height * ReferenceHeight;
+            float bottom = safe.yMin / Screen.height * ReferenceHeight;
+            return new Vector4(left, right, top, bottom);
+        }
+    }
+}

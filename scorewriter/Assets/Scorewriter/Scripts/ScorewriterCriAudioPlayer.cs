@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using CriWare;
 using UnityEngine;
@@ -181,14 +181,28 @@ namespace Scorewriter
             if (acb == null)
                 return false;
 
-            CriAtomEx.CueInfo info;
-            bool hasInfo = string.IsNullOrWhiteSpace(song.cueName)
-                ? acb.GetCueInfoByIndex(0, out info)
-                : acb.GetCueInfo(song.cueName, out info);
-            if (!hasInfo || info.length <= 0)
+            CriAtomEx.CueInfo cueInfo;
+            bool hasCueInfo = string.IsNullOrWhiteSpace(song.cueName)
+                ? acb.GetCueInfoByIndex(0, out cueInfo)
+                : acb.GetCueInfo(song.cueName, out cueInfo);
+            if (hasCueInfo && cueInfo.length > 0)
+            {
+                lengthSeconds = cueInfo.length / 1000f;
+                if (lengthSeconds > 0f)
+                    return true;
+            }
+
+            CriAtomEx.WaveformInfo waveformInfo = default;
+            bool hasWaveformInfo = !string.IsNullOrWhiteSpace(song.cueName)
+                ? acb.GetWaveFormInfo(song.cueName, out waveformInfo)
+                : hasCueInfo && acb.GetWaveFormInfo(cueInfo.id, out waveformInfo);
+            if (!hasWaveformInfo && hasCueInfo)
+                hasWaveformInfo = acb.GetWaveFormInfo(cueInfo.id, out waveformInfo);
+
+            if (!hasWaveformInfo || waveformInfo.samplingRate <= 0 || waveformInfo.numSamples <= 0)
                 return false;
 
-            lengthSeconds = info.length / 1000f;
+            lengthSeconds = waveformInfo.numSamples / (float)waveformInfo.samplingRate;
             return lengthSeconds > 0f;
         }
 
@@ -304,3 +318,5 @@ namespace Scorewriter
         }
     }
 }
+
+

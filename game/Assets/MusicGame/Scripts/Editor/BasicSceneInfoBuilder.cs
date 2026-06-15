@@ -132,7 +132,13 @@ namespace MusicGame.Editor
             GameObject canvas = CreateCanvas("MainMenuCanvas");
             Image background = CreatePanel("StartBackground", canvas.transform, Color.white, Vector2.zero, new Vector2(1600, 900)).GetComponent<Image>();
             background.sprite = LoadCoverSprite("Assets/Images/start.png");
-            background.preserveAspect = false;
+            background.preserveAspect = true;
+            AspectRatioFitter fitter = background.GetComponent<AspectRatioFitter>();
+            if (fitter == null)
+                fitter = background.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            if (background.sprite != null && background.sprite.rect.height > 0f)
+                fitter.aspectRatio = background.sprite.rect.width / background.sprite.rect.height;
             background.raycastTarget = false;
             background.transform.SetAsFirstSibling();
 

@@ -467,11 +467,17 @@ private IEnumerator FadePreviewTo(float targetVolume, float duration, int reques
             // it doesn't do synchronous file IO on the main thread each time.
             if (!sfxAcbExistsCache.TryGetValue(cueSheet, out bool acbExists))
             {
+#if UNITY_ANDROID && !UNITY_EDITOR
+                // Android StreamingAssets live inside the APK, so File.Exists on
+                // the path can return false even when CRIWARE can load the ACB.
+                acbExists = true;
+#else
                 string acbFilePath = Path.Combine(CriWare.Common.streamingAssetsPath, $"{cueSheetFolder}/{cueSheet}.acb");
                 acbExists = File.Exists(acbFilePath);
-                sfxAcbExistsCache[cueSheet] = acbExists;
                 if (!acbExists)
                     Debug.LogWarning($"[AudioManager] PlaySFX: ACB file not found at {acbFilePath}. Skipping.");
+#endif
+                sfxAcbExistsCache[cueSheet] = acbExists;
             }
 
             if (!acbExists) return;
