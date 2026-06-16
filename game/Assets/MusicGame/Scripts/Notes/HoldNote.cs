@@ -27,6 +27,7 @@ namespace MusicGame.Notes
         // dark background than an alpha-only fade.
         private const float DimAlpha = 0.55f;
         private const float DimGray = 0.30f;
+        private static Material spriteDefaultMaterial;
 
         private readonly List<HoldPiece> holdPieces = new List<HoldPiece>();
         private readonly List<HoldPiece> visualFillPieces = new List<HoldPiece>();
@@ -115,6 +116,7 @@ namespace MusicGame.Notes
                 headResolved = true;
                 segmentSuccess = false;
                 holdDimmed = true;
+                ApplyHoldDimVisuals();
                 ScoreManager.Instance.RegisterJudgment(HeadCategory, JudgmentType.Miss);
                 JudgmentFx.Show(JudgmentType.Miss, new Vector3(Data.x, Data.y, judgePlaneZ),
                     Data.isRoundNote ? 0.55f : 1f);
@@ -158,6 +160,7 @@ namespace MusicGame.Notes
                     else
                     {
                         holdDimmed = true;
+                        ApplyHoldDimVisuals();
                         JudgmentFx.Show(JudgmentType.Miss, new Vector3(pathPosition.x, pathPosition.y, judgePlaneZ), 0.7f);
                     }
                     nextCheckpointIndex++;
@@ -308,6 +311,7 @@ private void TryHitTailSlide()
                     if (fillSprite != null)
                         piece.Renderer.sprite = fillSprite;
 
+                    ApplySpriteMaterial(piece.Renderer);
                     piece.Shape = "round";
                     piece.HitTime = Mathf.Lerp(start.HitTime, end.HitTime, normalized);
                     piece.HitPosition = Vector3.Lerp(start.Position, end.Position, normalized);
@@ -376,10 +380,16 @@ private void TryHitTailSlide()
         private void EnsureTemplatePieces()
         {
             if (spriteRenderer != null && !ContainsRenderer(spriteRenderer))
+            {
+                ApplySpriteMaterial(spriteRenderer);
                 holdPieces.Add(new HoldPiece(spriteRenderer, sequenceBaseScale));
+            }
 
             if (tailSpriteRenderer != null && !ContainsRenderer(tailSpriteRenderer))
+            {
+                ApplySpriteMaterial(tailSpriteRenderer);
                 holdPieces.Add(new HoldPiece(tailSpriteRenderer, sequenceBaseScale));
+            }
         }
 
         private bool ContainsRenderer(SpriteRenderer renderer)
@@ -401,6 +411,7 @@ private void TryHitTailSlide()
             if (sprite != null)
                 piece.Renderer.sprite = sprite;
 
+            ApplySpriteMaterial(piece.Renderer);
             piece.Shape = shape;
             piece.HitTime = hitTime;
             piece.HitPosition = hitPosition;
@@ -421,6 +432,7 @@ private void TryHitTailSlide()
                 GameObject pieceObject = new GameObject("Hold_Marker");
                 pieceObject.transform.SetParent(transform, false);
                 SpriteRenderer renderer = pieceObject.AddComponent<SpriteRenderer>();
+                ApplySpriteMaterial(renderer);
                 renderer.color = Color.white;
                 holdPieces.Add(new HoldPiece(renderer, sequenceBaseScale));
             }
@@ -435,6 +447,7 @@ private void TryHitTailSlide()
                 GameObject pieceObject = new GameObject("Hold_VisualRound");
                 pieceObject.transform.SetParent(transform, false);
                 SpriteRenderer renderer = pieceObject.AddComponent<SpriteRenderer>();
+                ApplySpriteMaterial(renderer);
                 renderer.color = Color.white;
                 visualFillPieces.Add(new HoldPiece(renderer, sequenceBaseScale));
             }
@@ -484,7 +497,8 @@ private void TryHitTailSlide()
                 piece.Renderer.transform.position = currentPosition;
 
                 float zDistance = Mathf.Abs(currentPosition.z - judgePlaneZ);
-                float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange) * piece.BaseScale * scaleMultiplier;
+                float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange)
+                    * piece.BaseScale * scaleMultiplier * PlatformScaleMultiplier;
                 piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
 
                 Color color = piece.Renderer.color;
@@ -524,7 +538,7 @@ private void TryHitTailSlide()
 
                 float zDistance = Mathf.Abs(currentPosition.z - judgePlaneZ);
                 float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange)
-                    * piece.BaseScale * visualFillScaleMultiplier;
+                    * piece.BaseScale * visualFillScaleMultiplier * PlatformScaleMultiplier;
                 piece.Renderer.transform.localScale = Vector3.one * scaleFactor;
 
                 Color color = piece.Renderer.color;
@@ -659,7 +673,54 @@ private void TryHitTailSlide()
         {
             float zRange = Mathf.Max(0.001f, Mathf.Abs(spawnZ - judgePlaneZ));
             float zDistance = Mathf.Abs(worldPosition.z - judgePlaneZ);
-            return Mathf.Lerp(maxScale, minScale, zDistance / zRange);
+            return Mathf.Lerp(maxScale, minScale, zDistance / zRange) * PlatformScaleMultiplier;
+        }
+
+        private static void ApplySpriteMaterial(SpriteRenderer renderer)
+        {
+            if (renderer == null) return;
+
+            Material material = GetSpriteDefaultMaterial();
+            if (material != null)
+                renderer.sharedMaterial = material;
+        }
+
+        private static Material GetSpriteDefaultMaterial()
+        {
+            if (spriteDefaultMaterial != null)
+                return spriteDefaultMaterial;
+
+            Shader spriteShader = Shader.Find("Sprites/Default");
+            if (spriteShader == null)
+                return null;
+
+            spriteDefaultMaterial = new Material(spriteShader)
+            {
+                name = "HoldNoteSpriteDefaultMaterial"
+            };
+            return spriteDefaultMaterial;
+        }
+
+        private void ApplyHoldDimVisuals()
+        {
+            ApplyDimToPieces(holdPieces);
+            ApplyDimToPieces(visualFillPieces);
+        }
+
+        private static void ApplyDimToPieces(List<HoldPiece> pieces)
+        {
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                SpriteRenderer renderer = pieces[i].Renderer;
+                if (renderer == null || !renderer.gameObject.activeSelf) continue;
+
+                Color color = renderer.color;
+                color.r = DimGray;
+                color.g = DimGray;
+                color.b = DimGray;
+                color.a *= DimAlpha;
+                renderer.color = color;
+            }
         }
 
         private void ClearRibbon()
@@ -751,6 +812,7 @@ private void TryHitTailSlide()
             else
             {
                 holdDimmed = true;
+                ApplyHoldDimVisuals();
             }
             JudgmentFx.Show(judgment, new Vector3(endPosition.x, endPosition.y, judgePlaneZ));
         }

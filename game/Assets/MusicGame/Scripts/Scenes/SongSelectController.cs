@@ -20,6 +20,8 @@ namespace MusicGame.Scenes
         private const float HeaderCenterY = -56f;
         private const float HeaderBackX = 96f;
         private const float HeaderTitleX = 360f;
+        private const float HeaderHeight = 112f;
+        private const float SongSelectTitleArtYOffset = -46f;
 
         [Header("UI References")]
         [SerializeField] private Transform songListContent;
@@ -275,6 +277,9 @@ private void ConfigureHeaderEffects()
                     titleRect.anchoredPosition = SafeAreaUtility.TopLeft(new Vector2(HeaderTitleX, HeaderCenterY), 0f, 0f);
                     titleRect.sizeDelta = new Vector2(420f, 70f);
                     UI.TextArt.ReplaceWithSprite(text, "Images/Titles/title_songselect");
+                    Transform art = text.transform.parent != null ? text.transform.parent.Find("TitleArt_" + text.name) : null;
+                    if (art is RectTransform artRect)
+                        artRect.anchoredPosition = SafeAreaUtility.TopLeft(new Vector2(HeaderTitleX, HeaderCenterY + SongSelectTitleArtYOffset), 0f, 0f);
                 }
                 else if (text.name == "SongListHeader" || normalized == "TRACKLIST" || normalized == "SONGLIST")
                 {
@@ -861,11 +866,11 @@ private void ConfigureTopBand()
             topBandObject.transform.SetSiblingIndex(0);
 
             RectTransform rect = topBandObject.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 0.5f);
-            rect.anchorMax = new Vector2(1f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.offsetMin = new Vector2(0f, 338f);
-            rect.offsetMax = new Vector2(0f, 450f);
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = new Vector2(0f, -HeaderHeight);
+            rect.offsetMax = Vector2.zero;
 
             Image image = topBandObject.GetComponent<Image>();
             if (image == null)

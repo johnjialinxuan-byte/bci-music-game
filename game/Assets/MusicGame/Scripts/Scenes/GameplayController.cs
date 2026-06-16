@@ -437,14 +437,15 @@ private void ConfigureGameplayBackground()
             if (background == null)
                 background = gameplayCanvas.gameObject.AddComponent<SciFiCurveBackground>();
 
+            float flowSpeed = 0.56f * Mathf.Clamp(GameplaySettings.ChartSpeed / 2f, 0.5f, 2.5f);
             background.ConfigurePerspectiveFlow(
                 12,
-                64,
+                160,
                 1850f,
                 980f,
                 34f,
                 2.1f,
-                0.56f,
+                flowSpeed,
                 new Color(0.05f, 0.95f, 1f, 0.12f),
                 new Color(0.55f, 0.25f, 1f, 0.10f));
         }

@@ -37,13 +37,13 @@ private IEnumerator Run(float firstNoteTime)
         {
             SetHudHintsVisible(false);
 
-            yield return ShowMain("亲爱的玩家\n欢迎您来到脑波协奏的世界\n这是一个用于训练玩家注意力的音乐游戏", 5.6f, new Vector2(0f, 112f), 42);
-            yield return ShowMain("现在我们开始新手教程", 2.4f, new Vector2(0f, 112f), 46);
+            yield return ShowMain("亲爱的玩家\n欢迎您来到脑波协奏的世界\n这是一个用于训练玩家注意力的音乐游戏", 5.6f, new Vector2(0f, 28f), 42);
+            yield return ShowMain("现在我们开始新手教程", 2.4f, new Vector2(0f, 28f), 46);
 
-            yield return ShowMain("在游戏中，你需要根据音乐节拍来判定上不同的音符", 3.0f, new Vector2(0f, 146f), 36);
-            yield return ShowHudHint(0, "这是您的游玩分数\n每判定上一个音符均会加分", new Vector2(70f, 252f), TextAnchor.MiddleRight, new Vector2(720f, 338f), new Vector2(330f, 82f), 3.0f);
-            yield return ShowHudHint(1, "这是您的游玩准确率\n用以实时显示您的判定情况", new Vector2(58f, 116f), TextAnchor.MiddleRight, new Vector2(704f, 256f), new Vector2(370f, 88f), 3.0f);
-            yield return ShowHudHint(2, "这是您的专注度数值\n初期测试阶段会实时显示您的专注度", new Vector2(-8f, 298f), TextAnchor.MiddleLeft, new Vector2(-806f, 486f), new Vector2(178f, 34f), 3.2f);
+            yield return ShowMain("在游戏中，你需要根据音乐节拍来判定上不同的音符", 3.0f, new Vector2(0f, 56f), 36);
+            yield return ShowHudHint(0, "这是您的游玩分数\n每判定上一个音符均会加分", new Vector2(70f, 144f), TextAnchor.MiddleRight, new Vector2(720f, 338f), new Vector2(330f, 82f), 3.0f);
+            yield return ShowHudHint(1, "这是您的游玩准确率\n用以实时显示您的判定情况", new Vector2(58f, 18f), TextAnchor.MiddleRight, new Vector2(704f, 256f), new Vector2(370f, 88f), 3.0f);
+            yield return ShowHudHint(2, "这是您的专注度数值\n初期测试阶段会实时显示您的专注度", new Vector2(-8f, 214f), TextAnchor.MiddleLeft, new Vector2(-806f, 486f), new Vector2(178f, 34f), 3.2f);
             SetHudHintsVisible(false);
 
             float holdIntroTime = Mathf.Max(0f, firstNoteTime - 2f);
@@ -69,6 +69,11 @@ private IEnumerator Run(float firstNoteTime)
 
 private IEnumerator ShowMain(string text, float holdDuration, Vector2 position, int fontSize)
         {
+            if (position.y > 200f)
+                position.y -= 80f;
+            else if (position.y > 80f)
+                position.y -= 70f;
+
             string[] lines = text.Split('\n');
             int lineCount = Mathf.Min(lines.Length, MaxMainLines);
             float lineHeight = Mathf.Clamp(fontSize * 1.45f, 52f, 82f);

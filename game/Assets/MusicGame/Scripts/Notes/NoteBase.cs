@@ -24,6 +24,7 @@ namespace MusicGame.Notes
         [SerializeField] private string successCueSheet = "cuesheet2";
         [SerializeField] private string successCueName = "";
         [SerializeField] protected float maxAlpha = 1.0f;
+        [SerializeField] protected float mobileScaleMultiplier = 0.82f;
 
         protected NoteData Data { get; private set; }
         protected float SongTime => MusicTime.Current;
@@ -80,7 +81,7 @@ protected void ApplyInitialDepthVisual()
         {
             float scaleFactor = minScale;
             if (visualTransform != null)
-                visualTransform.localScale = Vector3.one * scaleFactor;
+                visualTransform.localScale = Vector3.one * scaleFactor * PlatformScaleMultiplier;
 
             if (spriteRenderer != null)
             {
@@ -110,7 +111,7 @@ protected virtual void UpdatePosition()
             float scaleFactor = Mathf.Lerp(maxScale, minScale, zDistance / zRange);
 
             if (visualTransform != null)
-                visualTransform.localScale = Vector3.one * scaleFactor;
+                visualTransform.localScale = Vector3.one * scaleFactor * PlatformScaleMultiplier;
 
             float alpha = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange);
             if (spriteRenderer != null)
@@ -161,5 +162,7 @@ protected virtual void UpdatePosition()
         {
             gameObject.SetActive(false);
         }
+
+        protected float PlatformScaleMultiplier => Application.isMobilePlatform ? mobileScaleMultiplier : 1f;
     }
 }

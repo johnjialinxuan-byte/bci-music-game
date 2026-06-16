@@ -14,6 +14,7 @@ namespace MusicGame.Scenes
         private const float HeaderCenterY = -56f;
         private const float HeaderBackX = 96f;
         private const float HeaderTitleX = 360f;
+        private const float HeaderHeight = 112f;
 
         [SerializeField] private Sprite backArrowSprite;
 
@@ -53,7 +54,7 @@ private void ConfigureTitle()
             title.text = "\u8bbe\u7f6e";
             title.fontSize = 42;
             title.fontStyle = FontStyle.Bold;
-            title.alignment = TextAnchor.MiddleLeft;
+            title.alignment = TextAnchor.MiddleCenter;
             title.color = Color.white;
             title.horizontalOverflow = HorizontalWrapMode.Overflow;
             title.verticalOverflow = VerticalWrapMode.Overflow;
@@ -421,11 +422,11 @@ private static Button CreateSmallButton(Transform parent, string label, Vector2 
             topBar.transform.SetAsFirstSibling();
 
             RectTransform rect = topBar.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 0.5f);
-            rect.anchorMax = new Vector2(1f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.offsetMin = new Vector2(0f, 338f);
-            rect.offsetMax = new Vector2(0f, 450f);
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = new Vector2(0f, -HeaderHeight);
+            rect.offsetMax = Vector2.zero;
 
             Image image = topBar.GetComponent<Image>();
             if (image == null)

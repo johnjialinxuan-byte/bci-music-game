@@ -21,10 +21,10 @@ namespace MusicGame.UI
         [SerializeField] private bool enableDesktopMouse = true;
         [SerializeField] private bool enableMobileTilt = true;
         [SerializeField] private float inputSmoothing = 8f;
-        [SerializeField] private float mobileTiltSensitivity = 3.5f;
-        [SerializeField] private float mobileGyroSensitivity = 0.08f;
-        [SerializeField] private float mobileDeadZone = 0.01f;
-        [SerializeField] private Vector2 maximumOffset = new Vector2(24f, 14f);
+        [SerializeField] private float mobileTiltSensitivity = 11f;
+        [SerializeField] private float mobileGyroSensitivity = 0.42f;
+        [SerializeField] private float mobileDeadZone = 0.003f;
+        [SerializeField] private Vector2 maximumOffset = new Vector2(96f, 60f);
 
         private readonly List<LayerTarget> targets = new List<LayerTarget>();
         private Vector2 smoothedInput;
@@ -42,7 +42,10 @@ namespace MusicGame.UI
 #endif
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (SystemInfo.supportsGyroscope)
+            {
                 global::UnityEngine.Input.gyro.enabled = true;
+                global::UnityEngine.Input.gyro.updateInterval = 1f / 60f;
+            }
 #endif
             CalibrateMobileTilt();
             ResetBaseTransforms();
@@ -145,12 +148,12 @@ public void ClearTargets()
             Vector3 delta = acceleration - mobileNeutralAcceleration;
             Vector3 accelerationRate = acceleration - lastMobileAcceleration;
             lastMobileAcceleration = acceleration;
-            float x = ApplyDeadZone(delta.y * mobileTiltSensitivity);
-            float y = ApplyDeadZone(-delta.x * mobileTiltSensitivity);
+            float x = ApplyDeadZone(delta.x * mobileTiltSensitivity);
+            float y = ApplyDeadZone(delta.y * mobileTiltSensitivity);
             Vector3 gyro = ReadGyroRotationRate();
-            x += Mathf.Clamp((gyro.y + accelerationRate.y * 2.2f) * mobileGyroSensitivity, -0.45f, 0.45f);
-            y += Mathf.Clamp((-gyro.x - accelerationRate.x * 2.2f) * mobileGyroSensitivity, -0.45f, 0.45f);
-            return new Vector2(Mathf.Clamp(x, -1f, 1f), Mathf.Clamp(y, -1f, 1f));
+            x += Mathf.Clamp((gyro.x + accelerationRate.x * 2.2f) * mobileGyroSensitivity, -0.75f, 0.75f);
+            y += Mathf.Clamp((gyro.y + accelerationRate.y * 2.2f) * mobileGyroSensitivity, -0.75f, 0.75f);
+            return new Vector2(Mathf.Clamp(x, -2.2f, 2.2f), Mathf.Clamp(y, -2.2f, 2.2f));
         }
 
         private Vector2 ReadMousePosition()
@@ -168,6 +171,10 @@ public void ClearTargets()
 
         private Vector3 ReadAcceleration()
         {
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (SystemInfo.supportsGyroscope)
+                return global::UnityEngine.Input.gyro.gravity;
+#endif
 #if ENABLE_INPUT_SYSTEM
             if (Accelerometer.current != null)
                 return Accelerometer.current.acceleration.ReadValue();
@@ -181,13 +188,13 @@ public void ClearTargets()
 
         private Vector3 ReadGyroRotationRate()
         {
-#if ENABLE_INPUT_SYSTEM
-            if (UnityEngine.InputSystem.Gyroscope.current != null)
-                return UnityEngine.InputSystem.Gyroscope.current.angularVelocity.ReadValue();
-#endif
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (SystemInfo.supportsGyroscope)
                 return global::UnityEngine.Input.gyro.rotationRateUnbiased;
+#endif
+#if ENABLE_INPUT_SYSTEM
+            if (UnityEngine.InputSystem.Gyroscope.current != null)
+                return UnityEngine.InputSystem.Gyroscope.current.angularVelocity.ReadValue();
 #endif
             return Vector3.zero;
         }

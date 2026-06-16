@@ -223,7 +223,7 @@ private Vector2 EvaluatePerspectivePoint(int ray, float t, float lane, float tim
             Vector2 near = new Vector2(nearX, nearY);
             Vector2 far = new Vector2(farX, farY);
             Vector2 perpendicular = new Vector2(-near.y, near.x).normalized * lane * Mathf.Lerp(0.05f, 1f, 1f - t) * Mathf.Min(width, height);
-            float shimmer = Mathf.Sin((t * 2.2f + time * 0.18f + ray) * Mathf.PI * 2f) * amplitude * 0.045f;
+            float shimmer = Mathf.Sin((t * 2.2f + time * 0.18f + ray) * Mathf.PI * 2f) * amplitude * 0.025f;
             Vector2 direction = (near - far).normalized;
             Vector2 normal = new Vector2(-direction.y, direction.x);
             return Vector2.Lerp(near, far, t) + perpendicular + normal * shimmer;
@@ -234,7 +234,9 @@ private void PositionPerspectiveSegment(int curve, int segment, Vector2 start, V
             Vector2 delta = end - start;
             RectTransform rect = segmentRects[curve, segment];
             rect.anchoredPosition = (start + end) * 0.5f;
-            rect.sizeDelta = new Vector2(delta.magnitude + 2f, Mathf.Lerp(lineWidth * 2.35f, lineWidth * 0.38f, (startT + endT) * 0.5f));
+            rect.sizeDelta = new Vector2(
+                delta.magnitude + 8f,
+                Mathf.Lerp(lineWidth * 2.85f, lineWidth * 0.32f, (startT + endT) * 0.5f));
             rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
 
             float depth = Mathf.Clamp01((startT + endT) * 0.5f);
