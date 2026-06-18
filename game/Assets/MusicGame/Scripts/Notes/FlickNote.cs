@@ -14,7 +14,7 @@ namespace MusicGame.Notes
 
         private const float MissDimAlpha = 0.55f;
         private const float MissDimGray = 0.30f;
-        private const float MissLingerSeconds = 0.225f;
+        private const float MissLingerSeconds = 0.45f;
         private static Material spriteDefaultMaterial;
 
         private bool dimmed;
@@ -128,10 +128,18 @@ namespace MusicGame.Notes
 
         private static Material GetSpriteDefaultMaterial()
         {
+            // Android only: force Sprites/Default so the SVG sprites render there.
+            // On desktop/iOS keep the prefab's original material — forcing this
+            // material regressed the miss-dim tint (the pre-pull behavior worked).
+#if UNITY_ANDROID && !UNITY_EDITOR
             if (spriteDefaultMaterial != null)
                 return spriteDefaultMaterial;
 
-            Shader spriteShader = Shader.Find("Sprites/Default");
+            // URP project: an unlit URP sprite shader renders without 2D lights AND
+            // tints via SpriteRenderer.color (so the miss-dim works). Fall back to
+            // the built-in sprite shader only if the URP one isn't in the build.
+            Shader spriteShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                ?? Shader.Find("Sprites/Default");
             if (spriteShader == null)
                 return null;
 
@@ -140,6 +148,9 @@ namespace MusicGame.Notes
                 name = "FlickNoteSpriteDefaultMaterial"
             };
             return spriteDefaultMaterial;
+#else
+            return null;
+#endif
         }
     }
 }
