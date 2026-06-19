@@ -23,7 +23,13 @@ namespace MusicGame.UI
                 if (cachedFont != null)
                     return cachedFont;
 
-                cachedFont = Font.CreateDynamicFontFromOSFont(PreferredFamilies, 18);
+                // Embedded CJK font first: OS dynamic fonts (CreateDynamicFontFromOSFont)
+                // render full CJK in the macOS editor but drop glyphs on iOS/Android
+                // (the named families don't exist / fallback coverage is incomplete).
+                // A bundled font guarantees the same glyphs on every platform.
+                cachedFont = Resources.Load<Font>("Fonts/GameFont");
+                if (cachedFont == null)
+                    cachedFont = Font.CreateDynamicFontFromOSFont(PreferredFamilies, 18);
                 if (cachedFont == null)
                     cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 return cachedFont;
