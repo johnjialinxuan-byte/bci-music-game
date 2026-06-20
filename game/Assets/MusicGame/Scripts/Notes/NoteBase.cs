@@ -68,7 +68,7 @@ public virtual void Initialize(NoteData data)
             if (sprite != null)
             {
                 spriteRenderer.sprite = sprite;
-                spriteRenderer.color = Color.white;
+                spriteRenderer.SetTint(Color.white);
                 Debug.Log($"[NoteBase] Loaded sprite: {spritePath}");
             }
             else
@@ -87,7 +87,7 @@ protected void ApplyInitialDepthVisual()
             {
                 Color c = spriteRenderer.color;
                 c.a = minAlpha;
-                spriteRenderer.color = c;
+                spriteRenderer.SetTint(c);
             }
         }
 
@@ -118,7 +118,7 @@ protected virtual void UpdatePosition()
             {
                 Color c = spriteRenderer.color;
                 c.a = alpha;
-                spriteRenderer.color = c;
+                spriteRenderer.SetTint(c);
             }
         }
 

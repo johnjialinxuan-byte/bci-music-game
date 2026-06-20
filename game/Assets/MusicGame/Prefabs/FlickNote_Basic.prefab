@@ -52,9 +52,12 @@ MonoBehaviour:
   minScale: 0.22
   maxScale: 0.68
   minAlpha: 0.4
+  successCueSheet: cuesheet2
+  successCueName: 
   maxAlpha: 1
+  mobileScaleMultiplier: 0.82
   arrowTransform: {fileID: 7284010687770759980}
-  arrowRotationOffset: 0
+  visualScaleMultiplier: 0.7
 --- !u!1 &3668620217026534493
 GameObject:
   m_ObjectHideFlags: 0
@@ -113,7 +116,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 430c3b0e72fe443b18154a0dd2d04407, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

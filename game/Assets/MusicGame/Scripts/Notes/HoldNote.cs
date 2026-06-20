@@ -27,7 +27,6 @@ namespace MusicGame.Notes
         // dark background than an alpha-only fade.
         private const float DimAlpha = 0.55f;
         private const float DimGray = 0.30f;
-        private static Material spriteDefaultMaterial;
 
         private readonly List<HoldPiece> holdPieces = new List<HoldPiece>();
         private readonly List<HoldPiece> visualFillPieces = new List<HoldPiece>();
@@ -316,7 +315,7 @@ private void TryHitTailSlide()
                     piece.HitTime = Mathf.Lerp(start.HitTime, end.HitTime, normalized);
                     piece.HitPosition = Vector3.Lerp(start.Position, end.Position, normalized);
                     // Reset pooled renderer color — see ConfigurePiece.
-                    piece.Renderer.color = Color.white;
+                    piece.Renderer.SetTint(Color.white);
                     piece.Renderer.sortingOrder = 2;
                     piece.Renderer.gameObject.name = $"Hold_VisualRound_{fillIndex:000}";
                     piece.Renderer.gameObject.SetActive(true);
@@ -417,7 +416,7 @@ private void TryHitTailSlide()
             piece.HitPosition = hitPosition;
             // Pieces are pooled with the note: a previous life may have grayed this
             // renderer out (miss dim), so the color must be reset on every build.
-            piece.Renderer.color = Color.white;
+            piece.Renderer.SetTint(Color.white);
             piece.Renderer.sortingOrder = shape == "click" ? 4 : shape == "slide" ? 3 : 2;
             piece.Renderer.gameObject.name = $"Hold_{shape}_{index:00}";
             piece.Renderer.gameObject.SetActive(true);
@@ -433,7 +432,7 @@ private void TryHitTailSlide()
                 pieceObject.transform.SetParent(transform, false);
                 SpriteRenderer renderer = pieceObject.AddComponent<SpriteRenderer>();
                 ApplySpriteMaterial(renderer);
-                renderer.color = Color.white;
+                renderer.SetTint(Color.white);
                 holdPieces.Add(new HoldPiece(renderer, sequenceBaseScale));
             }
 
@@ -448,7 +447,7 @@ private void TryHitTailSlide()
                 pieceObject.transform.SetParent(transform, false);
                 SpriteRenderer renderer = pieceObject.AddComponent<SpriteRenderer>();
                 ApplySpriteMaterial(renderer);
-                renderer.color = Color.white;
+                renderer.SetTint(Color.white);
                 visualFillPieces.Add(new HoldPiece(renderer, sequenceBaseScale));
             }
 
@@ -509,7 +508,7 @@ private void TryHitTailSlide()
                     color.b = DimGray;
                 }
                 color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange) * (holdDimmed ? DimAlpha : 1f);
-                piece.Renderer.color = color;
+                piece.Renderer.SetTint(color);
             }
 
             UpdateRibbonVisual();
@@ -550,7 +549,7 @@ private void TryHitTailSlide()
                 }
                 color.a = Mathf.Lerp(maxAlpha, minAlpha, zDistance / zRange) * visualFillAlphaMultiplier
                     * (holdDimmed ? DimAlpha : 1f);
-                piece.Renderer.color = color;
+                piece.Renderer.SetTint(color);
             }
         }
 
@@ -676,40 +675,33 @@ private void TryHitTailSlide()
             return Mathf.Lerp(maxScale, minScale, zDistance / zRange) * PlatformScaleMultiplier;
         }
 
-        private static void ApplySpriteMaterial(SpriteRenderer renderer)
+        private void ApplySpriteMaterial(SpriteRenderer renderer)
         {
             if (renderer == null) return;
 
-            Material material = GetSpriteDefaultMaterial();
-            if (material != null)
-                renderer.sharedMaterial = material;
+            // Runtime-created hold pieces (the repeated body/fill sprites) start with a
+            // default sprite material that rendered pure BLACK on iOS. Copy the material
+            // from the prefab's serialized head/tail renderer instead — that material
+            // (URP 2D Sprite-Lit-Default) is the only one confirmed to render on device,
+            // and being a serialized reference its shader variants stay in the build
+            // (new Material / Resources.Load / Shader.Find all failed on iOS). It tints
+            // via SpriteRenderer.color, so the miss-dim still works. This is the same
+            // material the pieces already use on desktop, so Windows/macOS are unchanged.
+            Material source = PrefabPieceMaterial;
+            if (source != null && renderer.sharedMaterial != source)
+                renderer.sharedMaterial = source;
         }
 
-        private static Material GetSpriteDefaultMaterial()
+        private Material PrefabPieceMaterial
         {
-            // Android only: force Sprites/Default so the SVG sprites render there.
-            // On desktop/iOS keep the prefab's original material — forcing this
-            // material regressed the miss-dim tint (the pre-pull behavior worked).
-#if UNITY_ANDROID && !UNITY_EDITOR
-            if (spriteDefaultMaterial != null)
-                return spriteDefaultMaterial;
-
-            // URP project: an unlit URP sprite shader renders without 2D lights AND
-            // tints via SpriteRenderer.color (so the miss-dim works). Fall back to
-            // the built-in sprite shader only if the URP one isn't in the build.
-            Shader spriteShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
-                ?? Shader.Find("Sprites/Default");
-            if (spriteShader == null)
-                return null;
-
-            spriteDefaultMaterial = new Material(spriteShader)
+            get
             {
-                name = "HoldNoteSpriteDefaultMaterial"
-            };
-            return spriteDefaultMaterial;
-#else
-            return null;
-#endif
+                if (spriteRenderer != null && spriteRenderer.sharedMaterial != null)
+                    return spriteRenderer.sharedMaterial;
+                if (tailSpriteRenderer != null && tailSpriteRenderer.sharedMaterial != null)
+                    return tailSpriteRenderer.sharedMaterial;
+                return null;
+            }
         }
 
         private void ApplyHoldDimVisuals()
@@ -730,7 +722,7 @@ private void TryHitTailSlide()
                 color.g = DimGray;
                 color.b = DimGray;
                 color.a *= DimAlpha;
-                renderer.color = color;
+                renderer.SetTint(color);
             }
         }
 

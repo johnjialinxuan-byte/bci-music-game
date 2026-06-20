@@ -58,7 +58,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 430c3b0e72fe443b18154a0dd2d04407, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -149,7 +149,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  - {fileID: 2100000, guid: 430c3b0e72fe443b18154a0dd2d04407, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -236,21 +236,21 @@ MonoBehaviour:
   minScale: 0.22
   maxScale: 0.68
   minAlpha: 0.4
+  successCueSheet: cuesheet2
+  successCueName: 
   maxAlpha: 1
+  mobileScaleMultiplier: 0.82
   tailSpriteRenderer: {fileID: 8922995952429952266}
   tailTransform: {fileID: 8969848114720004808}
   connectionLine: {fileID: 1369762105440430260}
-  samplingInterval: 0.1
   ribbonSampleTime: 0.08
   ribbonWidth: 0.38
   ribbonAlpha: 0.22
   sequenceBaseScale: 0.68
-  visualFillInterval: 0.025
   visualFillScaleMultiplier: 0.92
   visualFillAlphaMultiplier: 0.88
   tailFlickScaleMultiplier: 0.7
   maxGeneratedPieces: 48
-  maxVisualFillPieces: 192
 --- !u!120 &1369762105440430260
 LineRenderer:
   serializedVersion: 3

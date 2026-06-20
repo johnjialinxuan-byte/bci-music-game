@@ -15,7 +15,6 @@ namespace MusicGame.Notes
         private const float MissDimAlpha = 0.55f;
         private const float MissDimGray = 0.30f;
         private const float MissLingerSeconds = 0.45f;
-        private static Material spriteDefaultMaterial;
 
         private bool dimmed;
         private float deactivateTime;
@@ -58,7 +57,7 @@ namespace MusicGame.Notes
                 color.g = MissDimGray;
                 color.b = MissDimGray;
                 color.a *= MissDimAlpha;
-                spriteRenderer.color = color;
+                spriteRenderer.SetTint(color);
             }
         }
 
@@ -123,34 +122,17 @@ namespace MusicGame.Notes
             color.g = MissDimGray;
             color.b = MissDimGray;
             color.a *= MissDimAlpha;
-            spriteRenderer.color = color;
+            spriteRenderer.SetTint(color);
         }
 
         private static Material GetSpriteDefaultMaterial()
         {
-            // Android only: force Sprites/Default so the SVG sprites render there.
-            // On desktop/iOS keep the prefab's original material — forcing this
-            // material regressed the miss-dim tint (the pre-pull behavior worked).
-#if UNITY_ANDROID && !UNITY_EDITOR
-            if (spriteDefaultMaterial != null)
-                return spriteDefaultMaterial;
-
-            // URP project: an unlit URP sprite shader renders without 2D lights AND
-            // tints via SpriteRenderer.color (so the miss-dim works). Fall back to
-            // the built-in sprite shader only if the URP one isn't in the build.
-            Shader spriteShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
-                ?? Shader.Find("Sprites/Default");
-            if (spriteShader == null)
-                return null;
-
-            spriteDefaultMaterial = new Material(spriteShader)
-            {
-                name = "FlickNoteSpriteDefaultMaterial"
-            };
-            return spriteDefaultMaterial;
-#else
+            // Flick's renderers are all serialized on the prefab and already carry the
+            // working URP 2D Sprite-Lit-Default material (the only one that renders on
+            // iOS), so return null and let the prefab material stand on every platform.
+            // Forcing a runtime material here (new Material / Resources.Load) rendered
+            // black on device and also regressed the miss-dim tint, so don't.
             return null;
-#endif
         }
     }
 }
